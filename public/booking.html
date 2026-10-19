@@ -1,0 +1,535 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10111a">
+  <title>Онлайн-запись — TorclixGroup</title>
+  <style>
+    :root {
+      --bg: #10111a;
+      --panel: #191b29;
+      --panel2: #222438;
+      --purple: #8968ff;
+      --light: #b7a5ff;
+      --text: #f7f7fc;
+      --muted: #a4a7bd;
+      --border: rgba(255,255,255,.09);
+      --green: #8ee8b7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 50% 0%, #29204d, transparent 48%),
+        var(--bg);
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    button, input, select, textarea { font: inherit; }
+
+    .container {
+      width: min(760px, calc(100% - 28px));
+      margin: auto;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      background: #10111ae8;
+    }
+
+    .nav {
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .brand span { color: var(--light); }
+
+    .back {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .intro { padding: 38px 0 24px; }
+
+    .eyebrow {
+      color: var(--light);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 9px 0;
+      font-size: clamp(32px, 7vw, 46px);
+      line-height: 1.13;
+      letter-spacing: -1.5px;
+    }
+
+    .muted { color: var(--muted); }
+
+    .intro p {
+      margin: 10px 0 0;
+      font-size: 14px;
+    }
+
+    .card {
+      margin: 15px 0;
+      padding: 22px;
+      background: linear-gradient(145deg, #1c1e2d, #171823);
+      border: 1px solid var(--border);
+      border-radius: 21px;
+    }
+
+    .step-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .number {
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      width: 35px;
+      height: 35px;
+      border-radius: 12px;
+      background: #8968ff22;
+      color: var(--light);
+      font-weight: 800;
+    }
+
+    h2 { margin: 0; font-size: 17px; }
+
+    .step-title p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .services {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 11px;
+    }
+
+    .service {
+      min-width: 0;
+      padding: 15px;
+      color: var(--text);
+      text-align: left;
+      background: #ffffff04;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      cursor: pointer;
+      transition: .18s;
+    }
+
+    .service.selected {
+      background: #8968ff19;
+      border-color: var(--purple);
+      box-shadow: inset 0 0 0 1px #8968ff35;
+    }
+
+    .service-icon {
+      display: block;
+      margin-bottom: 9px;
+      font-size: 24px;
+    }
+
+    .service strong { display: block; font-size: 14px; }
+
+    .service small {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 7px;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    input, select, textarea {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 12px;
+      color: var(--text);
+      background: #11121d;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--purple);
+    }
+
+    input[type="date"] { color-scheme: dark; }
+
+    select option {
+      color: white;
+      background: #191b29;
+    }
+
+    textarea {
+      min-height: 85px;
+      resize: vertical;
+    }
+
+    .times {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .time {
+      min-height: 43px;
+      padding: 8px 3px;
+      color: var(--text);
+      background: #ffffff04;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .time.selected {
+      background: var(--purple);
+      border-color: var(--purple);
+    }
+
+    .summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 18px;
+      padding: 15px;
+      background: #8968ff13;
+      border: 1px solid #8968ff30;
+      border-radius: 14px;
+    }
+
+    .summary small {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .summary strong { font-size: 14px; }
+
+    .button {
+      display: flex;
+      width: 100%;
+      min-height: 51px;
+      align-items: center;
+      justify-content: center;
+      margin-top: 17px;
+      padding: 12px;
+      color: white;
+      background: linear-gradient(135deg, #987bff, #704bf0);
+      border: 0;
+      border-radius: 13px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .message {
+      display: none;
+      margin-top: 14px;
+      padding: 13px;
+      border-radius: 12px;
+      font-size: 13px;
+    }
+
+    .message.show { display: block; }
+
+    .message.error {
+      color: #ffb6b6;
+      background: #ff555515;
+      border: 1px solid #ff555535;
+    }
+
+    .message.success {
+      color: var(--green);
+      background: #3bd68b12;
+      border: 1px solid #3bd68b35;
+    }
+
+    .notice {
+      margin: 12px 0 30px;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    @media (max-width: 420px) {
+      .card { padding: 16px; }
+      .services { grid-template-columns: 1fr; }
+      .times { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="/">ϟ Torclix<span>Group</span></a>
+      <a class="back" href="/">← На главную</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="intro">
+      <div class="eyebrow">Бронирование онлайн</div>
+      <h1>Запишись в удобное время.</h1>
+      <p class="muted">
+        Выбери услугу, дату и время. Заполнение формы пока работает
+        в демонстрационном режиме.
+      </p>
+    </section>
+
+    <form id="bookingForm">
+      <section class="card">
+        <div class="step-title">
+          <span class="number">1</span>
+          <div>
+            <h2>Выбери услугу</h2>
+            <p>Демонстрационные услуги</p>
+          </div>
+        </div>
+
+        <div class="services" id="services">
+          <button class="service" type="button" data-name="Базовая услуга" data-price="1000" data-duration="30">
+            <span class="service-icon">✦</span>
+            <strong>Базовая услуга</strong>
+            <small>30 минут · 1 000 ₽</small>
+          </button>
+
+          <button class="service" type="button" data-name="Стандартная услуга" data-price="2000" data-duration="60">
+            <span class="service-icon">◈</span>
+            <strong>Стандартная услуга</strong>
+            <small>60 минут · 2 000 ₽</small>
+          </button>
+
+          <button class="service" type="button" data-name="Расширенная услуга" data-price="3500" data-duration="90">
+            <span class="service-icon">✧</span>
+            <strong>Расширенная услуга</strong>
+            <small>90 минут · 3 500 ₽</small>
+          </button>
+
+          <button class="service" type="button" data-name="Индивидуальная услуга" data-price="5000" data-duration="120">
+            <span class="service-icon">◇</span>
+            <strong>Индивидуальная услуга</strong>
+            <small>120 минут · 5 000 ₽</small>
+          </button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="step-title">
+          <span class="number">2</span>
+          <div>
+            <h2>Дата и время</h2>
+            <p>Выбери удобный интервал</p>
+          </div>
+        </div>
+
+        <label for="date">Дата посещения</label>
+        <input id="date" name="date" type="date" required>
+
+        <label for="time">Время посещения</label>
+        <select id="time" name="time" required>
+          <option value="">Сначала выбери дату</option>
+        </select>
+
+        <p class="muted" style="font-size:11px">
+          Временные интервалы демонстрационные и не проверяются
+          по реальному расписанию.
+        </p>
+      </section>
+
+      <section class="card">
+        <div class="step-title">
+          <span class="number">3</span>
+          <div>
+            <h2>Контактные данные</h2>
+            <p>Чтобы можно было связаться с тобой</p>
+          </div>
+        </div>
+
+        <label for="name">Имя</label>
+        <input id="name" name="name" type="text"
+          placeholder="Как к тебе обращаться"
+          minlength="2" maxlength="80" autocomplete="name" required>
+
+        <label for="phone">Телефон</label>
+        <input id="phone" name="phone" type="tel"
+          placeholder="+7 900 000-00-00"
+          maxlength="25" autocomplete="tel" required>
+
+        <label for="comment">Комментарий (необязательно)</label>
+        <textarea id="comment" name="comment" maxlength="500"
+          placeholder="Дополнительные пожелания"></textarea>
+
+        <div class="summary">
+          <div>
+            <small>Твоя услуга</small>
+            <strong id="summaryService">Не выбрана</strong>
+            <small id="summaryDetails">Выбери услугу выше</small>
+          </div>
+          <strong id="summaryPrice">— ₽</strong>
+        </div>
+
+        <button class="button" type="submit" id="submitButton" disabled>
+          Проверить данные
+        </button>
+
+        <div id="message" class="message" role="status" aria-live="polite"></div>
+      </section>
+    </form>
+
+    <p class="notice">
+      TorclixGroup · Демонстрационная форма.
+      До подключения сервера данные не сохраняются и запись не создаётся.
+    </p>
+  </main>
+
+  <script>
+    const form = document.getElementById("bookingForm");
+    const serviceButtons = [...document.querySelectorAll(".service")];
+    const dateInput = document.getElementById("date");
+    const timeSelect = document.getElementById("time");
+    const submitButton = document.getElementById("submitButton");
+    const message = document.getElementById("message");
+
+    let selectedService = null;
+
+    function localDateString(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    const today = new Date();
+    dateInput.min = localDateString(today);
+    dateInput.value = localDateString(today);
+
+    serviceButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        selectedService = {
+          name: button.dataset.name,
+          price: Number(button.dataset.price),
+          duration: Number(button.dataset.duration)
+        };
+
+        serviceButtons.forEach(item => {
+          item.classList.toggle("selected", item === button);
+        });
+
+        document.getElementById("summaryService").textContent =
+          selectedService.name;
+
+        document.getElementById("summaryDetails").textContent =
+          `${selectedService.duration} минут`;
+
+        document.getElementById("summaryPrice").textContent =
+          selectedService.price.toLocaleString("ru-RU") + " ₽";
+
+        updateButton();
+        clearMessage();
+      });
+    });
+
+    function populateTimes() {
+      timeSelect.replaceChildren();
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Выбери время";
+      timeSelect.append(placeholder);
+
+      for (let hour = 9; hour < 18; hour++) {
+        for (const minute of [0, 30]) {
+          const value =
+            String(hour).padStart(2, "0") + ":" +
+            String(minute).padStart(2, "0");
+
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          timeSelect.append(option);
+        }
+      }
+
+      updateButton();
+    }
+
+    function updateButton() {
+      submitButton.disabled = !(
+        selectedService &&
+        dateInput.value &&
+        timeSelect.value
+      );
+    }
+
+    function clearMessage() {
+      message.className = "message";
+      message.textContent = "";
+    }
+
+    dateInput.addEventListener("change", () => {
+      populateTimes();
+      clearMessage();
+    });
+
+    timeSelect.addEventListener("change", () => {
+      updateButton();
+      clearMessage();
+    });
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      clearMessage();
+
+      if (!selectedService || !form.reportValidity()) {
+        return;
+      }
+
+      message.textContent =
+        "Интерфейс работает. Для создания настоящей записи " +
+        "нужно подключить сервер TorclixGroup и проверить доступность времени.";
+      message.className = "message show success";
+    });
+
+    populateTimes();
+  </script>
+</body>
+    </html>

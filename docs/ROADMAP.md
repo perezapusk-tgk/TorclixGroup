@@ -60,9 +60,9 @@
 - [x] Visual block content editing in the builder
 - [x] API hydration with localStorage fallback
 - [x] Persistent PostgreSQL adapter (projects/documents/CRM records)
-- [~] Authentication and organization membership
-- [~] Published project runtime and preview URLs (preview endpoint)
-- [ ] Custom domains and SSL automation
+- [x] Authentication boundary + organization membership enforcement
+- [x] Published project runtime and preview URLs (publish/unpublish + public published endpoint)
+- [~] Custom domain records and API (SSL automation still pending)
 - [ ] Telegram Mini App runtime
 - [ ] Billing and usage enforcement
 
@@ -79,7 +79,7 @@
 
 ## Current execution priority
 1. Production identity provider and session verification
-2. Database migrations and API integration tests
+2. Database migration runner and API integration tests
 3. Builder publishing pipeline and draft/published document versions
 4. Custom domains and SSL automation
 5. Telegram Mini App runtime

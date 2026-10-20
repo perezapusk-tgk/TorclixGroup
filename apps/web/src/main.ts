@@ -43,6 +43,7 @@ function loadDoc(id:string):SiteDoc{
 function saveDoc(){localStorage.setItem("tg-doc-"+doc.projectId,JSON.stringify(doc));}
 function saveProjects(){localStorage.setItem("tg-projects",JSON.stringify(projects));}
 const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
+const DEMO_AUTH=import.meta.env.VITE_TORCLIX_DEMO==="true";
 let hydrated=false;
 async function hydrateSession(){
  if(!API_BASE) return;
@@ -92,7 +93,7 @@ async function hydrateDocument(id:string){
 async function api(path:string,options:RequestInit={}){
   if(!API_BASE) return null;
   try{
-    const response=await fetch(API_BASE+path,{headers:{"content-type":"application/json",...(options.headers||{})},...options});
+    const response=await fetch(API_BASE+path,{headers:{"content-type":"application/json",...(DEMO_AUTH?{"x-torclix-user":"demo"}:{}),...(options.headers||{})},...options});
     if(!response.ok) throw new Error("API "+response.status);
     return await response.json();
   }catch{ return null; }

@@ -359,6 +359,7 @@ function editor(project:Project){
  const miniEnabled=project.type==="Mini App"||project.type==="Website + Mini App";
  const moduleCatalog=[["home","Главная","Стартовый экран и быстрые действия."],["catalog","Каталог","Товары, услуги и категории."],["booking","Бронирование","Доступность, слоты и подтверждения."],["calendar","Календарь","Расписание и предстоящие визиты."],["cart","Корзина и заказ","Корзина, оформление и статус заказа."],["membership","Абонементы","Планы, пакеты и подписки."],["loyalty","Лояльность","Баллы, награды и уровни клиентов."],["profile","Профиль","Аккаунт, настройки и история."],["notifications","Уведомления","Системные и транзакционные уведомления."],["telegram","Telegram","Связка Telegram Mini App и бота."]];
  const tab=(id:string,label:string)=>'<button class="project-tab '+(projectViewTab===id?"selected":"")+'" data-project-tab="'+id+'">'+label+'</button>';
+ if(!websiteEnabled&&projectViewTab==="builder") projectViewTab=miniEnabled?"mini":"overview";
  const overviewTab=projectViewTab==="overview"?projectOverview(project):"";
  const builderTab=projectViewTab==="builder"&&websiteEnabled?`
  <div class="builder"><aside class="builder-side"><div class="builder-tabs"><button class="${editorTab==="Design"?"selected":""}" data-tab="Design">Дизайн</button><button class="${editorTab==="Content"?"selected":""}" data-tab="Content">Контент</button></div>
@@ -369,7 +370,6 @@ function editor(project:Project){
  const miniTab=projectViewTab==="mini"&&miniEnabled?`<div class="project-module-view">${miniAppPanel(moduleCatalog)}</div>`:"";
  const crmTab=projectViewTab==="crm"?projectCRM(project):"";
  const settingsTab=projectViewTab==="settings"?projectSettings(project):"";
- if(!websiteEnabled&&projectViewTab==="builder") projectViewTab=miniEnabled?"mini":"overview";
  return `<div class="editor-shell"><div class="editor-top"><div><div class="eyebrow">04 / Проект</div><h2>${project.name}</h2><div class="editor-url">${project.url} · ${project.type} · ${project.industry}</div><div class="editor-links"><button class="secondary sm" data-action="preview">Сайт</button>${project.type.includes("Mini App")?'<button class="secondary sm" data-action="open-miniapp">Mini App</button>':""}</div></div><div class="editor-actions"><button class="secondary" data-action="preview">Предпросмотр</button><button class="primary" data-action="publish">Опубликовать</button></div></div>
  <div class="project-tabs">${tab("overview","Обзор")}${websiteEnabled?tab("builder","Сайт"):""}${miniEnabled?tab("mini","Mini App"):""}${tab("crm","Заявки и записи")}${tab("settings","Настройки")}</div>
  ${overviewTab}${builderTab}${miniTab}${crmTab}${settingsTab}</div>`;
@@ -474,7 +474,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='clear-block']").forEach(el=>el.addEventListener("click",()=>{selectedBlock=null;render();}));
  root.querySelectorAll<HTMLElement>("[data-remove-block]").forEach(el=>el.addEventListener("click",()=>{const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks=page.blocks.filter(b=>b.id!==el.dataset.removeBlock);saveDoc();void syncDocument();render()}));
  root.querySelector<HTMLInputElement>("#accent")?.addEventListener("input",e=>{doc.accent=(e.target as HTMLInputElement).value;doc.miniApp={modules:doc.miniApp?.modules||miniModules,navigation:doc.miniApp?.navigation||miniModules,theme:{accent:doc.accent,mode:doc.miniApp?.theme?.mode==="light"?"light":"dark"}};saveDoc();void syncDocument();document.documentElement.style.setProperty("--editor-accent",doc.accent)});
- root.querySelectorAll<HTMLElement>("[data-action='add-page']").forEach(el=>el.addEventListener("click",()=>{const id="page"+Date.now();doc.pages.push({id,name:"Новая страница",blocks:[{id:"b"+Date.now(),type:"Hero",title:"Новая страница.",body:"Начните собирать страницу для клиента."}]});doc.activePage=id;saveDoc();void syncDocument();render()}));
+ root.querySelectorAll<HTMLElement>("[data-action='add-page']").forEach(el=>el.addEventListener("click",()=>{const id="page"+Date.now();doc.pages.push({id:id,name:"Новая страница",blocks:[{id:"b"+Date.now(),type:"Hero",title:"Новая страница.",body:"Начните собирать страницу для клиента."}]});doc.activePage=id;saveDoc();void syncDocument();render()}));
  root.querySelectorAll<HTMLElement>("[data-action='preview']").forEach(el=>el.addEventListener("click",()=>{if(!editorProject){notify("Сначала откройте проект.");return;}if(!API_BASE){notify("Для предпросмотра нужен VITE_API_URL.");return;}window.open(API_BASE+"/published/"+editorProject,"_blank","noopener,noreferrer");}));
  root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",async()=>{
   const p=projects.find(x=>x.id===editorProject);if(!p)return;

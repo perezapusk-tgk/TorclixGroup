@@ -425,3 +425,6 @@ h1 {
   .hero { min-height: 300px; padding-bottom: 28px; }
   h1 { font-size: clamp(44px, 14vw, 68px); }
 }
+
+/* TorclixGroup product-showcase landing */
+.landing{padding:34px 0 80px;max-width:1280px}.landing-kicker{font-size:10px;letter-spacing:.24em;color:var(--accent);margin-bottom:54px}.landing h1{font-size:clamp(58px,8.5vw,132px);line-height:.86;letter-spacing:-.075em;max-width:1200px;margin:0}.landing h1 span{color:#777}.landing-lead{max-width:650px;color:#a0a09a;font-size:16px;line-height:1.6;margin:34px 0}.landing-actions{display:flex;gap:10px;margin-bottom:86px}.landing-grid{border-top:1px solid #262626;display:grid;grid-template-columns:90px 1fr;max-width:900px}.landing-grid>div{border-bottom:1px solid #262626;padding:28px 0}.landing-index{font-size:11px;color:var(--accent);letter-spacing:.15em}.landing-label{font-size:9px;letter-spacing:.22em;color:#666;margin-bottom:12px}.landing-grid h2{font-size:clamp(28px,4vw,52px);letter-spacing:-.055em;margin:0 0 10px}.landing-grid p{max-width:650px;color:#777;line-height:1.55;font-size:12px;margin:0}@media(max-width:700px){.landing{padding-top:12px}.landing-kicker{margin-bottom:38px}.landing h1{font-size:clamp(50px,15vw,78px)}.landing-actions{margin-bottom:54px;flex-direction:column;align-items:flex-start}.landing-grid{grid-template-columns:50px 1fr}}

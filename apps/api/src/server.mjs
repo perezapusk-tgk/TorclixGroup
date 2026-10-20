@@ -10,6 +10,14 @@ import { billingSnapshot } from "./billing.mjs";
 import { configureTelegramBot, telegramApi, telegramMiniAppUrl, verifyTelegramInitData } from "./telegram.mjs";
 
 const port=Number(process.env.PORT||4000);
+const rateBuckets=new Map();
+const idempotencyCache=new Map();
+function rateLimit(key,limit=30,windowMs=60000){
+  const now=Date.now(); const hit=rateBuckets.get(key);
+  if(!hit||now-hit.startedAt>=windowMs){rateBuckets.set(key,{startedAt:now,count:1});return true;}
+  hit.count+=1; return hit.count<=limit;
+}
+function requestKey(req){const value=String(req.headers["idempotency-key"]||"").trim();return value&&/^[A-Za-z0-9._:-]{8,128}$/.test(value)?value:null;}
 const projects=new Map([
   ["p1",{id:"p1",name:"Maison Noire",type:"website_mini_app",industry:"restaurant",status:"active",organizationId:"org_demo",slug:"maison-noire"}],
   ["p2",{id:"p2",name:"Forma Fitness",type:"mini_app",industry:"fitness",status:"active",organizationId:"org_demo",slug:"forma-fitness"}]
@@ -30,7 +38,7 @@ function headers(extra={}){return {
 };}
 function json(res,status,data){res.writeHead(status,headers());res.end(JSON.stringify(data));}
 function html(res,status,body){res.writeHead(status,{"content-type":"text/html; charset=utf-8"});res.end(body);}
-async function body(req){let raw="";for await(const chunk of req) raw+=chunk;return raw?JSON.parse(raw):{};}
+async function body(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>1024*1024) throw new Error("Request body too large");}return raw?JSON.parse(raw):{};}
 function esc(value=""){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function defaultDocument(projectId){return {projectId,activePage:"home",accent:"#d8ff3e",miniApp:{modules:["home","catalog","booking","profile","notifications"],navigation:["home","catalog","booking","profile","notifications"],theme:{accent:"#d8ff3e",mode:"dark"}},pages:[{id:"home",name:"Главная",blocks:[
   {id:"b1",type:"Hero",title:"Ваш бизнес — в одном цифровом пространстве",body:"Сайт, заявки, записи и мини‑приложение Telegram управляются из одной студии TorclixGroup."},
@@ -63,6 +71,11 @@ const server=createServer(async(req,res)=>{
   if(req.method==="OPTIONS"){json(res,204,{});return;}
   const {pathname:path}=new URL(req.url||"/","http://localhost");
   try{
+    if(req.method==="POST" && (path.startsWith("/public/projects/")||path==="/tg/webhook")){
+      const ip=String(req.headers["x-forwarded-for"]||req.socket.remoteAddress||"unknown").split(",")[0].trim();
+      const limit=path==="/tg/webhook"?120:20;
+      if(!rateLimit(path+":"+ip,limit,60000)){json(res,429,{error:"Слишком много запросов. Попробуйте позже."});return;}
+    }
     if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.7.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":(process.env.TORCLIX_DEV_AUTH==="true"?"development-session":"development-auth-disabled")});return;}
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
@@ -100,6 +113,9 @@ const server=createServer(async(req,res)=>{
     if(publish&&req.method==="POST"){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
       const projectId=publish[1];
+      const idem=requestKey(req);
+      const cached=idem? idempotencyCache.get(auth.user.id+":"+projectId+":"+idem):null;
+      if(cached){json(res,cached.status,cached.body);return;}
       const memory=projects.get(projectId);
       const project=memory?.organizationId===auth.organization.id?memory:await getProject(projectId,auth.organization.id);
       if(!project){json(res,404,{error:"Project not found"});return;}
@@ -109,7 +125,9 @@ const server=createServer(async(req,res)=>{
       if(!process.env.DATABASE_URL) project.status="active";
       if(!process.env.DATABASE_URL) projects.set(project.id,project);
       if(process.env.DATABASE_URL) await saveProject({...project,status:"active"});
-      json(res,200,{data:{project:{...project,status:"active"},published:true}});
+      const response={data:{project:{...project,status:"active"},published:true}};
+      if(idem) idempotencyCache.set(auth.user.id+":"+projectId+":"+idem,{status:200,body:response});
+      json(res,200,response);
       return;
     }
     if(publish&&req.method==="DELETE"){
@@ -198,7 +216,9 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
     if(path==="/tg/webhook"&&req.method==="POST"){
       const expected=process.env.TELEGRAM_WEBHOOK_SECRET||"";
       const provided=String(req.headers["x-telegram-bot-api-secret-token"]||"");
-      if(!expected||!provided||expected!==provided){res.writeHead(403);res.end();return;}
+      if(!expected||!provided){res.writeHead(403);res.end();return;}
+       const a=Buffer.from(expected),b=Buffer.from(provided);
+       if(a.length!==b.length||!crypto.timingSafeEqual(a,b)){res.writeHead(403);res.end();return;}
       const update=await body(req);
       const chatId=update?.message?.chat?.id;
       if(chatId&&update.message?.text?.startsWith("/start")){
@@ -277,9 +297,13 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.name){json(res,400,{error:"name is required"});return;}
-      const lead={id:newId(),organizationId:project.organizationId,projectId:project.id,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"published_site"),status:"new",createdAt:new Date().toISOString()};
+      const idem=requestKey(req);
+       const cacheKey=idem?project.id+":lead:"+idem:null;
+       const cached=cacheKey?idempotencyCache.get(cacheKey):null;
+       if(cached){json(res,cached.status,cached.body);return;}
+       const lead={id:newId(),organizationId:project.organizationId,projectId:project.id,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"published_site"),status:"new",createdAt:new Date().toISOString()};
       await saveRecord("leads",lead);if(!process.env.DATABASE_URL)leads.set(lead.id,lead);
-      json(res,201,{data:{id:lead.id,received:true}});return;
+      const response={data:{id:lead.id,received:true}};if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }
     const publicBooking=path.match(/^\/public\/projects\/([^/]+)\/bookings$/);
     if(publicBooking&&req.method==="POST"){

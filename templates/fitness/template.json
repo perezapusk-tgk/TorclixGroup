@@ -1,0 +1,40 @@
+{
+  "id": "fitness-forma",
+  "industry": "fitness",
+  "name": "Fitness / Forma",
+  "projectType": "mini_app",
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "blocks": [
+        {
+          "type": "Hero",
+          "title": "Train with purpose.",
+          "body": "Classes, coaches, memberships and booking."
+        },
+        {
+          "type": "Features",
+          "title": "Your training system.",
+          "body": "Schedule classes and manage membership."
+        },
+        {
+          "type": "Booking",
+          "title": "Book a class.",
+          "body": "Choose a trainer, class and time."
+        }
+      ]
+    },
+    {
+      "id": "membership",
+      "name": "Membership",
+      "blocks": [
+        {
+          "type": "Pricing",
+          "title": "Memberships built to fit.",
+          "body": "Flexible plans for every training goal."
+        }
+      ]
+    }
+  ]
+}

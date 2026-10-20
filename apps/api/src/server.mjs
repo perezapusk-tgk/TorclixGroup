@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { initStorage, listProjects, saveProject, getDocument, saveDocument, listRecords, saveRecord, newId, getSessionUser, listOrganizationsForUser } from "./storage.mjs";
-import { can } from "../../../packages/access/src/index.ts";
+import { can } from "../../../packages/access/src/index.mjs";
 
 const port = Number(process.env.PORT || 4000);
 const projects = new Map([

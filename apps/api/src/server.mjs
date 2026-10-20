@@ -176,7 +176,7 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
         const projectId=String((await body(req)).projectId||process.env.TELEGRAM_DEFAULT_PROJECT||"p1");
         const project=projects.get(projectId)||await getProject(projectId,auth.organization.id);
         if(!project||project.organizationId!==auth.organization.id){json(res,404,{error:"Project not found"});return;}
-        const integration={id:newId(),organizationId:auth.organization.id,projectId,botId:result.id,botUsername:result.username,enabled:true,webhookUrl:(process.env.PUBLIC_URL||"").replace(/\\/$/,"")+"/tg/webhook"};
+        const integration={id:newId(),organizationId:auth.organization.id,projectId,botId:result.id,botUsername:result.username,enabled:true,webhookUrl:(process.env.PUBLIC_URL||"").replace(/\/$/,"")+"/tg/webhook"};
         await saveTelegramIntegration(integration);
         json(res,200,{data:{...result,projectId,miniAppUrl:telegramMiniAppUrl(projectId),integration}});
 

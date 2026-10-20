@@ -4,13 +4,15 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @torclix/api build
+    buildCommand: pnpm install --force --no-frozen-lockfile && pnpm --filter @torclix/api build
     preDeployCommand: pnpm --filter @torclix/api migrate
     startCommand: pnpm --filter @torclix/api start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: development
+      - key: NODE_VERSION
+        value: 22.14.0
       - key: TORCLIX_DEV_AUTH
         value: "true"
       - key: DATABASE_URL
@@ -42,7 +44,7 @@ services:
   - type: web
     name: torclixgroup-web
     runtime: static
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @torclix/web build
+    buildCommand: pnpm install --force --no-frozen-lockfile && pnpm --filter @torclix/web build
     staticPublishPath: apps/web/dist
     envVars:
       - key: NODE_VERSION

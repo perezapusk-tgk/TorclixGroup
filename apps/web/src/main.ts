@@ -6,7 +6,7 @@ type Page = { id:string; name:string; blocks:Block[] };
 type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string };
 
 const nav = [
-  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["⚙","Settings"]
+  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["♟","Team"],["⚙","Settings"]
 ] as const;
 
 const seed:Project[]=[
@@ -137,7 +137,8 @@ function workspace(section:string){
  Analytics:[["Visitors","24.8k","↑ 18%"],["Leads","329","↑ 22%"],["Conversion","4.8%","↑ 0.7%"]],
  Domains:[["maisonnoire.studio","DNS verified","Connected"],["forma.fit","SSL active","Connected"],["northline.health","Awaiting DNS","Pending"]],
  Integrations:[["Telegram","Mini Apps + notifications","Ready"],["Stripe","Payments","Connect"],["Email","Transactional email","Connect"]],
- Billing:[["Studio Pro","€299 / month","Current"],["Usage",projects.length+" / 50 projects","72%"],["Next invoice","01 Nov 2026","Scheduled"]],
+ Billing:[[billing?.plan||"Pro","€"+String(billing?.price||299)+" / month","Current"],["Projects",String(billing?.usage?.projects||projects.length)+" / "+String(billing?.limits?.projects||50),"Usage"],["Leads",String(billing?.usage?.leads||0)+" / "+String(billing?.limits?.leads||10000),"Usage"]],
+ Team:team.map(m=>[m.name,m.email,m.role]),
  Settings:[["Workspace","Perezapusk Studio","Owner"],["Team","4 members","Manage"],["Brand","TorclixGroup","Configure"]]
  };
  if(section==="Templates") return templateView();

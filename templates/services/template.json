@@ -1,0 +1,45 @@
+{
+  "id": "services-studio",
+  "industry": "services",
+  "name": "Services / Studio",
+  "projectType": "website",
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "blocks": [
+        {
+          "type": "Hero",
+          "title": "Make the work impossible to ignore.",
+          "body": "A premium website for modern service businesses."
+        },
+        {
+          "type": "Features",
+          "title": "What we do.",
+          "body": "Present services, process and expertise."
+        },
+        {
+          "type": "Testimonials",
+          "title": "Trusted by ambitious teams.",
+          "body": "Turn client results into social proof."
+        },
+        {
+          "type": "CTA",
+          "title": "Start a project.",
+          "body": "Capture the next qualified lead."
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "name": "Contact",
+      "blocks": [
+        {
+          "type": "Contact",
+          "title": "Let's build something.",
+          "body": "A focused inquiry experience for serious clients."
+        }
+      ]
+    }
+  ]
+}

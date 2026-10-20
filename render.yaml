@@ -9,6 +9,8 @@ services:
     startCommand: pnpm --filter @torclix/api start
     healthCheckPath: /health
     envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
       - key: NODE_ENV
         value: development
       - key: NODE_VERSION

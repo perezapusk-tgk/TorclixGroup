@@ -189,15 +189,17 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
     }
     if(path==="/api/telegram/status"&&req.method==="GET"){
       const enabled=!!process.env.TELEGRAM_BOT_TOKEN;
-      json(res,200,{data:{enabled,configured:enabled,miniAppUrl:enabled?telegramMiniAppUrl(process.env.TELEGRAM_DEFAULT_PROJECT||"p1"):null}});
+      json(res,200,{data:{enabled,configured:enabled,miniAppUrl:null,requiresProject:true}});
       return;
     }
     if(path==="/api/telegram/configure"&&req.method==="POST"){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
       try{
-        const result=await configureTelegramBot();
+        const input=await body(req);
+        const projectId=String(input.projectId||"").trim();
+        if(!projectId){json(res,400,{error:"projectId is required"});return;}
+        const result=await configureTelegramBot(projectId);
         if(!result.enabled){json(res,409,{error:"TELEGRAM_BOT_TOKEN is not configured"});return;}
-        const projectId=String((await body(req)).projectId||process.env.TELEGRAM_DEFAULT_PROJECT||"p1");
         const project=projects.get(projectId)||await getProject(projectId,auth.organization.id);
         if(!project||project.organizationId!==auth.organization.id){json(res,404,{error:"Project not found"});return;}
         const integration={id:newId(),organizationId:auth.organization.id,projectId,botId:result.id,botUsername:result.username,enabled:true,webhookUrl:(process.env.PUBLIC_URL||"").replace(/\/$/,"")+"/tg/webhook"};
@@ -223,7 +225,7 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
       const update=await body(req);
       const chatId=update?.message?.chat?.id;
       if(chatId&&update.message?.text?.startsWith("/start")){
-        await telegramApi("sendMessage",{chat_id:chatId,text:"Добро пожаловать в TorclixGroup! Откройте мини‑приложение, чтобы посмотреть сервис и оставить заявку.",reply_markup:{inline_keyboard:[[{text:"Открыть мини‑приложение",web_app:{url:telegramMiniAppUrl(process.env.TELEGRAM_DEFAULT_PROJECT||"p1")}}]]}});
+        await telegramApi("sendMessage",{chat_id:chatId,text:"Добро пожаловать в TorclixGroup! Откройте мини‑приложение через кнопку меню бота, чтобы посмотреть сервис и оставить заявку."});
       }else if(chatId&&update.message?.text==="/help"){
         await telegramApi("sendMessage",{chat_id:chatId,text:"Используйте кнопку «Открыть мини‑приложение», чтобы открыть сервис прямо в Telegram."});
       }

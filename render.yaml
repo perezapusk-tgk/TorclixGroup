@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: pnpm install --force --no-frozen-lockfile --prod=false && pnpm --filter @torclix/api build
+    buildCommand: pnpm install --prod=false && pnpm --filter @torclix/api build
     preDeployCommand: pnpm --filter @torclix/api migrate
     startCommand: pnpm --filter @torclix/api start
     healthCheckPath: /health
@@ -43,7 +43,7 @@ services:
   - type: web
     name: torclixgroup-web
     runtime: static
-    buildCommand: pnpm install --force --no-frozen-lockfile && pnpm --filter @torclix/web build
+    buildCommand: pnpm install --prod=false && pnpm --filter @torclix/web build
     staticPublishPath: apps/web/dist
     envVars:
       - key: NODE_VERSION

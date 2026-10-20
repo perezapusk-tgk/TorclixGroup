@@ -1,39 +1,29 @@
-# TorclixGroup Architecture
+# TorclixGroup architecture
 
-TorclixGroup is a SaaS Operating System for studios: one workspace for creating, operating, and scaling client websites and Mini Apps.
+TorclixGroup is a studio operating system: one workspace creates and operates many client websites and Telegram Mini Apps.
 
-## Product domains
+## Product model
 
-- Identity: users, organizations, memberships, roles, permissions
-- Studio: projects, clients, workspaces, branding, white-label
-- Web: websites, pages, sections, components, templates, publishing, domains
-- Mini Apps: modules, navigation, booking, catalog, orders, forms, loyalty, notifications
-- Business: leads, CRM, bookings, products, services, staff, calendar, invoices
-- Infrastructure: media, storage, domains, analytics, logs, backups
-- SaaS: plans, billing, usage limits, subscriptions
+User → Organization/Studio → Project → Website / Mini App → Business modules.
 
-## Multi-tenancy
+## Application boundaries
 
-Every business object is scoped to an organization. Authorization is evaluated before tenant-scoped services execute.
+- `apps/web`: studio UI, dashboard and visual builder shell.
+- `apps/api`: tenant-aware API, publishing and Telegram integration.
+- `packages/editor`: canonical document schema and editor operations.
+- `packages/ui`: shared visual language and navigation tokens.
+- `packages/access`: roles and permissions.
+- `packages/auth`: production JWT verification.
+- `packages/database`: PostgreSQL migrations and storage.
 
-Request flow:
+## Design direction
 
-HTTP request
--> authentication/session verification
--> user lookup
--> active organization membership
--> role/permission check
--> tenant-scoped service
--> response
+The interface follows the approved reference direction rather than a generic SaaS dashboard: near-black canvas, oversized editorial typography, numbered sections, thin rules, large quiet surfaces, restrained lime accent, generous whitespace, product-showcase composition and subtle motion.
 
-## Builder model
+## Editor rule
 
-Builders store typed document trees instead of arbitrary page HTML. This allows templates, reusable sections, responsive properties, validation, versioning, publishing, and future visual editing.
+The database document is the source of truth. The web editor may cache drafts locally, but published content must always be persisted through the API.
 
-## Initial delivery phases
+## Security rule
 
-1. Foundation: monorepo, shared types, auth boundary, tenant model, dashboard shell
-2. Studio: projects, clients, templates, website builder
-3. Mini Apps: modules, booking, catalog, forms, Telegram
-4. SaaS: billing, plans, limits, white-label, domains
-5. Polish: onboarding, analytics, responsive UX, production hardening
+Development identity headers are temporary and must never be enabled for production. Production authentication requires an external OIDC/JWT provider and validated issuer, audience and JWKS URL.

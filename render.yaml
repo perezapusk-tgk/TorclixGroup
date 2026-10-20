@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: pnpm install --force --no-frozen-lockfile && pnpm --filter @torclix/api build
+    buildCommand: pnpm install --force --no-frozen-lockfile --prod=false && pnpm --filter @torclix/api build
     preDeployCommand: pnpm --filter @torclix/api migrate
     startCommand: pnpm --filter @torclix/api start
     healthCheckPath: /health
@@ -12,10 +12,12 @@ services:
       - key: SKIP_INSTALL_DEPS
         value: "true"
       - key: NODE_ENV
-        value: development
+        value: production
       - key: NODE_VERSION
         value: 22.14.0
       - key: TORCLIX_DEV_AUTH
+        value: "false"
+      - key: TORCLIX_TRIAL_MODE
         value: "true"
       - key: DATABASE_URL
         fromDatabase:
@@ -24,14 +26,9 @@ services:
       - key: DATABASE_SSL
         value: "true"
       - key: CORS_ORIGIN
-        fromService:
-          name: torclixgroup-web
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://torclixgroup-web.onrender.com
       - key: PUBLIC_URL
         value: https://torclixgroup-api.onrender.com
-      - key: TELEGRAM_DEFAULT_PROJECT
-        value: p1
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
@@ -54,6 +51,8 @@ services:
       - key: VITE_API_URL
         value: https://torclixgroup-api.onrender.com
       - key: VITE_TORCLIX_DEMO
+        value: "false"
+      - key: VITE_TORCLIX_TRIAL
         value: "true"
 
 databases:

@@ -20,7 +20,7 @@ async function waitForServer(){
 test.before(async()=>{
   child=spawn(process.execPath,["apps/api/src/server.mjs"],{
     cwd:process.cwd(),
-    env:{...process.env,NODE_ENV:"development",PORT:String(port),DATABASE_URL:""},
+    env:{...process.env,NODE_ENV:"development",TORCLIX_DEV_AUTH:"true",PORT:String(port),DATABASE_URL:""},
     stdio:["ignore","pipe","pipe"]
   });
   child.stderr.on("data",()=>{});

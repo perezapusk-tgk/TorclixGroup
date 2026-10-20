@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { initStorage, listProjects, saveProject, getDocument, saveDocument, listRecords, saveRecord, newId, getSessionUser, listOrganizationsForUser } from "./storage.mjs";
+import { can } from "../../../packages/access/src/index.ts";
 
 const port = Number(process.env.PORT || 4000);
 const projects = new Map([
@@ -61,6 +62,7 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});
       return;
     }
+    if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}
     if(path==="/api/projects"&&req.method==="POST"){
       const auth=await requireSession(req,res);if(!auth)return;const input=await body(req);const project={id:newId("p"),name:String(input.name||"Untitled project"),type:String(input.type||"website"),industry:String(input.industry||"services"),status:"draft",organizationId:auth.organization.id,slug:String(input.slug||input.name||"untitled").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")};

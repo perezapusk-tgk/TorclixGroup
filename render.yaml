@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: torclixgroup-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @torclix/api build
+    preDeployCommand: pnpm --filter @torclix/api migrate
+    startCommand: pnpm --filter @torclix/api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: development
+      - key: DATABASE_URL
+        fromDatabase:
+          name: torclixgroup-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: "true"
+      - key: CORS_ORIGIN
+        fromService:
+          name: torclixgroup-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: web
+    name: torclixgroup-web
+    runtime: static
+    buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @torclix/web build
+    staticPublishPath: apps/web/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: torclixgroup-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_TORCLIX_DEMO
+        value: "true"
+
+databases:
+  - name: torclixgroup-db
+    plan: free
+    region: frankfurt
+    databaseName: torclixgroup
+    postgresMajorVersion: "17"

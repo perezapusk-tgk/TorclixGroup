@@ -17,7 +17,7 @@ const seed:Project[]=[
 ];
 const templates=[["Restaurant / Noir","Website + Mini App","Меню · столики · заказы · лояльность","restaurant"],["Beauty / Atelier","Website + Mini App","Услуги · мастера · календарь · запись","beauty"],["Fitness / Forma","Mini App","Занятия · тренеры · абонементы","fitness"],["Medical / Northline","Website","Услуги · врачи · запись","medical"],["Real Estate / North","Website","Объекты · агенты · заявки","realty"],["Services / Studio","Website","Услуги · специалисты · заявки","services"],["Car Wash / Wash","Website + Mini App","Услуги · прайс · запись","wash"],["Education / Class","Website + Mini App","Курсы · занятия · запись","education"],["Retail / Store","Website + Mini App","Каталог · корзина · заказы","retail"]];
 
-let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")||seed;
+let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")||[];
 let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", selectedIndustry="wash", wizardStep=1, toast="", editorTab="Design", selectedBlock:string|null=null, projectViewTab="overview";
 type StudioSettings={language:string;font:string;accent:string;theme:string;density:string;radius:string;animations:boolean;compactNav:boolean;emailNotifications:boolean;leadNotifications:boolean;bookingNotifications:boolean};
 let studioSettings:StudioSettings=JSON.parse(localStorage.getItem("tg-settings")||"null")||{language:"ru",font:"Inter",accent:"#d8ff3e",theme:"dark",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};

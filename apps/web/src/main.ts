@@ -68,6 +68,62 @@ function loadDoc(id:string):SiteDoc{
   {id:"contact",name:"Contact",blocks:[{id:"b5",type:"Contact",title:"Let's talk.",body:"hello@example.com"}]}
  ]};
 }
+function buildTemplateDocument(id:string,industry:string):SiteDoc{
+ const templates:Record<string,{pages:Page[];accent:string}>={
+  restaurant:{accent:"#d8ff3e",pages:[
+   {id:"home",name:"Главная",blocks:[
+    {id:"hero",type:"Hero",title:"Вкус, который возвращает.",body:"Меню, столики и заказ — в одном цифровом опысе."},
+    {id:"features",type:"Features",title:"Всё для гостя.",body:"Меню, бронирование, заказы и программа лояльности."},
+    {id:"pricing",type:"Pricing",title:"Популярное меню",body:"Завтраки · Основное меню · Десерты"},
+    {id:"booking",type:"Booking",title:"Забронировать столик",body:"Выберите дату и время — без звонков."},
+    {id:"cta",type:"CTA",title:"До встречи за столом.",body:"Откройте Mini App и оформите заказ."}
+   ]},
+   {id:"menu",name:"Меню",blocks:[{id:"menu-1",type:"Catalog",title:"Основное меню",body:"Каталог блюд и актуальные цены."}]},
+   {id:"contact",name:"Контакты",blocks:[{id:"contact-1",type:"Contact",title:"Мы рядом.",body:"Адрес, часы работы и контакты ресторана."}]}
+  ]},
+  beauty:{accent:"#ff5ca8",pages:[
+   {id:"home",name:"Главная",blocks:[
+    {id:"hero",type:"Hero",title:"Ваш лучший образ.",body:"Услуги, мастера и запись в несколько касаний."},
+    {id:"features",type:"Features",title:"Красота без ожидания.",body:"Выберите услугу, мастера и удобное время."},
+    {id:"pricing",type:"Pricing",title:"Услуги",body:"Стрижка · Окрашивание · Маникюр"},
+    {id:"booking",type:"Booking",title:"Записаться к мастеру",body:"Свободные окна обновляются автоматически."}
+   ]},
+   {id:"services",name:"Услуги",blocks:[{id:"services-1",type:"Catalog",title:"Каталог услуг",body:"Цены, длительность и специалисты."}]},
+   {id:"contact",name:"Контакты",blocks:[{id:"contact-1",type:"Contact",title:"Студия красоты",body:"Адрес и контакты."}]}
+  ]},
+  fitness:{accent:"#5aa9ff",pages:[
+   {id:"home",name:"Главная",blocks:[
+    {id:"hero",type:"Hero",title:"Тренировки, которые работают.",body:"Расписание, тренеры и абонементы в одном месте."},
+    {id:"features",type:"Features",title:"Выберите свой ритм.",body:"Групповые занятия, персональные тренировки и абонементы."},
+    {id:"booking",type:"Booking",title:"Записаться на тренировку",body:"Выберите занятие и время."}
+   ]},
+   {id:"schedule",name:"Расписание",blocks:[{id:"schedule-1",type:"Calendar",title:"Расписание занятий",body:"Занятия и свободные места."}]},
+   {id:"contact",name:"Контакты",blocks:[{id:"contact-1",type:"Contact",title:"Фитнес-студия",body:"Адрес, тренеры и контакты."}]}
+  ]},
+  medical:{accent:"#5aa9ff",pages:[
+   {id:"home",name:"Главная",blocks:[
+    {id:"hero",type:"Hero",title:"Забота без очередей.",body:"Врачи, диагностика и запись онлайн."},
+    {id:"features",type:"Features",title:"Всё под контролем.",body:"Выберите специалиста и удобное время приёма."},
+    {id:"booking",type:"Booking",title:"Записаться к врачу",body:"Запись без звонка в регистратуру."}
+   ]},
+   {id:"services",name:"Услуги",blocks:[{id:"services-1",type:"Catalog",title:"Медицинские услуги",body:"Приём врача · Диагностика · Анализы"}]},
+   {id:"contact",name:"Контакты",blocks:[{id:"contact-1",type:"Contact",title:"Клиника",body:"Адрес, часы работы и контакты."}]}
+  ]},
+  services:{accent:"#c6ff3d",pages:[
+   {id:"home",name:"Главная",blocks:[
+    {id:"hero",type:"Hero",title:"Сделаем быстро и аккуратно.",body:"Услуги, специалисты и заявки в одном цифровом продукте."},
+    {id:"features",type:"Features",title:"Просто получить услугу.",body:"Выберите услугу, оставьте заявку и получите подтверждение."},
+    {id:"pricing",type:"Pricing",title:"Услуги",body:"Консультация · Выезд · Обслуживание"},
+    {id:"booking",type:"Booking",title:"Оставить заявку",body:"Выберите удобное время."}
+   ]},
+   {id:"services",name:"Услуги",blocks:[{id:"services-1",type:"Catalog",title:"Каталог услуг",body:"Описание, стоимость и сроки."}]},
+   {id:"contact",name:"Контакты",blocks:[{id:"contact-1",type:"Contact",title:"Свяжитесь с нами",body:"Телефон, email и адрес."}]}
+  ]}
+ };
+ const base=templates[industry]||templates.services;
+ return {projectId:id,activePage:"home",accent:base.accent,miniApp:{modules:["home","catalog","booking","profile","notifications"],navigation:["home","catalog","booking","profile","notifications"],theme:{accent:base.accent,mode:"dark"}},pages:base.pages};
+}
+
 function saveDoc(){localStorage.setItem("tg-doc-"+doc.projectId,JSON.stringify(doc));}
 function saveProjects(){localStorage.setItem("tg-projects",JSON.stringify(projects));}
 const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
@@ -359,7 +415,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-industry]").forEach(el=>el.addEventListener("click",()=>{selectedIndustry=el.dataset.industry||selectedIndustry;render()}));
  root.querySelectorAll<HTMLElement>("[data-action='wizard-next']").forEach(el=>el.addEventListener("click",()=>{wizardStep=Math.min(3,wizardStep+1);render()}));
  root.querySelectorAll<HTMLElement>("[data-action='wizard-back']").forEach(el=>el.addEventListener("click",()=>{wizardStep=Math.max(1,wizardStep-1);render()}));
- root.querySelectorAll<HTMLElement>("[data-action='create-project']").forEach(el=>el.addEventListener("click",async()=>{const name=root.querySelector<HTMLInputElement>("#project-name")?.value.trim()||"Новый проект";const industry=selectedIndustry;const typeMap:Record<string,string>={"Website":"website","Mini App":"mini_app","Website + Mini App":"website_mini_app"};const localId="p"+Date.now();const payload={name,type:typeMap[selectedType]||"website",industry:industry.toLowerCase().replace(" ","_"),organizationId:"org_demo"};const remote=await api("/api/projects",{method:"POST",body:JSON.stringify(payload)});if(!remote?.data?.id){notify(remote?.error||"Не удалось создать проект.");return;}const id=remote.data.id;const moduleMap:Record<string,string[]>={wash:["home","services","booking","profile","notifications"],restaurant:["home","catalog","cart","booking","profile","loyalty"],beauty:["home","catalog","calendar","booking","profile"],fitness:["home","catalog","calendar","membership","profile"],medical:["home","catalog","booking","profile","notifications"],realty:["home","catalog","booking","profile"],services:["home","catalog","booking","profile","notifications"],education:["home","catalog","calendar","booking","profile"],retail:["home","catalog","cart","profile","notifications"],other:["home","catalog","booking","profile","notifications"]};miniModules=moduleMap[industry]||moduleMap.services;projects.unshift({id,name,url:(remote.data.slug||name.toLowerCase().replace(/[^a-z0-9]+/g,"-"))+".preview",type:selectedType,status:"Draft",leads:0,industry});saveProjects();modal=false;wizardStep=1;editorProject=id;doc=loadDoc(id);doc.miniApp={modules:miniModules,navigation:miniModules,theme:{accent:doc.accent,mode:"dark"}};saveDoc();await hydrateDocument(id);await syncDocument();render();notify(name+" создан — открываем конструктор.")}));
+ root.querySelectorAll<HTMLElement>("[data-action='create-project']").forEach(el=>el.addEventListener("click",async()=>{const name=root.querySelector<HTMLInputElement>("#project-name")?.value.trim()||"Новый проект";const industry=selectedIndustry;const typeMap:Record<string,string>={"Website":"website","Mini App":"mini_app","Website + Mini App":"website_mini_app"};const localId="p"+Date.now();const payload={name,type:typeMap[selectedType]||"website",industry:industry.toLowerCase().replace(" ","_"),organizationId:"org_demo"};const remote=await api("/api/projects",{method:"POST",body:JSON.stringify(payload)});if(!remote?.data?.id){notify(remote?.error||"Не удалось создать проект.");return;}const id=remote.data.id;const moduleMap:Record<string,string[]>={wash:["home","services","booking","profile","notifications"],restaurant:["home","catalog","cart","booking","profile","loyalty"],beauty:["home","catalog","calendar","booking","profile"],fitness:["home","catalog","calendar","membership","profile"],medical:["home","catalog","booking","profile","notifications"],realty:["home","catalog","booking","profile"],services:["home","catalog","booking","profile","notifications"],education:["home","catalog","calendar","booking","profile"],retail:["home","catalog","cart","profile","notifications"],other:["home","catalog","booking","profile","notifications"]};miniModules=moduleMap[industry]||moduleMap.services;projects.unshift({id,name,url:(remote.data.slug||name.toLowerCase().replace(/[^a-z0-9]+/g,"-"))+".preview",type:selectedType,status:"Draft",leads:0,industry});saveProjects();modal=false;wizardStep=1;editorProject=id;doc=buildTemplateDocument(id,industry);doc.miniApp={modules:miniModules,navigation:miniModules,theme:{accent:doc.accent,mode:"dark"}};saveDoc();await hydrateDocument(id);await syncDocument();render();notify(name+" создан — открываем конструктор.")}));
  root.querySelectorAll<HTMLElement>("[data-project],[data-open-project]").forEach(el=>el.addEventListener("click",async(e)=>{e.preventDefault();e.stopPropagation();const id=el.dataset.project||el.dataset.openProject;if(!id)return;editorProject=id;active="Projects";modal=false;projectViewTab="overview";doc=loadDoc(id);selectedBlock=null;render();await hydrateDocument(id);render();}));
  root.querySelectorAll<HTMLElement>("[data-template]").forEach(el=>el.addEventListener("click",()=>{
   const t=templates[Number(el.dataset.template)];

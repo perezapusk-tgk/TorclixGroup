@@ -301,4 +301,93 @@ function projectCRM(project:Project){
 function projectSettings(project:Project){
  return `<div class="project-module-view"><div class="settings-card"><div class="settings-card-head"><div><h3>Настройки проекта</h3><p>Основные параметры проекта клиента.</p></div><span class="badge ${project.status==="Live"?"live":""}">${project.status==="Live"?"Опубликован":"Черновик"}</span></div><div class="security-grid"><div><span>Название</span><strong>${project.name}</strong></div><div><span>Тип</span><strong>${project.type}</strong></div><div><span>Отрасль</span><strong>${project.industry}</strong></div><div><span>Проект ID</span><strong>${project.id}</strong></div></div></div><div class="settings-card"><div class="settings-card-head"><div><h3>Публикация и домен</h3><p>Следующий шаг — подключить собственный домен клиента.</p></div></div><div class="quick-actions"><button class="secondary" data-nav-direct="Domains">Домены</button><button class="secondary" data-nav-direct="Analytics">Аналитика</button></div></div></div>`;
 }
+function blockInspector(page:Page){
+ const block=page.blocks.find(b=>b.id===selectedBlock);
+ if(!block) return `<div class="inspector-note">Select a block to edit it.</div>`;
+ return `<div class="selected-block"><div class="style-chip">${block.type}</div><label class="field"><span>Title</span><textarea id="block-title">${block.title}</textarea></label><label class="field"><span>Body</span><textarea id="block-body">${block.body}</textarea></label><button class="primary full" data-action="save-block">Save block</button><button class="secondary full" data-action="clear-block">Done</button></div>`;
+}
+
+function projectModal(){
+ const types=[["Website","Сайт клиента: страницы, секции, SEO и публикация."],["Mini App","Telegram Mini App: модули, запись, каталог и профиль."],["Website + Mini App","Полный клиентский цифровой продукт."]];
+ const industries=[["restaurant","🍽️","Ресторан и кафе","Меню, столики, доставка"],["beauty","✦","Красота","Салоны, мастера, запись"],["fitness","◒","Фитнес и спорт","Занятия, тренеры, абонементы"],["medical","✚","Медицина","Клиники, врачи, запись"],["realty","⌂","Недвижимость","Объекты, агенты, заявки"],["services","◆","Услуги","Сервисы, специалисты, заявки"],["wash","◌","Автомойка","Услуги, запись, прайс"],["education","▣","Обучение","Курсы, занятия, преподаватели"],["retail","◇","Магазин","Каталог, корзина, заказы"],["other","•","Другое","Универсальный шаблон"]];
+ const names=["Выберите формат","Выберите отрасль","Назовите проект"];
+ const stepBody=wizardStep===1?`<div class="type-grid">${types.map(([n,c])=>`<button class="type-option ${selectedType===n?"selected":""}" data-type="${n}"><strong>${n}</strong><span>${c}</span></button>`).join("")}</div>`:wizardStep===2?`<div class="industry-grid">${industries.map(([id,icon,n,c])=>`<button class="industry-option ${selectedIndustry===id?"selected":""}" data-industry="${id}"><span class="industry-icon">${icon}</span><span class="industry-copy"><strong>${n}</strong><small>${c}</small></span><span class="industry-check">${selectedIndustry===id?"✓":""}</span></button>`).join("")}</div>`:`<div class="project-create-preview"><div class="eyebrow">Готово к созданию</div><h3>${selectedType}</h3><p>Отрасль: <strong>${industries.find(x=>x[0]===selectedIndustry)?.[2]||"Услуги"}</strong></p><div class="field"><label>Название проекта</label><input id="project-name" placeholder="Например, ПЕНА24"/></div></div>`;
+ return `<div class="modal-backdrop" data-close="modal"><div class="modal modal-wizard"><div class="modal-head"><div><div class="eyebrow">05 / Новый проект · шаг ${wizardStep} из 3</div><div class="modal-title">${names[wizardStep-1]}</div></div><button class="close" data-close="modal">×</button></div><div class="wizard-progress"><span class="${wizardStep>=1?"on":""}">01</span><i></i><span class="${wizardStep>=2?"on":""}">02</span><i></i><span class="${wizardStep>=3?"on":""}">03</span></div><div class="modal-body">${stepBody}</div><div class="modal-foot"><button class="secondary" data-close="modal">Отмена</button>${wizardStep>1?`<button class="secondary" data-action="wizard-back">Назад</button>`: ""}${wizardStep<3?`<button class="primary" data-action="wizard-next">Продолжить →</button>`:`<button class="primary" data-action="create-project">Создать проект →</button>`}</div></div></div>`;
+}
+
+function notify(m:string){toast=m;render();window.setTimeout(()=>{toast="";render()},2200)}
+function bind(){
+ root.querySelectorAll<HTMLElement>("[data-setting]").forEach(el=>el.addEventListener("change",()=>{
+   const key=el.dataset.setting as keyof StudioSettings;
+   if(key==="language") studioSettings.language=(el as HTMLSelectElement).value;
+   else if(key==="font") studioSettings.font=(el as HTMLSelectElement).value;
+   else if(key==="accent") studioSettings.accent=(el as HTMLInputElement).value;
+   else if(key==="theme") studioSettings.theme=(el as HTMLSelectElement).value;
+   else if(key==="density") studioSettings.density=(el as HTMLSelectElement).value;
+   else if(key==="radius") studioSettings.radius=(el as HTMLSelectElement).value;
+   else if(key==="animations"||key==="compactNav"||key==="emailNotifications"||key==="leadNotifications"||key==="bookingNotifications") studioSettings[key]=(el as HTMLInputElement).checked;
+   saveSettings(); render();
+ }));
+ root.querySelectorAll<HTMLElement>("[data-action='refresh-telegram']").forEach(el=>el.addEventListener("click",async()=>{await hydrateTelegram();render();notify(telegramStatus.enabled?"Telegram подключён.":"Telegram пока не подключён.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='configure-telegram']").forEach(el=>el.addEventListener("click",async()=>{const result=await api("/api/telegram/configure",{method:"POST",body:JSON.stringify({projectId:editorProject||"p1"})});if(result?.data){await hydrateTelegram();render();notify("Telegram подключён и Mini App настроен.");}else notify(result?.error||"Не удалось подключить Telegram.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='open-telegram-mini']").forEach(el=>el.addEventListener("click",()=>{if(telegramStatus.miniAppUrl)window.open(telegramStatus.miniAppUrl,"_blank","noopener,noreferrer");}));
+ root.querySelectorAll<HTMLElement>("[data-settings-scroll]").forEach(el=>el.addEventListener("click",()=>document.getElementById("settings-"+el.dataset.settingsScroll)?.scrollIntoView({behavior:"smooth",block:"start"})));
+ root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={language:"ru",font:"Inter",accent:"#d8ff3e",theme:"dark",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};saveSettings();render();notify("Стиль возвращён к стандартному.");}));
+
+ root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();render()}));
+ root.querySelectorAll<HTMLElement>("[data-nav-direct]").forEach(el=>el.addEventListener("click",()=>{active=el.dataset.navDirect||"Overview";editorProject=null;render()}));
+ root.querySelectorAll<HTMLElement>("[data-action='back']").forEach(el=>el.addEventListener("click",()=>{editorProject=null;active="Projects";render()}));
+ root.querySelectorAll<HTMLElement>("[data-action='new-project']").forEach(el=>el.addEventListener("click",()=>{modal=true;wizardStep=1;selectedType="Website + Mini App";selectedIndustry="wash";render()}));
+ root.querySelectorAll<HTMLElement>("[data-close='modal']").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).dataset.close==="modal"||el.classList.contains("close")||el.classList.contains("secondary")){modal=false;render()}}));
+ root.querySelectorAll<HTMLElement>("[data-type]").forEach(el=>el.addEventListener("click",()=>{selectedType=el.dataset.type||selectedType;render()}));
+ root.querySelectorAll<HTMLElement>("[data-industry]").forEach(el=>el.addEventListener("click",()=>{selectedIndustry=el.dataset.industry||selectedIndustry;render()}));
+ root.querySelectorAll<HTMLElement>("[data-action='wizard-next']").forEach(el=>el.addEventListener("click",()=>{wizardStep=Math.min(3,wizardStep+1);render()}));
+ root.querySelectorAll<HTMLElement>("[data-action='wizard-back']").forEach(el=>el.addEventListener("click",()=>{wizardStep=Math.max(1,wizardStep-1);render()}));
+ root.querySelectorAll<HTMLElement>("[data-action='create-project']").forEach(el=>el.addEventListener("click",async()=>{const name=root.querySelector<HTMLInputElement>("#project-name")?.value.trim()||"Новый проект";const industry=selectedIndustry;const typeMap:Record<string,string>={"Website":"website","Mini App":"mini_app","Website + Mini App":"website_mini_app"};const localId="p"+Date.now();const payload={name,type:typeMap[selectedType]||"website",industry:industry.toLowerCase().replace(" ","_"),organizationId:"org_demo"};const remote=await api("/api/projects",{method:"POST",body:JSON.stringify(payload)});if(!remote?.data?.id){notify(remote?.error||"Не удалось создать проект.");return;}const id=remote.data.id;const moduleMap:Record<string,string[]>={wash:["home","services","booking","profile","notifications"],restaurant:["home","catalog","cart","booking","profile","loyalty"],beauty:["home","catalog","calendar","booking","profile"],fitness:["home","catalog","calendar","membership","profile"],medical:["home","catalog","booking","profile","notifications"],realty:["home","catalog","booking","profile"],services:["home","catalog","booking","profile","notifications"],education:["home","catalog","calendar","booking","profile"],retail:["home","catalog","cart","profile","notifications"],other:["home","catalog","booking","profile","notifications"]};miniModules=moduleMap[industry]||moduleMap.services;projects.unshift({id,name,url:(remote.data.slug||name.toLowerCase().replace(/[^a-z0-9]+/g,"-"))+".preview",type:selectedType,status:"Draft",leads:0,industry});saveProjects();modal=false;wizardStep=1;editorProject=id;doc=loadDoc(id);doc.miniApp={modules:miniModules,navigation:miniModules,theme:{accent:doc.accent,mode:"dark"}};saveDoc();await hydrateDocument(id);await syncDocument();render();notify(name+" создан — открываем конструктор.")}));
+ root.querySelectorAll<HTMLElement>("[data-project],[data-open-project]").forEach(el=>el.addEventListener("click",async(e)=>{e.preventDefault();e.stopPropagation();const id=el.dataset.project||el.dataset.openProject;if(!id)return;editorProject=id;active="Projects";modal=false;projectViewTab="overview";doc=loadDoc(id);selectedBlock=null;render();await hydrateDocument(id);render();}));
+ root.querySelectorAll<HTMLElement>("[data-template]").forEach(el=>el.addEventListener("click",()=>{
+  const t=templates[Number(el.dataset.template)];
+  selectedType=t[1];
+  const label=String(t[0]).toLowerCase();
+  selectedIndustry=label.includes("restaurant")?"restaurant":label.includes("beauty")?"beauty":label.includes("fitness")?"fitness":label.includes("medical")?"medical":label.includes("real estate")?"realty":"services";
+  modal=true; wizardStep=2; render();
+}));
+ root.querySelectorAll<HTMLElement>("[data-page]").forEach(el=>el.addEventListener("click",()=>{doc.activePage=el.dataset.page||doc.activePage;saveDoc();render()}));
+ root.querySelectorAll<HTMLElement>("[data-tab]").forEach(el=>el.addEventListener("click",()=>{editorTab=el.dataset.tab||"Design";render()}));
+ root.querySelectorAll<HTMLElement>("[data-project-tab]").forEach(el=>el.addEventListener("click",()=>{projectViewTab=el.dataset.projectTab||"overview";render()}));
+ root.querySelectorAll<HTMLElement>("[data-mini-module]").forEach(el=>el.addEventListener("click",()=>{const id=el.dataset.miniModule||"";miniModules=miniModules.includes(id)?miniModules.filter(x=>x!==id):[...miniModules,id];doc.miniApp={modules:miniModules,navigation:miniModules,theme:{accent:doc.accent,mode:doc.miniApp?.theme?.mode==="light"?"light":"dark"}};if(editorProject){localStorage.setItem("tg-mini-"+editorProject,JSON.stringify(miniModules));saveDoc();void syncDocument();}render();}));
+ root.querySelectorAll<HTMLElement>("[data-action='toggle-mini']").forEach(el=>el.addEventListener("click",()=>{notify("Mini App открыт в конструкторе проекта.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='open-miniapp']").forEach(el=>el.addEventListener("click",()=>{if(editorProject&&API_BASE)window.open(API_BASE+"/miniapp/"+editorProject,"_blank","noopener,noreferrer");}));
+ root.querySelectorAll<HTMLElement>("[data-action='publish-miniapp']").forEach(el=>el.addEventListener("click",async()=>{
+  if(!editorProject)return;
+  doc.miniApp={modules:miniModules,navigation:miniModules,theme:{accent:doc.accent,mode:doc.miniApp?.theme?.mode==="light"?"light":"dark"}};
+  saveDoc();
+  const sync=await syncDocument();
+  if(sync?.error){notify("Не удалось сохранить Mini App: "+sync.error);return;}
+  const result=await api("/api/projects/"+editorProject+"/publish",{method:"POST"});
+  if(result?.data?.published){
+    const p=projects.find(x=>x.id===editorProject);
+    if(p){p.status="Live";saveProjects();}
+    notify("Mini App опубликован. Можно открыть его по ссылке.");
+  }else{
+    notify("Не удалось опубликовать Mini App: "+(result?.error||"ошибка API")+".");
+  }
+}));
+ root.querySelectorAll<HTMLElement>("[data-action='crm-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateCRM();notify("Данные обновлены.");}));
+ root.querySelectorAll<HTMLElement>("[data-add-block]").forEach(el=>el.addEventListener("click",()=>{const type=el.dataset.addBlock||"Section";const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks.push({id:"b"+Date.now(),type,title:type==="Hero"?"Your next chapter starts here.":type+" section",body:"Edit this section to match your client's business."});saveDoc();void syncDocument();notify(type+" section added.")}));
+ root.querySelectorAll<HTMLElement>("[data-block]").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).closest("[data-remove-block]")) return;selectedBlock=el.dataset.block||null;render();}));
+ root.querySelectorAll<HTMLElement>("[data-action='save-block']").forEach(el=>el.addEventListener("click",()=>{const page=doc.pages.find(p=>p.id===doc.activePage)!;const block=page.blocks.find(b=>b.id===selectedBlock);if(block){block.title=root.querySelector<HTMLTextAreaElement>("#block-title")?.value||block.title;block.body=root.querySelector<HTMLTextAreaElement>("#block-body")?.value||block.body;saveDoc();void syncDocument();notify("Блок сохранён.");}}));
+ root.querySelectorAll<HTMLElement>("[data-action='clear-block']").forEach(el=>el.addEventListener("click",()=>{selectedBlock=null;render();}));
+ root.querySelectorAll<HTMLElement>("[data-remove-block]").forEach(el=>el.addEventListener("click",()=>{const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks=page.blocks.filter(b=>b.id!==el.dataset.removeBlock);saveDoc();void syncDocument();render()}));
+ root.querySelector<HTMLInputElement>("#accent")?.addEventListener("input",e=>{doc.accent=(e.target as HTMLInputElement).value;doc.miniApp={modules:doc.miniApp?.modules||miniModules,navigation:doc.miniApp?.navigation||miniModules,theme:{accent:doc.accent,mode:doc.miniApp?.theme?.mode==="light"?"light":"dark"}};saveDoc();void syncDocument();document.documentElement.style.setProperty("--editor-accent",doc.accent)});
+ root.querySelectorAll<HTMLElement>("[data-action='add-page']").forEach(el=>el.addEventListener("click",()=>{const id="page"+Date.now();doc.pages.push({id,name:"Новая страница",blocks:[{id:"b"+Date.now(),type:"Hero",title:"Новая страница.",body:"Начните собирать страницу для клиента."}]});doc.activePage=id;saveDoc();void syncDocument();render()}));
+ root.querySelectorAll<HTMLElement>("[data-action='preview']").forEach(el=>el.addEventListener("click",()=>{if(!editorProject){notify("Сначала откройте проект.");return;}if(!API_BASE){notify("Для предпросмотра нужен VITE_API_URL.");return;}window.open(API_BASE+"/published/"+editorProject,"_blank","noopener,noreferrer");}));
+ root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",async()=>{
+  const p=projects.find(x=>x.id===editorProject);if(!p)return;
+  const remote=await api("/api/projects/"+p.id+"/publish",{method:"POST"});
+  if(remote?.data?.published){p.status="Live";saveProjects();notify(p.name+" опубликован. Сайт доступен через «Сайты».");}
+  else notify("Публикация не выполнена. Проверьте API и авторизацию.");
+}));
+}
 ;

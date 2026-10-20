@@ -6,7 +6,7 @@ type Page = { id:string; name:string; blocks:Block[] };
 type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string; miniApp?:{modules:string[];navigation?:string[];theme?:{accent:string;mode:"light"|"dark"}}; };
 
 const nav = [
-  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["▤","Catalog"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["♟","Team"],["⚙","Settings"]
+  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["▤","Catalog"],["▣","Orders"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["♟","Team"],["⚙","Settings"]
 ] as const;
 
 const seed:Project[]=[
@@ -53,6 +53,7 @@ let session:any=null;
 let billing:any=null;
 let analytics:any=null;
 let catalogItems:any[]=[];
+let orders:any[]=[];
 let catalogModal=false;
 let editingCatalogId:string|null=null;
 let team:any[]=[];
@@ -157,6 +158,10 @@ const TRIAL_KEY="tg-trial-session";
 const trialToken=TRIAL_AUTH?(localStorage.getItem(TRIAL_KEY)||(()=>{const value=crypto.randomUUID().replace(/-/g,"")+crypto.randomUUID().replace(/-/g,"");localStorage.setItem(TRIAL_KEY,value);return value;})()):"";
 let hydrated=false;
 let telegramStatus:{enabled:boolean;miniAppUrl:string}={enabled:false,miniAppUrl:""};
+async function hydrateOrders(){
+ if(!API_BASE)return;
+ const result=await api("/api/orders");orders=Array.isArray(result?.data)?result.data:[];if(active==="Orders")render();
+}
 async function hydrateCatalog(){
  if(!API_BASE) return;
  const result=await api("/api/catalog");
@@ -338,6 +343,7 @@ function settingsView(){
  if(section==="Leads") return crmView("Leads",crm.leads.map(x=>[x.name,x.email||x.phone||"No contact",x.status||"new"]));
  if(section==="Bookings") return crmView("Bookings",crm.bookings.map(x=>[x.customerName,x.startAt?new Date(x.startAt).toLocaleString():"No time",x.status||"pending"]));
  if(section==="Catalog") return catalogView();
+ if(section==="Orders") return ordersView();
  const list=rows[section]||[];
  const sectionCopy:Record<string,string>={
   Projects:"Управление всеми клиентскими проектами и их состоянием.",
@@ -462,6 +468,8 @@ function bind(){
    else if(key==="animations"||key==="compactNav"||key==="emailNotifications"||key==="leadNotifications"||key==="bookingNotifications") studioSettings[key]=(el as HTMLInputElement).checked;
    saveSettings(); render();
  }));
+ root.querySelectorAll<HTMLElement>("[data-action='orders-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateOrders();notify("Заказы обновлены.");}));
+ root.querySelectorAll<HTMLSelectElement>("[data-order-status]").forEach(el=>el.addEventListener("change",async()=>{const result=await api("/api/orders/"+el.dataset.orderStatus,{method:"PATCH",body:JSON.stringify({status:el.value})});if(result?.data){await hydrateOrders();notify("Статус заказа обновлён.");}else notify(result?.error||"Не удалось обновить заказ.");}));
  root.querySelectorAll<HTMLElement>("[data-action='catalog-new']").forEach(el=>el.addEventListener("click",()=>{editingCatalogId=null;catalogModal=true;render();}));
  root.querySelectorAll<HTMLElement>("[data-catalog-edit]").forEach(el=>el.addEventListener("click",()=>{editingCatalogId=el.dataset.catalogEdit||null;catalogModal=true;render();}));
  root.querySelectorAll<HTMLElement>("[data-close='catalog-modal']").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).dataset.close==="catalog-modal"||el.classList.contains("close")||el.classList.contains("secondary")){catalogModal=false;editingCatalogId=null;render();}}));
@@ -485,7 +493,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
  root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={language:"ru",font:"Inter",accent:"#d8ff3e",theme:"dark",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};saveSettings();render();notify("Стиль возвращён к стандартному.");}));
 
- root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();if(active==="Catalog") await hydrateCatalog();render()}));
+ root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();if(active==="Catalog") await hydrateCatalog();if(active==="Orders") await hydrateOrders();render()}));
  root.querySelectorAll<HTMLElement>("[data-nav-direct]").forEach(el=>el.addEventListener("click",()=>{active=el.dataset.navDirect||"Overview";editorProject=null;render()}));
  root.querySelectorAll<HTMLElement>("[data-action='back']").forEach(el=>el.addEventListener("click",()=>{editorProject=null;active="Projects";render()}));
  root.querySelectorAll<HTMLElement>("[data-action='new-project']").forEach(el=>el.addEventListener("click",()=>{modal=true;wizardStep=1;selectedType="Website + Mini App";selectedIndustry="wash";render()}));
@@ -548,7 +556,7 @@ async function boot(){
   try{
     applyStudioSettings();
     render();
-    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateCatalog(),hydrateTelegram()]);
+    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateCatalog(),hydrateOrders(),hydrateTelegram()]);
     if(!editorProject) render();
   }catch(error){
     console.error("TorclixGroup boot error",error);
@@ -556,4 +564,9 @@ async function boot(){
   }
 }
 
-void boot();
+void boot();function ordersView(){
+ const statusLabel=(s:string)=>({pending:"Ожидает",paid:"Оплачен",processing:"В работе",completed:"Завершён",cancelled:"Отменён",refunded:"Возврат"}[s]||s);
+ const rows=orders.map(o=>'<div class="workspace-row"><div class="project-name">#'+String(o.id).slice(0,8)+'</div><div class="project-type">'+(o.customerName||"Клиент")+' · '+(projects.find(p=>p.id===o.projectId)?.name||"Проект")+'</div><span class="badge '+(o.status==="paid"||o.status==="completed"?"live":"")+'">'+statusLabel(o.status)+' · '+o.total+" "+o.currency+'</span><select class="order-status" data-order-status="'+o.id+'"><option value="pending">Ожидает</option><option value="paid">Оплачен</option><option value="processing">В работе</option><option value="completed">Завершён</option><option value="cancelled">Отменён</option><option value="refunded">Возврат</option></select></div>').join("");
+ return '<div class="eyebrow">04 / Business OS</div><div class="workspace-head"><div><h2>Заказы</h2><p class="hero-copy">Заказы из сайтов и Mini Apps. Следующий слой — подключение реального провайдера оплаты.</p></div><button class="secondary" data-action="orders-refresh">Обновить</button></div><section class="card table-card"><div class="card-head"><div class="card-title">Заказы</div><div class="card-meta">'+orders.length+'</div></div>'+(rows||'<div class="inspector-note">Заказов пока нет.</div>')+'</section></div>';
+}
+

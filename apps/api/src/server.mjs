@@ -7,6 +7,7 @@ import {
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
 import { billingSnapshot } from "./billing.mjs";
+import { configureTelegramBot, telegramApi, telegramMiniAppUrl, verifyTelegramInitData } from "./telegram.mjs";
 
 const port=Number(process.env.PORT||4000);
 const projects=new Map([
@@ -30,10 +31,10 @@ function json(res,status,data){res.writeHead(status,headers());res.end(JSON.stri
 function html(res,status,body){res.writeHead(status,{"content-type":"text/html; charset=utf-8"});res.end(body);}
 async function body(req){let raw="";for await(const chunk of req) raw+=chunk;return raw?JSON.parse(raw):{};}
 function esc(value=""){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function defaultDocument(projectId){return {projectId,activePage:"home",accent:"#d8ff3e",pages:[{id:"home",name:"Home",blocks:[
-  {id:"b1",type:"Hero",title:"Built for the next version of your business.",body:"A premium digital experience, managed from one studio."},
-  {id:"b2",type:"Features",title:"Everything your clients need.",body:"Services, booking, catalog, leads and customer journeys in one system."},
-  {id:"b3",type:"CTA",title:"Ready when you are.",body:"Book a consultation or start a project."}
+function defaultDocument(projectId){return {projectId,activePage:"home",accent:"#d8ff3e",pages:[{id:"home",name:"Главная",blocks:[
+  {id:"b1",type:"Hero",title:"Ваш бизнес — в одном цифровом пространстве",body:"Сайт, заявки, записи и мини‑приложение Telegram управляются из одной студии TorclixGroup."},
+  {id:"b2",type:"Features",title:"Всё необходимое вашим клиентам",body:"Услуги, каталог, бронирование, заявки и клиентский путь — в одном удобном интерфейсе."},
+  {id:"b3",type:"CTA",title:"Готовы начать?",body:"Оставьте заявку или откройте мини‑приложение прямо в Telegram."}
 ]}]};}
 function renderPreview(project,doc){
   const page=doc.pages.find(p=>p.id===doc.activePage)||doc.pages[0];
@@ -124,13 +125,50 @@ const server=createServer(async(req,res)=>{
       const project=(!process.env.DATABASE_URL)
         ? (projects.get(requestedProjectId)||null)
         : await getPublishedProject(projectId);
-      if(!project){html(res,404,"<h1>Мини-приложение не найдено</h1>");return;}
+      if(!project){html(res,404,"<h1>Мини‑приложение не найдено</h1>");return;}
       const document=await getPublishedDocument(project.id) || (!process.env.DATABASE_URL ? defaultDocument(project.id) : null);
-      if(!document){html(res,404,"<h1>Мини-приложение не опубликовано</h1>");return;}
+      if(!document){html(res,404,"<h1>Мини‑приложение ещё не опубликовано</h1>");return;}
       const page=document.pages?.find(p=>p.id===document.activePage)||document.pages?.[0];
-      const blocks=(page?.blocks||[]).map((b,i)=>`<article style="padding:24px 0;border-bottom:1px solid #252525"><small style="opacity:.5">0${i+1} · ${esc(b.type)}</small><h2 style="font-size:32px;line-height:1;margin:10px 0">${esc(b.title)}</h2><p style="line-height:1.55;opacity:.72">${esc(b.body)}</p><button onclick="Telegram.WebApp.showAlert('Torclix action')" style="border:0;border-radius:999px;padding:12px 16px;background:${esc(document.accent||"#d8ff3e")}">Открыть</button></article>`).join("");
-      html(res,200,`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://telegram.org/js/telegram-web-app.js"></script><title>${esc(project.name)}</title></head><body style="margin:0;background:#0b0b0b;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><main style="max-width:560px;margin:auto;padding:20px 20px 48px"><header style="padding:12px 0 28px"><small style="opacity:.5">МИНИ-ПРИЛОЖЕНИЕ TORCLIXGROUP</small><h1 style="font-size:42px;line-height:.95;margin:10px 0">${esc(project.name)}</h1></header>${blocks}</main><script>if(window.Telegram?.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}</script></body></html>`);
+      const blocks=(page?.blocks||[]).map((b,i)=>'<article class="tg-block"><small>0'+(i+1)+' · '+esc(b.type==="Hero"?"Главный экран":b.type==="Features"?"Возможности":b.type==="CTA"?"Действие":b.type)+'</small><h2>'+esc(b.title)+'</h2><p>'+esc(b.body)+'</p><button class="tg-action" data-action="open">Открыть</button></article>').join("");
+      const accent=esc(document.accent||"#d8ff3e");
+      const projectName=esc(project.name);
+      html(res,200,'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="color-scheme" content="dark light"><script src="https://telegram.org/js/telegram-web-app.js"></script><title>'+projectName+'</title><style>
+:root{--accent:'+accent+';--bg:#0b0d0e;--card:#151819;--text:#f5f7f2;--muted:#9da39e;--line:#262a2b}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{min-height:100vh}main{max-width:620px;margin:auto;padding:calc(18px + env(safe-area-inset-top)) 18px calc(48px + env(safe-area-inset-bottom))}.brand{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0 24px}.brand-mark{font-weight:900;letter-spacing:.08em}.tg-user{font-size:13px;color:var(--muted);text-align:right}.hero{padding:20px 0 28px}.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:800}.hero h1{font-size:clamp(38px,11vw,64px);line-height:.94;margin:12px 0}.hero p{font-size:17px;line-height:1.55;color:var(--muted);margin:0}.tg-block{padding:22px 0;border-top:1px solid var(--line)}.tg-block small{color:var(--muted)}.tg-block h2{font-size:27px;line-height:1.05;margin:9px 0}.tg-block p{line-height:1.55;color:var(--muted)}button{font:inherit}.tg-action{width:100%;border:0;border-radius:14px;padding:14px 16px;background:var(--accent);color:#0a0b0b;font-weight:800;margin-top:8px}.request{display:none;border:1px solid var(--line);background:var(--card);border-radius:18px;padding:16px;margin-top:16px}.request.open{display:block}.request input{width:100%;padding:13px 12px;margin:6px 0;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);outline:none}.request .submit{margin-top:8px}.status{min-height:20px;color:var(--muted);font-size:13px;margin-top:10px}.foot{color:var(--muted);font-size:12px;text-align:center;padding-top:28px}</style></head><body><main>
+<header class="brand"><div class="brand-mark">TORCLIXGROUP</div><div class="tg-user" id="tgUser">Telegram</div></header>
+<section class="hero"><div class="eyebrow">Мини‑приложение</div><h1>'+projectName+'</h1><p>'+esc(page?.blocks?.[0]?.body||"Ваш сервис всегда под рукой.")+'</p></section>
+<section>'+blocks+'</section>
+<section class="request" id="request"><strong>Оставить заявку</strong><input id="name" placeholder="Ваше имя"><input id="phone" placeholder="Телефон"><input id="when" type="datetime-local"><button class="tg-action submit" id="submit">Отправить заявку</button><div class="status" id="status"></div></section>
+<div class="foot">Работает внутри Telegram · TorclixGroup</div>
+</main><script>
+const tg=window.Telegram?.WebApp;const initData=tg?.initData||"";if(tg){tg.ready();tg.expand();tg.enableClosingConfirmation?.();document.documentElement.style.setProperty("--bg",tg.themeParams?.bg_color||"#0b0d0e");document.documentElement.style.setProperty("--text",tg.themeParams?.text_color||"#f5f7f2");document.documentElement.style.setProperty("--muted",tg.themeParams?.hint_color||"#9da39e");const u=tg.initDataUnsafe?.user;if(u)document.getElementById("tgUser").textContent=(u.first_name||"")+" "+(u.last_name||"");tg.BackButton?.onClick(()=>{document.getElementById("request").classList.remove("open");tg.BackButton.hide();});}
+document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click",()=>{document.getElementById("request").classList.add("open");tg?.BackButton?.show();tg?.HapticFeedback?.impactOccurred("light");document.getElementById("name").focus();}));
+document.getElementById("submit").addEventListener("click",async()=>{const status=document.getElementById("status");const name=document.getElementById("name").value.trim();const phone=document.getElementById("phone").value.trim();const when=document.getElementById("when").value;if(!name){status.textContent="Укажите имя";return;}if(!when){status.textContent="Выберите дату и время";return;}status.textContent="Отправляем…";try{const r=await fetch("/public/projects/__${project.id}__/bookings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({customerName:name,customerEmail:phone,startAt:new Date(when).toISOString(),service:"Заявка из Telegram",tg_init:initData})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Не удалось отправить");status.textContent="Готово. Заявка отправлена.";tg?.HapticFeedback?.notificationOccurred("success");tg?.MainButton?.hide();}catch(e){status.textContent="Не удалось отправить заявку. Попробуйте ещё раз.";tg?.HapticFeedback?.notificationOccurred("error");}});
+</script></body></html>');
       return;
+    }
+    if(path==="/api/telegram/status"&&req.method==="GET"){
+      json(res,200,{data:{enabled:!!process.env.TELEGRAM_BOT_TOKEN,miniAppUrl:telegramMiniAppUrl(process.env.TELEGRAM_DEFAULT_PROJECT||"p1")}});
+      return;
+    }
+    if(path==="/api/telegram/validate"&&req.method==="POST"){
+      const input=await body(req);
+      const user=verifyTelegramInitData(String(input.initData||""),process.env.TELEGRAM_BOT_TOKEN||"");
+      if(!user){json(res,401,{error:"Telegram авторизация недействительна"});return;}
+      json(res,200,{data:{authenticated:true,user}});
+      return;
+    }
+    if(path==="/tg/webhook"&&req.method==="POST"){
+      const expected=process.env.TELEGRAM_WEBHOOK_SECRET||"";
+      const provided=String(req.headers["x-telegram-bot-api-secret-token"]||"");
+      if(!expected||!provided||expected!==provided){res.writeHead(403);res.end();return;}
+      const update=await body(req);
+      const chatId=update?.message?.chat?.id;
+      if(chatId&&update.message?.text?.startsWith("/start")){
+        await telegramApi("sendMessage",{chat_id:chatId,text:"Добро пожаловать в TorclixGroup! Откройте мини‑приложение, чтобы посмотреть сервис и оставить заявку.",reply_markup:{inline_keyboard:[[{text:"Открыть мини‑приложение",web_app:{url:telegramMiniAppUrl(process.env.TELEGRAM_DEFAULT_PROJECT||"p1")}}]]}});
+      }else if(chatId&&update.message?.text==="/help"){
+        await telegramApi("sendMessage",{chat_id:chatId,text:"Используйте кнопку «Открыть мини‑приложение», чтобы открыть сервис прямо в Telegram."});
+      }
+      json(res,200,{ok:true});return;
     }
     const published=path.match(/^\/published\/([^/]+)$/);
     if(published&&req.method==="GET"){
@@ -248,4 +286,4 @@ const server=createServer(async(req,res)=>{
 
 const leadsMap=leads;
 await initStorage();
-server.listen(port,"0.0.0.0",()=>console.log("Torclix API listening on :"+port));
+server.listen(port,"0.0.0.0",()=>{console.log("Torclix API listening on :"+port);configureTelegramBot().then(x=>{if(x.enabled)console.log("Telegram Mini App configured for @"+x.username);}).catch(e=>console.warn("Telegram setup:",e.message));});

@@ -3,7 +3,7 @@ import "./styles.css";
 type Project = { id:string; name:string; url:string; type:string; status:"Live"|"Draft"; leads:number; industry:string };
 type Block = { id:string; type:string; title:string; body:string };
 type Page = { id:string; name:string; blocks:Block[] };
-type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string };
+type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string; miniApp?:{modules:string[]}; };
 
 const nav = [
   ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["♟","Team"],["⚙","Settings"]
@@ -58,7 +58,7 @@ let doc:SiteDoc = loadDoc(editorProject||"p1");
 function loadDoc(id:string):SiteDoc{
  const saved=localStorage.getItem("tg-doc-"+id);
  if(saved) return JSON.parse(saved);
- return {projectId:id,activePage:"home",accent:"#d8ff3e",pages:[
+ return {projectId:id,activePage:"home",accent:"#d8ff3e",miniApp:{modules:["home","catalog","booking","profile","notifications"]},pages:[
   {id:"home",name:"Home",blocks:[
    {id:"b1",type:"Hero",title:"Built for the next version of your business.",body:"A premium digital experience, managed from one studio."},
    {id:"b2",type:"Features",title:"Everything your clients need.",body:"Services, booking, catalog, leads and customer journeys in one system."},

@@ -3,7 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 let jwks;
 
 export async function authenticateRequest(req) {
-  const devAuthEnabled = process.env.NODE_ENV !== "production" && process.env.TORCLIX_DEV_AUTH === "true";
+  const devAuthEnabled = process.env.TORCLIX_DEV_AUTH === "true";
   if (devAuthEnabled) {
     // Demo/local mode must remain usable when the browser opens the app directly
     // (for example from Telegram or a public preview) and cannot attach the

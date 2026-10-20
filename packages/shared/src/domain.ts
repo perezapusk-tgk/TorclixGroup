@@ -19,3 +19,35 @@ export interface Project {
   status: ProjectStatus;
   createdAt: string;
 }
+
+export type BlockType =
+  | "Hero" | "Features" | "Gallery" | "Pricing" | "Testimonials"
+  | "FAQ" | "Booking" | "Contact" | "CTA" | "Story";
+
+export interface SiteBlock {
+  id: string;
+  type: BlockType;
+  title: string;
+  body: string;
+}
+
+export interface SitePage {
+  id: string;
+  name: string;
+  blocks: SiteBlock[];
+}
+
+export interface SiteDocument {
+  projectId: string;
+  activePage: string;
+  accent: string;
+  pages: SitePage[];
+}
+
+export interface Client {
+  id: string;
+  organizationId: string;
+  name: string;
+  email?: string;
+  projectIds: string[];
+}

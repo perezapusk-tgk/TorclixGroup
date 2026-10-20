@@ -20,6 +20,7 @@ const templates=[["Restaurant / Noir","Website + Mini App","Menu · booking · l
 let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")||seed;
 let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", toast="", editorTab="Design", selectedBlock:string|null=null;
 let miniModules:string[]=["home","catalog","booking","profile","notifications"];
+let crm: {clients:any[];leads:any[];bookings:any[]}={clients:[],leads:[],bookings:[]};
 let doc:SiteDoc = loadDoc(editorProject||"p1");
 
 function loadDoc(id:string):SiteDoc{
@@ -39,6 +40,12 @@ function saveDoc(){localStorage.setItem("tg-doc-"+doc.projectId,JSON.stringify(d
 function saveProjects(){localStorage.setItem("tg-projects",JSON.stringify(projects));}
 const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
 let hydrated=false;
+async function hydrateCRM(){
+ if(!API_BASE) return;
+ const [clients,leads,bookings]=await Promise.all([api("/api/clients"),api("/api/leads"),api("/api/bookings")]);
+ crm={clients:Array.isArray(clients?.data)?clients.data:[],leads:Array.isArray(leads?.data)?leads.data:[],bookings:Array.isArray(bookings?.data)?bookings.data:[]};
+ if(!editorProject) render();
+}
 async function hydrateProjects(){
   if(hydrated||!API_BASE) return;
   const remote=await api("/api/projects");
@@ -120,9 +127,14 @@ function workspace(section:string){
  Settings:[["Workspace","Perezapusk Studio","Owner"],["Team","4 members","Manage"],["Brand","TorclixGroup","Configure"]]
  };
  if(section==="Templates") return templateView();
+ if(section==="Clients") return crmView("Clients",crm.clients.map(x=>[x.name,x.email||"No email",x.projectIds?.length?x.projectIds.length+" projects":"No projects"]));
+ if(section==="Leads") return crmView("Leads",crm.leads.map(x=>[x.name,x.email||x.phone||"No contact",x.status||"new"]));
+ if(section==="Bookings") return crmView("Bookings",crm.bookings.map(x=>[x.customerName,x.startAt?new Date(x.startAt).toLocaleString():"No time",x.status||"pending"]));
  const list=rows[section]||[];
  return `<div class="eyebrow">03 / Workspace</div><div class="workspace-head"><div><h2>${section}</h2><p class="hero-copy">The ${section.toLowerCase()} layer of TorclixGroup.</p></div><button class="primary" data-action="new-project">+ New project</button></div><section class="card table-card"><div class="card-head"><div class="card-title">${section} workspace</div><div class="card-meta">${list.length} items</div></div>${list.map(r=>`<div class="workspace-row"><div class="project-name">${r[0]}</div><div class="project-type">${r[1]}</div><span class="badge ${/Live|Published|Active|Connected|Current|Ready/.test(r[2])?"live":""}">${r[2]}</span><button class="row-action">→</button></div>`).join("")}</section>`;
 }
+
+function crmView(title:string,items:string[][]){ return `<div class="eyebrow">03 / Business OS</div><div class="workspace-head"><div><h2>${title}</h2><p class="hero-copy">Live operational records connected to the TorclixGroup API.</p></div><button class="primary" data-action="crm-refresh">Refresh</button></div><section class="card table-card"><div class="card-head"><div class="card-title">${title} workspace</div><div class="card-meta">${items.length} records</div></div>${items.length?items.map(r=>`<div class="workspace-row"><div class="project-name">${r[0]}</div><div class="project-type">${r[1]}</div><span class="badge live">${r[2]}</span></div>`).join(""):`<div class="inspector-note">No records yet. Connect a website, Mini App or API form to start collecting data.</div>`}</section>`; }
 
 function templateView(){
  return `<div class="eyebrow">03 / Template system</div><div class="workspace-head"><div><h2>Templates</h2><p class="hero-copy">Production-ready starting points. Select one to open it in the builder.</p></div><button class="primary" data-action="new-project">+ New project</button></div><div class="template-grid">${templates.map((t,i)=>`<button class="template-card" data-template="${i}"><div class="template-index">0${i+1}</div><strong>${t[0]}</strong><span>${t[1]}</span><small>${t[2]}</small></button>`).join("")}</div>`;
@@ -158,7 +170,7 @@ function projectModal(){
 
 function notify(m:string){toast=m;render();window.setTimeout(()=>{toast="";render()},2200)}
 function bind(){
- root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",()=>{active=el.dataset.nav||"Overview";editorProject=null;render()}));
+ root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();render()}));
  root.querySelectorAll<HTMLElement>("[data-nav-direct]").forEach(el=>el.addEventListener("click",()=>{active=el.dataset.navDirect||"Overview";editorProject=null;render()}));
  root.querySelectorAll<HTMLElement>("[data-action='back']").forEach(el=>el.addEventListener("click",()=>{editorProject=null;active="Projects";render()}));
  root.querySelectorAll<HTMLElement>("[data-action='new-project']").forEach(el=>el.addEventListener("click",()=>{modal=true;render()}));
@@ -171,6 +183,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-tab]").forEach(el=>el.addEventListener("click",()=>{editorTab=el.dataset.tab||"Design";render()}));
  root.querySelectorAll<HTMLElement>("[data-mini-module]").forEach(el=>el.addEventListener("click",()=>{const id=el.dataset.miniModule||"";miniModules=miniModules.includes(id)?miniModules.filter(x=>x!==id):[...miniModules,id];render();}));
  root.querySelectorAll<HTMLElement>("[data-action='toggle-mini']").forEach(el=>el.addEventListener("click",()=>{notify("Mini App runtime is ready to configure.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='crm-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateCRM();notify("Business data refreshed.");}));
  root.querySelectorAll<HTMLElement>("[data-add-block]").forEach(el=>el.addEventListener("click",()=>{const type=el.dataset.addBlock||"Section";const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks.push({id:"b"+Date.now(),type,title:type==="Hero"?"Your next chapter starts here.":type+" section",body:"Edit this section to match your client's business."});saveDoc();void syncDocument();notify(type+" section added.")}));
  root.querySelectorAll<HTMLElement>("[data-block]").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).closest("[data-remove-block]")) return;selectedBlock=el.dataset.block||null;render();}));
  root.querySelectorAll<HTMLElement>("[data-action='save-block']").forEach(el=>el.addEventListener("click",()=>{const page=doc.pages.find(p=>p.id===doc.activePage)!;const block=page.blocks.find(b=>b.id===selectedBlock);if(block){block.title=root.querySelector<HTMLTextAreaElement>("#block-title")?.value||block.title;block.body=root.querySelector<HTMLTextAreaElement>("#block-body")?.value||block.body;saveDoc();void syncDocument();notify("Block saved.");}}));
@@ -183,3 +196,4 @@ function bind(){
 }
 render();
 void hydrateProjects();
+void hydrateCRM();

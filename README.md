@@ -4,7 +4,7 @@
 
 TorclixGroup is a multi-tenant platform concept for studios that create and operate client Websites and Mini Apps from one workspace.
 
-## Current build — Phase 2
+## Current build — platform foundation
 
 ### Studio OS
 - Overview dashboard
@@ -31,6 +31,12 @@ TorclixGroup is a multi-tenant platform concept for studios that create and oper
 - Responsive preview canvas
 - Local document persistence
 - Publish state
+- Draft and published document versions
+- PostgreSQL migration runner
+- Multi-tenant organization and membership enforcement
+- Production JWT/JWKS authentication boundary
+- Custom domain records with DNS TXT verification
+- Published-site routing on verified custom domains
 
 ### API foundation
 - Health endpoint
@@ -53,16 +59,13 @@ TorclixGroup is a multi-tenant platform concept for studios that create and oper
 The target is not a generic website builder. TorclixGroup is intended to become the infrastructure layer a studio uses to run dozens or hundreds of client projects.
 
 Next infrastructure layers:
-1. PostgreSQL persistence
-2. Authentication and organizations
-3. Real project/document API
-4. Template engine
-5. Publishing pipeline
-6. Custom domains and SSL
-7. CRM / leads / booking
-8. Telegram Mini Apps
-9. Billing and usage
-10. White-label and client portal
+1. SSL automation for verified custom domains
+2. Telegram Mini App runtime
+3. CRM workflows, staff and calendar operations
+4. Billing provider and usage enforcement
+5. Analytics and audit logs
+6. Full client portal routing and approvals
+7. White-label controls
 
 ## Development
 
@@ -71,6 +74,8 @@ Requires Node.js 20.19+ or 22.12+ and pnpm 10.
 Run the web app with `pnpm --filter @torclix/web dev`.
 
 Run the API with `pnpm --filter @torclix/api dev`.
+
+For PostgreSQL environments, apply migrations before startup with `pnpm --filter @torclix/api migrate`. The migration runner owns the database schema; API startup only verifies the canonical schema is present.
 
 
 ## Runtime configuration
@@ -89,6 +94,11 @@ Set `VITE_API_URL` in the web app to point at the API. The API exposes:
 - `GET/POST /api/leads`
 - `GET/POST /api/bookings`
 - `GET /api/templates`
+- `GET/POST /api/domains`
+- `POST /api/domains/:id/verify` (DNS TXT verification)
+- `POST /api/projects/:id/publish`
+- `DELETE /api/projects/:id/publish`
+- `GET /published/:id`
 - `GET /preview/:id`
 
 The Builder can open a real server-rendered project preview when the API is configured.

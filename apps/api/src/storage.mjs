@@ -134,6 +134,12 @@ export async function listProjects(fallback,organizationId){
   return rows;
 }
 
+export async function getPublishedProject(projectId){
+  const db=await getPool(); if(!db) return null;
+  const {rows}=await db.query('select id::text,organization_id::text as "organizationId",name,type,industry,slug from projects where id=$1::uuid limit 1',[projectId]);
+  return rows[0]||null;
+}
+
 export async function getProject(projectId,organizationId){
   const db=await getPool();
   if(!db) return null;

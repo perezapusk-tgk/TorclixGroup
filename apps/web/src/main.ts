@@ -461,4 +461,17 @@ function bind(){
   else notify("Публикация не выполнена. Проверьте API и авторизацию.");
 }));
 }
-;
+
+async function boot(){
+  try{
+    applyStudioSettings();
+    render();
+    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateTelegram()]);
+    if(!editorProject) render();
+  }catch(error){
+    console.error("TorclixGroup boot error",error);
+    root.innerHTML=`<main style="min-height:100vh;display:grid;place-items:center;background:#080808;color:#f5f5f5;font-family:Inter,system-ui,sans-serif;padding:24px"><section style="max-width:720px;width:100%;border:1px solid #2a2a2a;border-radius:20px;padding:28px;background:#111"><div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#d8ff3e;margin-bottom:12px">TORCLIXGROUP</div><h1 style="margin:0 0 10px;font-size:28px">Не удалось загрузить рабочее пространство</h1><p style="margin:0;color:#aaa;line-height:1.6">Интерфейс не смог запуститься. Обновите страницу — приложение повторит инициализацию автоматически.</p><button onclick="location.reload()" style="margin-top:20px;border:0;border-radius:12px;padding:12px 18px;background:#d8ff3e;color:#080808;font-weight:700;cursor:pointer">Обновить</button></section></main>`;
+  }
+}
+
+void boot();

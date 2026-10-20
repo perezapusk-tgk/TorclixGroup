@@ -34,7 +34,7 @@ function headers(extra={}){return {
   ...(process.env.CORS_ORIGIN?{"access-control-allow-origin":process.env.CORS_ORIGIN}:{}),
   "vary":"Origin",
   "access-control-allow-methods":"GET,POST,PUT,PATCH,OPTIONS",
-  "access-control-allow-headers":"content-type,authorization,x-torclix-user,x-torclix-organization",
+  "access-control-allow-headers":"content-type,authorization,x-torclix-user,x-torclix-organization,x-torclix-trial,idempotency-key,x-telegram-bot-api-secret-token",
   ...extra
 };}
 function json(res,status,data){res.writeHead(status,headers());res.end(JSON.stringify(data));}
@@ -198,10 +198,11 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
         const input=await body(req);
         const projectId=String(input.projectId||"").trim();
         if(!projectId){json(res,400,{error:"projectId is required"});return;}
+        const project=projects.get(projectId);
+        const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);
+        if(!owned){json(res,404,{error:"Project not found"});return;}
         const result=await configureTelegramBot(projectId);
         if(!result.enabled){json(res,409,{error:"TELEGRAM_BOT_TOKEN is not configured"});return;}
-        const project=projects.get(projectId)||await getProject(projectId,auth.organization.id);
-        if(!project||project.organizationId!==auth.organization.id){json(res,404,{error:"Project not found"});return;}
         const integration={id:newId(),organizationId:auth.organization.id,projectId,botId:result.id,botUsername:result.username,enabled:true,webhookUrl:(process.env.PUBLIC_URL||"").replace(/\/$/,"")+"/tg/webhook"};
         await saveTelegramIntegration(integration);
         json(res,200,{data:{...result,projectId,miniAppUrl:telegramMiniAppUrl(projectId),integration}});
@@ -358,4 +359,4 @@ const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
 });
 
 await initStorage();
-server.listen(port,"0.0.0.0",()=>{console.log("Torclix API listening on :"+port);configureTelegramBot().then(x=>{if(x.enabled)console.log("Telegram Mini App configured for @"+x.username);}).catch(e=>console.warn("Telegram setup:",e.message));});
+server.listen(port,"0.0.0.0",()=>{console.log("Torclix API listening on :"+port);if(process.env.TELEGRAM_BOT_TOKEN)console.log("Telegram bot token detected; configuration is project-scoped and must be initiated from the studio.");});

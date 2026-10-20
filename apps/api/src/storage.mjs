@@ -147,10 +147,17 @@ export async function unpublishDocument(projectId,organizationId){
 export async function saveDocument(projectId,organizationId,document){
   const db=await getPool();
   if(!db) return document;
-  await db.query(`insert into site_documents(project_id,document) select $1::uuid,$3::jsonb
+  const result=await db.query(`insert into site_documents(project_id,document)
+    select $1::uuid,$3::jsonb
     where exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)
-    on conflict(project_id) do update set document=excluded.document,version=site_documents.version+1,updated_at=now()`,
-    [projectId,organizationId,JSON.stringify(document)]);
+    on conflict(project_id) do update set document=excluded.document,version=site_documents.version+1,updated_at=now()
+    returning version`,[projectId,organizationId,JSON.stringify(document)]);
+  const version=result.rows[0]?.version;
+  if(version){
+    await db.query(`insert into site_document_versions(project_id,version,document)
+      values($1::uuid,$2,$3::jsonb)
+      on conflict(project_id,version) do nothing`,[projectId,version,JSON.stringify(document)]);
+  }
   return document;
 }
 

@@ -1,21 +1,33 @@
-# TorclixGroup product surface
+# TorclixGroup product model
 
-## Studio OS
-- Multi-tenant organizations
-- Teams, roles and permissions
-- Website + Mini App projects
-- Visual builder and templates
-- CRM: clients, leads, bookings
-- Domains, analytics and integrations
-- Usage and billing foundation
-- Client portal foundation
-- White-label foundation
+## Studio
 
-## Roles
-Owner, Admin, Editor, Viewer. Production authentication must be supplied by an external identity provider; development mode uses the seeded demo session.
+A studio is the paying customer. It manages client projects, team members, templates, domains and billing.
 
-## Client portal
-The portal surface is designed around project visibility, approvals, content requests, leads, bookings, invoices, files and support.
+## Project
 
-## Billing
-Plans expose usage limits for projects, members, storage, monthly visitors and leads. Billing-provider integration remains an external-service boundary.
+A project is a deployable digital product: Website, Telegram Mini App, or Website + Mini App.
+
+## Website modules
+
+Hero, services, catalog, gallery, pricing, testimonials, FAQ, booking, contact, forms, SEO and custom styling.
+
+## Mini App modules
+
+Home, catalog, booking, orders, profile, loyalty and notifications. Modules are configuration-driven so a studio assembles a business experience instead of writing each app from scratch.
+
+## Business data
+
+Clients, leads and bookings belong to the active organization. CRM will extend this with deals, activities, tags and automation.
+
+## Industry templates
+
+Restaurant, Beauty, Fitness, Medical, Real Estate and Services are the first template families.
+
+## Release strategy
+
+1. Stabilize deployment and authentication boundaries.
+2. Extract the editor and UI system from the prototype.
+3. Make Website and Mini App publishing production-safe.
+4. Add CRM, domains/SSL, analytics and billing.
+5. Add white-label and client portal.

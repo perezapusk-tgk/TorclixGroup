@@ -1,10 +1,9 @@
 import { createServer } from "node:http";
 import {
   initStorage,listProjects,getProject,saveProject,getDocument,saveDocument,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
-import { teamForOrganization } from "./team.mjs";
 import { billingSnapshot } from "./billing.mjs";
 
 const port=Number(process.env.PORT||4000);
@@ -58,8 +57,8 @@ const server=createServer(async(req,res)=>{
   try{
     if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.6.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":"development-session"});return;}
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
-    if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:teamForOrganization(auth.organization.id)});return;}
-    if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leads=await listRecords("leads",leadsMap,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:teamForOrganization(auth.organization.id).length,leads:leads.length})});return;}
+    if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
+    if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leads=await listRecords("leads",leadsMap,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leads.length})});return;}
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}
     if(path==="/api/projects"&&req.method==="POST"){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;

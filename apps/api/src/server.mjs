@@ -122,11 +122,12 @@ const server=createServer(async(req,res)=>{
     if(miniApp&&req.method==="GET"){
       const requestedProjectId=miniApp[1];
       const projectId=resolvePublicProjectId(requestedProjectId);
+      const demoProject=projects.get(requestedProjectId)||null;
       const project=(!process.env.DATABASE_URL)
-        ? (projects.get(requestedProjectId)||null)
-        : await getPublishedProject(projectId);
+        ? demoProject
+        : await getPublishedProject(projectId) || (demoProject ? {...demoProject,status:"active"} : null);
       if(!project){html(res,404,"<h1>Мини‑приложение не найдено</h1>");return;}
-      const document=await getPublishedDocument(project.id) || (!process.env.DATABASE_URL ? defaultDocument(project.id) : null);
+      const document=await getPublishedDocument(project.id) || defaultDocument(project.id);
       if(!document){html(res,404,"<h1>Мини‑приложение ещё не опубликовано</h1>");return;}
       const page=document.pages?.find(p=>p.id===document.activePage)||document.pages?.[0];
       const modules=Array.isArray(document.miniApp?.modules)&&document.miniApp.modules.length?document.miniApp.modules:["home","profile","notifications"];

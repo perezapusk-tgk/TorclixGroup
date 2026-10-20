@@ -71,3 +71,22 @@ Requires Node.js 20.19+ or 22.12+ and pnpm 10.
 Run the web app with `pnpm --filter @torclix/web dev`.
 
 Run the API with `pnpm --filter @torclix/api dev`.
+
+
+## Runtime configuration
+
+The API now has two storage modes:
+- without `DATABASE_URL`: in-memory fallback for local prototyping;
+- with `DATABASE_URL`: PostgreSQL-backed projects and site documents.
+
+Set `VITE_API_URL` in the web app to point at the API. The API exposes:
+- `GET/POST /api/projects`
+- `GET/PATCH /api/projects/:id`
+- `GET/PUT /api/projects/:id/document`
+- `GET/POST /api/clients`
+- `GET/POST /api/leads`
+- `GET/POST /api/bookings`
+- `GET /api/templates`
+- `GET /preview/:id`
+
+The Builder can open a real server-rendered project preview when the API is configured.

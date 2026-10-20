@@ -18,7 +18,7 @@ const seed:Project[]=[
 const templates=[["Restaurant / Noir","Website + Mini App","Menu · booking · loyalty · orders"],["Beauty / Atelier","Website + Mini App","Services · staff · calendar · booking"],["Fitness / Forma","Mini App","Classes · trainers · memberships"],["Medical / Northline","Website","Services · doctors · booking · SEO"],["Real Estate / North","Website","Listings · agents · inquiries"],["Services / Studio","Website","Cases · services · leads"]];
 
 let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")||seed;
-let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", toast="", editorTab="Design";
+let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", toast="", editorTab="Design", selectedBlock:string|null=null;
 let doc:SiteDoc = loadDoc(editorProject||"p1");
 
 function loadDoc(id:string):SiteDoc{
@@ -89,7 +89,13 @@ function editor(project:Project){
  <div class="panel-title">Pages</div>${doc.pages.map(p=>`<button class="page-item ${p.id===doc.activePage?"selected":""}" data-page="${p.id}"><span>${p.name}</span><small>${p.blocks.length} blocks</small></button>`).join("")}
  <div class="panel-title">Add section</div><div class="block-palette">${["Hero","Features","Gallery","Pricing","Testimonials","FAQ","Booking","Contact","CTA"].map(type=>`<button class="palette-item" data-add-block="${type}">+ ${type}</button>`).join("")}</div></aside>
  <div class="canvas"><div class="site-preview" style="--editor-accent:${doc.accent}">${page.blocks.map((b,i)=>`<article class="canvas-block" data-block="${b.id}"><div class="block-number">0${i+1}</div><div><div class="block-type">${b.type}</div><h3>${b.title}</h3><p>${b.body}</p><button class="preview-button">Learn more →</button></div><button class="block-remove" data-remove-block="${b.id}">×</button></article>`).join("")}</div></div>
- <aside class="inspector"><div class="panel-title">Global style</div><label class="field"><span>Accent</span><input id="accent" type="color" value="${doc.accent}"/></label><div class="style-chip">Responsive</div><div class="style-chip">SEO ready</div><div class="style-chip">Custom domain</div><div class="style-chip">Analytics</div><div class="inspector-note">Changes are stored locally for this prototype. Database persistence is the next infrastructure layer.</div></aside></div></div>`;
+ <aside class="inspector"><div class="panel-title">${selectedBlock?"Block editor":"Global style"}</div>${selectedBlock?blockInspector(page):`<label class="field"><span>Accent</span><input id="accent" type="color" value="${doc.accent}"/></label><div class="style-chip">Responsive</div><div class="style-chip">SEO ready</div><div class="style-chip">Custom domain</div><div class="style-chip">Analytics</div><div class="inspector-note">Select any block in the canvas to edit its content. Changes are saved to the active project document.</div>`}</aside></div></div>`;
+}
+
+function blockInspector(page:Page){
+ const block=page.blocks.find(b=>b.id===selectedBlock);
+ if(!block) return `<div class="inspector-note">Select a block to edit it.</div>`;
+ return `<div class="selected-block"><div class="style-chip">${block.type}</div><label class="field"><span>Title</span><textarea id="block-title">${block.title}</textarea></label><label class="field"><span>Body</span><textarea id="block-body">${block.body}</textarea></label><button class="primary full" data-action="save-block">Save block</button><button class="secondary full" data-action="clear-block">Done</button></div>`;
 }
 
 function projectModal(){
@@ -111,6 +117,9 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-page]").forEach(el=>el.addEventListener("click",()=>{doc.activePage=el.dataset.page||doc.activePage;saveDoc();render()}));
  root.querySelectorAll<HTMLElement>("[data-tab]").forEach(el=>el.addEventListener("click",()=>{editorTab=el.dataset.tab||"Design";render()}));
  root.querySelectorAll<HTMLElement>("[data-add-block]").forEach(el=>el.addEventListener("click",()=>{const type=el.dataset.addBlock||"Section";const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks.push({id:"b"+Date.now(),type,title:type==="Hero"?"Your next chapter starts here.":type+" section",body:"Edit this section to match your client's business."});saveDoc();notify(type+" section added.")}));
+ root.querySelectorAll<HTMLElement>("[data-block]").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).closest("[data-remove-block]")) return;selectedBlock=el.dataset.block||null;render();}));
+ root.querySelectorAll<HTMLElement>("[data-action='save-block']").forEach(el=>el.addEventListener("click",()=>{const page=doc.pages.find(p=>p.id===doc.activePage)!;const block=page.blocks.find(b=>b.id===selectedBlock);if(block){block.title=root.querySelector<HTMLTextAreaElement>("#block-title")?.value||block.title;block.body=root.querySelector<HTMLTextAreaElement>("#block-body")?.value||block.body;saveDoc();notify("Block saved.");}}));
+ root.querySelectorAll<HTMLElement>("[data-action='clear-block']").forEach(el=>el.addEventListener("click",()=>{selectedBlock=null;render();}));
  root.querySelectorAll<HTMLElement>("[data-remove-block]").forEach(el=>el.addEventListener("click",()=>{const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks=page.blocks.filter(b=>b.id!==el.dataset.removeBlock);saveDoc();render()}));
  root.querySelector<HTMLInputElement>("#accent")?.addEventListener("input",e=>{doc.accent=(e.target as HTMLInputElement).value;saveDoc();document.documentElement.style.setProperty("--editor-accent",doc.accent)});
  root.querySelectorAll<HTMLElement>("[data-action='add-page']").forEach(el=>el.addEventListener("click",()=>{const id="page"+Date.now();doc.pages.push({id,name:"New page",blocks:[{id:"b"+Date.now(),type:"Hero",title:"New page.",body:"Start building this page."}]});doc.activePage=id;saveDoc();render()}));

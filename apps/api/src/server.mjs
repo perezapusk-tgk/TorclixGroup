@@ -82,6 +82,24 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leadRecords=await listRecords("leads",leads,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leadRecords.length})});return;}
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}
+    if(path==="/api/analytics"&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"analytics:read");if(!auth)return;
+      const projectRows=await listProjects(projects,auth.organization.id);
+      const leadRows=await listRecords("leads",leads,auth.organization.id);
+      const bookingRows=await listRecords("bookings",bookings,auth.organization.id);
+      const clientRows=await listRecords("clients",clients,auth.organization.id);
+      const liveProjects=projectRows.filter(p=>p.status==="active").length;
+      const draftProjects=projectRows.filter(p=>p.status!=="active").length;
+      const leadStatus=leadRows.reduce((acc,item)=>{const key=String(item.status||"new");acc[key]=(acc[key]||0)+1;return acc;},{});
+      const bookingStatus=bookingRows.reduce((acc,item)=>{const key=String(item.status||"pending");acc[key]=(acc[key]||0)+1;return acc;},{});
+      const byProject=projectRows.map(project=>({
+        projectId:project.id,name:project.name,leads:leadRows.filter(x=>x.projectId===project.id).length,
+        bookings:bookingRows.filter(x=>x.projectId===project.id).length
+      }));
+      json(res,200,{data:{projects:{total:projectRows.length,live:liveProjects,draft:draftProjects},leads:{total:leadRows.length,status:leadStatus},bookings:{total:bookingRows.length,status:bookingStatus},clients:{total:clientRows.length},byProject,generatedAt:new Date().toISOString()}});
+      return;
+    }
+
     if(path==="/api/projects"&&req.method==="POST"){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
       const input=await body(req);const name=String(input.name||"Untitled project");

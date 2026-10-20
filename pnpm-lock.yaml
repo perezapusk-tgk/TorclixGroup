@@ -1,0 +1,37 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+  .:
+    devDependencies:
+      typescript:
+        specifier: 5.9.2
+        version: 5.9.2
+  apps/api:
+    dependencies:
+      pg:
+        specifier: ^8.16.3
+        version: 8.16.3
+  apps/web:
+    devDependencies:
+      '@types/node':
+        specifier: 22.0.0
+        version: 22.0.0
+      typescript:
+        specifier: 5.9.2
+        version: 5.9.2
+      vite:
+        specifier: 7.1.7
+        version: 7.1.7
+  packages/auth:
+    dependencies:
+      jose:
+        specifier: ^6.1.0
+        version: 6.1.0
+
+packages: {}
+
+snapshots: {}

@@ -24,7 +24,7 @@ function headers(extra={}){return {
 function json(res,status,data){res.writeHead(status,headers());res.end(JSON.stringify(data));}
 function html(res,status,body){res.writeHead(status,{"content-type":"text/html; charset=utf-8"});res.end(body);}
 async function body(req){let raw="";for await(const chunk of req) raw+=chunk;return raw?JSON.parse(raw):{};}
-function esc(value=""){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;"}[c]));}
+function esc(value=""){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function defaultDocument(projectId){return {projectId,activePage:"home",accent:"#d8ff3e",pages:[{id:"home",name:"Home",blocks:[
   {id:"b1",type:"Hero",title:"Built for the next version of your business.",body:"A premium digital experience, managed from one studio."},
   {id:"b2",type:"Features",title:"Everything your clients need.",body:"Services, booking, catalog, leads and customer journeys in one system."},

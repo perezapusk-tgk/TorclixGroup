@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -23,7 +23,7 @@ const projects=new Map([
   ["p1",{id:"p1",name:"Maison Noire",type:"website_mini_app",industry:"restaurant",status:"active",organizationId:"org_demo",slug:"maison-noire"}],
   ["p2",{id:"p2",name:"Forma Fitness",type:"mini_app",industry:"fitness",status:"active",organizationId:"org_demo",slug:"forma-fitness"}]
 ]);
-const clients=new Map(),leads=new Map(),bookings=new Map(),catalogItems=new Map();
+const clients=new Map(),leads=new Map(),bookings=new Map(),catalogItems=new Map(),orders=new Map();
 const publishedProjects=new Set();
 const legacyProjectIds={p1:"00000000-0000-4000-8000-000000000101",p2:"00000000-0000-4000-8000-000000000102"};
 function resolvePublicProjectId(projectId){return legacyProjectIds[projectId]||projectId;}
@@ -81,6 +81,36 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leadRecords=await listRecords("leads",leads,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leadRecords.length})});return;}
+    if(path.startsWith("/public/projects/")&&path.endsWith("/catalog")&&req.method==="GET"){
+      const match=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);const projectId=match?.[1];
+      const project=projects.get(projectId)||await getPublishedProject(projectId);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      json(res,200,{data:await listCatalogItems(catalogItems,project.organizationId,projectId)});return;
+    }
+    if(path.startsWith("/public/projects/")&&path.endsWith("/orders")&&req.method==="POST"){
+      const match=path.match(/^\/public\/projects\/([^/]+)\/orders$/);const projectId=match?.[1];
+      const project=projects.get(projectId)||await getPublishedProject(projectId);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      const idem=requestKey(req);const cacheKey=idem?"public-order:"+projectId+":"+idem:null;const cached=cacheKey?idempotencyCache.get(cacheKey):null;if(cached){json(res,cached.status,cached.body);return;}
+      const input=await body(req);const customerName=String(input.customerName||"").trim();
+      if(!customerName){json(res,400,{error:"customerName is required"});return;}
+      const rawItems=Array.isArray(input.items)?input.items:[];if(!rawItems.length){json(res,400,{error:"items are required"});return;}
+      const catalog=await listCatalogItems(catalogItems,project.organizationId,projectId);
+      const byId=new Map(catalog.map(x=>[x.id,x]));const items=[];let total=0;let currency="EUR";
+      for(const raw of rawItems){
+        const item=byId.get(String(raw.catalogItemId||""));const quantity=Math.floor(Number(raw.quantity||1));
+        if(!item||item.status!=="active"||!Number.isFinite(quantity)||quantity<1||quantity>99){json(res,400,{error:"Invalid order item"});return;}
+        if(item.stock!==null&&Number(item.stock)<quantity){json(res,409,{error:"Insufficient stock",itemId:item.id});return;}
+        const unitPrice=Number(item.price||0);const line=unitPrice*quantity;total+=line;currency=item.currency||currency;
+        items.push({id:newId(),catalogItemId:item.id,name:item.name,quantity,unitPrice,total:line});
+      }
+      if(total>100000000){json(res,400,{error:"Order total is too large"});return;}
+      const order={id:newId(),organizationId:project.organizationId,projectId,customerName,customerEmail:input.customerEmail?String(input.customerEmail).trim():null,customerPhone:input.customerPhone?String(input.customerPhone).trim():null,status:"pending",currency,total,source:String(input.source||"website")};
+      const saved=await saveOrder(order,items);if(!process.env.DATABASE_URL)orders.set(order.id,saved);
+      const response={data:{id:order.id,status:order.status,total:order.total,currency:order.currency}};
+      if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
+    }
+
     if(path==="/api/catalog"&&req.method==="GET"){
       const auth=await requirePermission(req,res,"catalog:read");if(!auth)return;
       const url=new URL(req.url||"/","http://localhost");
@@ -142,6 +172,21 @@ const server=createServer(async(req,res)=>{
       const archived=await archiveCatalogItem(catalogId[1],auth.organization.id);
       if(!process.env.DATABASE_URL)catalogItems.delete(catalogId[1]);
       json(res,200,{data:archived||{...current,status:"archived"}});return;
+    }
+
+    if(path==="/api/orders"&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"billing:read");if(!auth)return;
+      const url=new URL(req.url||"/","http://localhost");const projectId=url.searchParams.get("projectId");
+      json(res,200,{data:await listOrders(orders,auth.organization.id,projectId)});return;
+    }
+    const orderId=path.match(/^\/api\/orders\/([^/]+)$/);
+    if(orderId&&req.method==="PATCH"){
+      const auth=await requirePermission(req,res,"billing:read");if(!auth)return;
+      const input=await body(req);const status=String(input.status||"");
+      if(!["pending","paid","processing","completed","cancelled","refunded"].includes(status)){json(res,400,{error:"Invalid order status"});return;}
+      const updated=await updateOrderStatus(orderId[1],auth.organization.id,status);
+      if(!updated){const local=orders.get(orderId[1]);if(!local||local.organizationId!==auth.organization.id){json(res,404,{error:"Order not found"});return;}local.status=status;json(res,200,{data:local});return;}
+      json(res,200,{data:updated});return;
     }
 
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}

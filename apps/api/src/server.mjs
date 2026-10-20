@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import {
-  initStorage,listProjects,getProject,saveProject,getDocument,saveDocument,listRecords,saveRecord,
+  initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
   newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";

@@ -201,6 +201,18 @@ export async function listRecords(table,fallback,organizationId){
   }));
 }
 
+export async function listDomains(organizationId){
+  const db=await getPool(); if(!db) return [];
+  const {rows}=await db.query('select id::text,organization_id::text as "organizationId",project_id::text as "projectId",hostname,status,ssl_status as "sslStatus" from domains where organization_id=$1::uuid order by created_at desc',[organizationId]);
+  return rows;
+}
+
+export async function saveDomain(domain){
+  const db=await getPool(); if(!db) return domain;
+  await db.query("insert into domains(id,organization_id,project_id,hostname,status,ssl_status) values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6)",[domain.id,domain.organizationId,domain.projectId||null,domain.hostname,domain.status||"pending",domain.sslStatus||"pending"]);
+  return domain;
+}
+
 export async function saveRecord(table,item){
   const db=await getPool(); if(!db) return item;
   const queries={

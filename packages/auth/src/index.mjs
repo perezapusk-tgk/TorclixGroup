@@ -3,7 +3,8 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 let jwks;
 
 export async function authenticateRequest(req) {
-  if (process.env.NODE_ENV !== "production") {
+  const devAuthEnabled = process.env.NODE_ENV !== "production" && process.env.TORCLIX_DEV_AUTH === "true";
+  if (devAuthEnabled) {
     const userKey = req.headers["x-torclix-user"];
     return userKey ? { subject: String(userKey), email: null, name: null, source: "development-header" } : null;
   }

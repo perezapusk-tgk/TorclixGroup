@@ -15,6 +15,7 @@ create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   email text not null unique,
   name text not null,
+  external_id text unique,
   created_at timestamptz not null default now()
 );
 
@@ -52,6 +53,7 @@ create table if not exists site_documents (
   version integer not null default 1,
   document jsonb not null default '{"pages":[]}'::jsonb,
   published_document jsonb,
+  published_version integer,
   updated_at timestamptz not null default now()
 );
 
@@ -73,6 +75,9 @@ create table if not exists bookings (
   project_id uuid references projects(id) on delete cascade,
   customer_name text not null,
   customer_email text,
+  customer_phone text,
+  telegram_user_id bigint,
+  telegram_username text,
   service text,
   start_at timestamptz not null,
   status text not null default 'pending',
@@ -86,6 +91,8 @@ create table if not exists domains (
   hostname text not null unique,
   status text not null default 'pending',
   ssl_status text not null default 'pending',
+  verification_token text,
+  verified_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -93,3 +100,27 @@ create index if not exists projects_org_idx on projects(organization_id);
 create index if not exists clients_org_idx on clients(organization_id);
 create index if not exists leads_project_idx on leads(project_id);
 create index if not exists bookings_project_idx on bookings(project_id);
+
+
+create table if not exists site_document_versions(
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  version integer not null,
+  document jsonb not null,
+  created_at timestamptz not null default now(),
+  unique(project_id,version)
+);
+
+create table if not exists telegram_integrations(
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references organizations(id) on delete cascade,
+  project_id uuid references projects(id) on delete cascade,
+  bot_id bigint,
+  bot_username text,
+  enabled boolean not null default true,
+  webhook_url text,
+  last_checked_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(organization_id, project_id)
+);

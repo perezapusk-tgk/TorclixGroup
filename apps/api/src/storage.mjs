@@ -103,6 +103,21 @@ export async function listOrganizationsForUser(userId){
   return rows;
 }
 
+export async function listTeamMembers(organizationId){
+  if(organizationId==="org_demo" && !process.env.DATABASE_URL){
+    return [
+      {id:"user_demo",name:"Studio Owner",email:"demo@torclix.local",role:"owner",status:"active"},
+      {id:"user_editor",name:"Creative Editor",email:"editor@torclix.local",role:"editor",status:"invited"}
+    ];
+  }
+  const db=await getPool();
+  if(!db) return [];
+  const {rows}=await db.query(`select u.id::text,u.name,u.email,m.role
+    from users u join memberships m on m.user_id=u.id
+    where m.organization_id=$1::uuid order by u.created_at asc`,[organizationId]);
+  return rows.map(row=>({...row,status:"active"}));
+}
+
 export async function getMembershipRole(userId,organizationId){
   if(userId==="user_demo" && organizationId==="org_demo" && !process.env.DATABASE_URL) return "owner";
   const db=await getPool();

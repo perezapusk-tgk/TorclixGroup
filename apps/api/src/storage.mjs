@@ -40,7 +40,14 @@ export async function getSessionUser(userKey,email=null,name=null){
   }
   const db=await getPool();
   if(!db) return null;
-  const {rows}=await db.query("select id::text,email,name from users where external_id=$1 or id::text=$1 or email=$2 limit 1",[userKey,email||""]);
+  let {rows}=await db.query("select id::text,email,name from users where external_id=$1 or id::text=$1 or email=$2 limit 1",[userKey,email||""]);
+  if(!rows[0] && userKey==="demo"){
+    const created=await db.query(
+      "insert into users(external_id,email,name) values($1,$2,$3) on conflict(external_id) do update set email=excluded.email,name=excluded.name returning id::text,email,name",
+      ["demo","demo@torclix.local","Studio Owner"]
+    );
+    rows=created.rows;
+  }
   return rows[0]||null;
 }
 
@@ -50,9 +57,20 @@ export async function listOrganizationsForUser(userId){
   }
   const db=await getPool();
   if(!db) return [];
-  const {rows}=await db.query(`select o.id::text,o.name,o.slug,o.plan,m.role
+  let {rows}=await db.query(`select o.id::text,o.name,o.slug,o.plan,m.role
     from organizations o join memberships m on m.organization_id=o.id
     where m.user_id=$1 order by o.created_at asc`,[userId]);
+  if(!rows.length){
+    const org=await db.query(
+      "insert into organizations(id,name,slug,plan) values($1,$2,$3,$4) on conflict(slug) do update set name=excluded.name,plan=excluded.plan returning id::text,name,slug,plan",
+      ["00000000-0000-4000-8000-000000000001","Torclix Demo","torclix-demo","pro"]
+    );
+    await db.query(
+      "insert into memberships(organization_id,user_id,role) values($1::uuid,$2::uuid,$3) on conflict(organization_id,user_id) do update set role=excluded.role",
+      [org.rows[0].id,userId,"owner"]
+    );
+    rows=[{...org.rows[0],role:"owner"}];
+  }
   return rows;
 }
 

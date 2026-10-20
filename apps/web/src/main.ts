@@ -35,7 +35,37 @@ function loadDoc(id:string):SiteDoc{
  ]};
 }
 function saveDoc(){localStorage.setItem("tg-doc-"+doc.projectId,JSON.stringify(doc));}
-function saveProjects(){localStorage.setItem("tg-projects",JSON.stringify(projects));}const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
+function saveProjects(){localStorage.setItem("tg-projects",JSON.stringify(projects));}
+const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
+let hydrated=false;
+async function hydrateProjects(){
+  if(hydrated||!API_BASE) return;
+  const remote=await api("/api/projects");
+  if(!Array.isArray(remote?.data)) return;
+  const mapped:Project[]=remote.data.map((p:any)=>({
+    id:p.id,
+    name:p.name,
+    url:(p.slug||p.id)+".preview",
+    type:p.type==="website_mini_app"?"Website + Mini App":p.type==="mini_app"?"Mini App":"Website",
+    status:p.status==="active"?"Live":"Draft",
+    leads:0,
+    industry:String(p.industry||"Services").replace(/_/g," ").replace(/\b\w/g,m=>m.toUpperCase())
+  }));
+  const localById=new Map(projects.map(p=>[p.id,p]));
+  projects=mapped.map(p=>({...localById.get(p.id),...p}));
+  for(const p of projects) if(localById.has(p.id)===false) localStorage.removeItem("tg-doc-"+p.id);
+  saveProjects();
+  hydrated=true;
+  if(!editorProject) render();
+void hydrateProjects();
+}
+async function hydrateDocument(id:string){
+  const remote=await api("/api/projects/"+id+"/document");
+  if(remote?.data){
+    doc=remote.data as SiteDoc;
+    saveDoc();
+  }
+}
 
 async function api(path:string,options:RequestInit={}){
   if(!API_BASE) return null;
@@ -128,7 +158,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-close='modal']").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).dataset.close==="modal"||el.classList.contains("close")||el.classList.contains("secondary")){modal=false;render()}}));
  root.querySelectorAll<HTMLElement>("[data-type]").forEach(el=>el.addEventListener("click",()=>{selectedType=el.dataset.type||selectedType;render()}));
  root.querySelectorAll<HTMLElement>("[data-action='create-project']").forEach(el=>el.addEventListener("click",async()=>{const name=root.querySelector<HTMLInputElement>("#project-name")?.value.trim()||"Untitled project";const industry=root.querySelector<HTMLSelectElement>("#industry")?.value||"Services";const typeMap:Record<string,string>={"Website":"website","Mini App":"mini_app","Website + Mini App":"website_mini_app"};const localId="p"+Date.now();const payload={name,type:typeMap[selectedType]||"website",industry:industry.toLowerCase().replace(" ","_"),organizationId:"org_demo"};const remote=await api("/api/projects",{method:"POST",body:JSON.stringify(payload)});const id=remote?.data?.id||localId;projects.unshift({id,name,url:(remote?.data?.slug||name.toLowerCase().replace(/[^a-z0-9]+/g,"-"))+".preview",type:selectedType,status:"Draft",leads:0,industry});saveProjects();modal=false;editorProject=id;doc=loadDoc(id);void syncDocument();notify(name+" created — opening builder.")}));
- root.querySelectorAll<HTMLElement>("[data-project]").forEach(el=>el.addEventListener("click",()=>{editorProject=el.dataset.project||null;active="Projects";doc=loadDoc(editorProject||"p1");render()}));
+ root.querySelectorAll<HTMLElement>("[data-project]").forEach(el=>el.addEventListener("click",async()=>{editorProject=el.dataset.project||null;active="Projects";doc=loadDoc(editorProject||"p1");render();if(editorProject){await hydrateDocument(editorProject);render();}}));
  root.querySelectorAll<HTMLElement>("[data-template]").forEach(el=>el.addEventListener("click",()=>{const t=templates[Number(el.dataset.template)];selectedType=t[1];modal=true;render()}));
  root.querySelectorAll<HTMLElement>("[data-page]").forEach(el=>el.addEventListener("click",()=>{doc.activePage=el.dataset.page||doc.activePage;saveDoc();render()}));
  root.querySelectorAll<HTMLElement>("[data-tab]").forEach(el=>el.addEventListener("click",()=>{editorTab=el.dataset.tab||"Design";render()}));
@@ -139,7 +169,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-remove-block]").forEach(el=>el.addEventListener("click",()=>{const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks=page.blocks.filter(b=>b.id!==el.dataset.removeBlock);saveDoc();render()}));
  root.querySelector<HTMLInputElement>("#accent")?.addEventListener("input",e=>{doc.accent=(e.target as HTMLInputElement).value;saveDoc();document.documentElement.style.setProperty("--editor-accent",doc.accent)});
  root.querySelectorAll<HTMLElement>("[data-action='add-page']").forEach(el=>el.addEventListener("click",()=>{const id="page"+Date.now();doc.pages.push({id,name:"New page",blocks:[{id:"b"+Date.now(),type:"Hero",title:"New page.",body:"Start building this page."}]});doc.activePage=id;saveDoc();render()}));
- root.querySelectorAll<HTMLElement>("[data-action='preview']").forEach(el=>el.addEventListener("click",()=>{if(!editorProject){notify("Open a project first.");return;}const base=API_BASE||window.location.origin;window.open(base+"/preview/"+editorProject,"_blank","noopener,noreferrer");}));
+ root.querySelectorAll<HTMLElement>("[data-action='preview']").forEach(el=>el.addEventListener("click",()=>{if(!editorProject){notify("Open a project first.");return;}if(!API_BASE){notify("Preview needs VITE_API_URL configured.");return;}window.open(API_BASE+"/preview/"+editorProject,"_blank","noopener,noreferrer");}));
  root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",()=>{const p=projects.find(x=>x.id===editorProject);if(p){p.status="Live";saveProjects();void api("/api/projects/"+p.id,{method:"PATCH",body:JSON.stringify({status:"active"})});notify(p.name+" marked as Live.")}}));
 }
 render();

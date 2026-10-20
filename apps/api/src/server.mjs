@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { initStorage, listProjects, saveProject, getDocument, saveDocument, listRecords, saveRecord, newId } from "./storage.mjs";
+import { initStorage, listProjects, saveProject, getDocument, saveDocument, listRecords, saveRecord, newId, getSessionUser, listOrganizationsForUser } from "./storage.mjs";
 
 const port = Number(process.env.PORT || 4000);
 const projects = new Map([
@@ -33,22 +33,44 @@ function renderPreview(project,doc){
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(project.name)} — TorclixGroup</title></head><body style="margin:0;background:#080808;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><header style="padding:28px 8vw;display:flex;justify-content:space-between;border-bottom:1px solid #222"><strong>TORCLIXGROUP</strong><span>${esc(project.name)}</span></header><main>${blocks}</main><footer style="padding:48px 8vw;opacity:.45">Published with TorclixGroup</footer></body></html>`;
 }
 
+async function session(req){
+  const userKey=req.headers["x-torclix-user"] || (process.env.NODE_ENV!=="production" ? "demo" : "");
+  if(!userKey) return null;
+  const user=await getSessionUser(String(userKey));
+  if(!user) return null;
+  const organizations=await listOrganizationsForUser(user.id);
+  if(!organizations.length) return null;
+  const requested=req.headers["x-torclix-organization"];
+  const organization=organizations.find(o=>o.id===requested) || organizations[0];
+  return {user,organization,organizations};
+}
+async function requireSession(req,res){
+  const value=await session(req);
+  if(!value){json(res,401,{error:"Authentication required"});return null;}
+  return value;
+}
+
 const server=createServer(async(req,res)=>{
   if(req.method==="OPTIONS"){json(res,204,{});return;}
   const url=new URL(req.url||"/","http://localhost");
   const path=url.pathname;
   try{
-    if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.4.0",storage:process.env.DATABASE_URL?"postgres":"memory"});return;}
-    if(path==="/api/projects"&&req.method==="GET"){json(res,200,{data:await listProjects(projects)});return;}
+    if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.5.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":"development-session"});return;}
+    if(path==="/api/session"&&req.method==="GET"){
+      const auth=await requireSession(req,res); if(!auth) return;
+      json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});
+      return;
+    }
+    if(path==="/api/projects"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}
     if(path==="/api/projects"&&req.method==="POST"){
-      const input=await body(req);const project={id:newId("p"),name:String(input.name||"Untitled project"),type:String(input.type||"website"),industry:String(input.industry||"services"),status:"draft",organizationId:String(input.organizationId||"org_demo"),slug:String(input.slug||input.name||"untitled").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")};
+      const auth=await requireSession(req,res);if(!auth)return;const input=await body(req);const project={id:newId("p"),name:String(input.name||"Untitled project"),type:String(input.type||"website"),industry:String(input.industry||"services"),status:"draft",organizationId:auth.organization.id,slug:String(input.slug||input.name||"untitled").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")};
       projects.set(project.id,project);await saveProject(project);await saveDocument(project.id,defaultDocument(project.id));json(res,201,{data:project});return;
     }
     const pm=path.match(/^\/api\/projects\/([^/]+)$/);
     if(pm&&(req.method==="PATCH"||req.method==="PUT")){
       const input=await body(req);
       const current=projects.get(pm[1]);
-      const all=await listProjects(projects);
+      const all=await listProjects(projects,auth.organization.id);
       const project=current||all.find(p=>p.id===pm[1]);
       if(!project){json(res,404,{error:"Project not found"});return;}
       const next={...project,...input,id:project.id};
@@ -57,17 +79,17 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:next});
       return;
     }
-    if(pm&&req.method==="GET"){const project=projects.get(pm[1]);if(project){json(res,200,{data:project});return;}const all=await listProjects(projects);const found=all.find(p=>p.id===pm[1]);found?json(res,200,{data:found}):json(res,404,{error:"Project not found"});return;}
+    if(pm&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;const project=projects.get(pm[1]);if(project&&project.organizationId===auth.organization.id){json(res,200,{data:project});return;}const all=await listProjects(projects,auth.organization.id);const found=all.find(p=>p.id===pm[1]);found?json(res,200,{data:found}):json(res,404,{error:"Project not found"});return;}
     const dm=path.match(/^\/api\/projects\/([^/]+)\/document$/);
-    if(dm){const projectId=dm[1];const all=await listProjects(projects);if(!projects.has(projectId)&&!all.some(p=>p.id===projectId)){json(res,404,{error:"Project not found"});return;}if(req.method==="GET"){json(res,200,{data:await getDocument(projectId,()=>defaultDocument(projectId))});return;}if(req.method==="PUT"||req.method==="PATCH"){const input=await body(req);const current=await getDocument(projectId,()=>defaultDocument(projectId));const next={...current,...input,projectId};await saveDocument(projectId,next);json(res,200,{data:next});return;}}
+    if(dm){const auth=await requireSession(req,res);if(!auth)return;const projectId=dm[1];const all=await listProjects(projects,auth.organization.id);if(!projects.has(projectId)&&!all.some(p=>p.id===projectId)){json(res,404,{error:"Project not found"});return;}if(req.method==="GET"){json(res,200,{data:await getDocument(projectId,()=>defaultDocument(projectId),auth.organization.id)});return;}if(req.method==="PUT"||req.method==="PATCH"){const input=await body(req);const current=await getDocument(projectId,()=>defaultDocument(projectId));const next={...current,...input,projectId};await saveDocument(projectId,next);json(res,200,{data:next});return;}}
     const preview=path.match(/^\/preview\/([^/]+)$/);
-    if(preview&&req.method==="GET"){const all=await listProjects(projects);const project=projects.get(preview[1])||all.find(p=>p.id===preview[1]||p.slug===preview[1]);if(!project){html(res,404,"<h1>Project not found</h1>");return;}const doc=await getDocument(project.id,()=>defaultDocument(project.id));html(res,200,renderPreview(project,doc));return;}
-    if(path==="/api/clients"&&req.method==="GET"){json(res,200,{data:await listRecords("clients",clients)});return;}
-    if(path==="/api/clients"&&req.method==="POST"){const input=await body(req);const client={id:newId("c"),organizationId:String(input.organizationId||"org_demo"),name:String(input.name||"New client"),email:input.email?String(input.email):undefined,projectIds:Array.isArray(input.projectIds)?input.projectIds:[]};clients.set(client.id,client);await saveRecord("clients",client);json(res,201,{data:client});return;}
-    if(path==="/api/leads"&&req.method==="GET"){json(res,200,{data:await listRecords("leads",leads)});return;}
-    if(path==="/api/leads"&&req.method==="POST"){const input=await body(req);const lead={id:newId("lead"),organizationId:String(input.organizationId||"org_demo"),projectId:String(input.projectId||""),name:String(input.name||"Anonymous"),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"website"),status:"new",createdAt:new Date().toISOString()};leads.set(lead.id,lead);await saveRecord("leads",lead);json(res,201,{data:lead});return;}
-    if(path==="/api/bookings"&&req.method==="GET"){json(res,200,{data:await listRecords("bookings",bookings)});return;}
-    if(path==="/api/bookings"&&req.method==="POST"){const input=await body(req);const booking={id:newId("book"),organizationId:String(input.organizationId||"org_demo"),projectId:String(input.projectId||""),customerName:String(input.customerName||"Guest"),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt||""),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};bookings.set(booking.id,booking);await saveRecord("bookings",booking);json(res,201,{data:booking});return;}
+    if(preview&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;const all=await listProjects(projects,auth.organization.id);const project=projects.get(preview[1])||all.find(p=>p.id===preview[1]||p.slug===preview[1]);if(!project){html(res,404,"<h1>Project not found</h1>");return;}const doc=await getDocument(project.id,()=>defaultDocument(project.id));html(res,200,renderPreview(project,doc));return;}
+    if(path==="/api/clients"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:await listRecords("clients",clients,auth.organization.id)});return;}
+    if(path==="/api/clients"&&req.method==="POST"){const auth=await requireSession(req,res);if(!auth)return;const input=await body(req);const client={id:newId("c"),organizationId:auth.organization.id,name:String(input.name||"New client"),email:input.email?String(input.email):undefined,projectIds:Array.isArray(input.projectIds)?input.projectIds:[]};clients.set(client.id,client);await saveRecord("clients",client);json(res,201,{data:client});return;}
+    if(path==="/api/leads"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:await listRecords("leads",leads,auth.organization.id)});return;}
+    if(path==="/api/leads"&&req.method==="POST"){const auth=await requireSession(req,res);if(!auth)return;const input=await body(req);const lead={id:newId("lead"),organizationId:auth.organization.id,projectId:String(input.projectId||""),name:String(input.name||"Anonymous"),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"website"),status:"new",createdAt:new Date().toISOString()};leads.set(lead.id,lead);await saveRecord("leads",lead);json(res,201,{data:lead});return;}
+    if(path==="/api/bookings"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:await listRecords("bookings",bookings,auth.organization.id)});return;}
+    if(path==="/api/bookings"&&req.method==="POST"){const auth=await requireSession(req,res);if(!auth)return;const input=await body(req);const booking={id:newId("book"),organizationId:auth.organization.id,projectId:String(input.projectId||""),customerName:String(input.customerName||"Guest"),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt||""),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};bookings.set(booking.id,booking);await saveRecord("bookings",booking);json(res,201,{data:booking});return;}
     if(path==="/api/templates"&&req.method==="GET"){json(res,200,{data:["restaurant-noir","beauty-atelier","fitness-forma","medical-northline","real-estate-north","services-studio"]});return;}
     json(res,404,{error:"Not found"});
   }catch(error){console.error(error);json(res,500,{error:"Internal server error"});}

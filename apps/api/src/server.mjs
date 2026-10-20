@@ -252,13 +252,18 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.customerName||!input.startAt){json(res,400,{error:"customerName and startAt are required"});return;}
-      const tgUser= input.tg_init ? verifyTelegramInitData(String(input.tg_init),process.env.TELEGRAM_BOT_TOKEN||"") : null;
-      if(input.tg_init && !tgUser){json(res,401,{error:"Telegram авторизация недействительна"});return;}
+      const tgUser=input.tg_init?verifyTelegramInitData(String(input.tg_init),process.env.TELEGRAM_BOT_TOKEN||""):null;
+      if(input.tg_init&&!tgUser){json(res,401,{error:"Telegram авторизация недействительна"});return;}
       const booking={id:newId(),organizationId:project.organizationId,projectId:project.id,customerName:String(input.customerName),customerEmail:input.customerEmail?String(input.customerEmail):undefined,customerPhone:input.customerPhone?String(input.customerPhone):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,telegramUserId:tgUser?.id,telegramUsername:tgUser?.username,status:"pending",createdAt:new Date().toISOString()};
       await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);
       json(res,201,{data:{id:booking.id,received:true,status:booking.status}});return;
     }
-    const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
+        if(path==="/api/telegram/me"&&req.method==="POST"){
+      const input=await body(req);const user=verifyTelegramInitData(String(input.initData||""),process.env.TELEGRAM_BOT_TOKEN||"");
+      if(!user){json(res,401,{error:"Telegram авторизация недействительна"});return;}
+      json(res,200,{data:{user}});return;
+    }
+const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
     if(leadId&&(req.method==="PATCH"||req.method==="PUT")){
       const auth=await requirePermission(req,res,"leads:write");if(!auth)return;
       const current=(await listRecords("leads",leads,auth.organization.id)).find(x=>x.id===leadId[1]);

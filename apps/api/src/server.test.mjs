@@ -37,11 +37,8 @@ test("health endpoint exposes development runtime",async()=>{
   assert.equal(body.auth,"development-session");
 });
 
-test("tenant-scoped project API requires a development identity",async()=>{
-  const unauthorized=await fetch(base+"/api/projects");
-  assert.equal(unauthorized.status,401);
-
-  const response=await fetch(base+"/api/projects",{headers:{"x-torclix-user":"demo"}});
+test("tenant-scoped project API uses the deterministic demo identity in development",async()=>{
+  const response=await fetch(base+"/api/projects");
   const body=await response.json();
   assert.equal(response.status,200);
   assert.ok(Array.isArray(body.data));

@@ -9,6 +9,8 @@ services:
     startCommand: pnpm --filter @torclix/api start
     healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
       - key: NODE_ENV
         value: development
       - key: DATABASE_URL
@@ -30,6 +32,12 @@ services:
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false
+      - key: AUTH_ISSUER
+        sync: false
+      - key: AUTH_AUDIENCE
+        sync: false
+      - key: AUTH_JWKS_URL
+        sync: false
 
   - type: web
     name: torclixgroup-web
@@ -37,6 +45,8 @@ services:
     buildCommand: pnpm install --no-frozen-lockfile && pnpm --filter @torclix/web build
     staticPublishPath: apps/web/dist
     envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
       - key: VITE_API_URL
         fromService:
           name: torclixgroup-api

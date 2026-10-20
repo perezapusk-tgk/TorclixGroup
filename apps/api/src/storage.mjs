@@ -189,8 +189,15 @@ export async function listDomains(organizationId){
 
 export async function saveDomain(domain){
   const db=await getPool(); if(!db) return domain;
-  await db.query("insert into domains(id,organization_id,project_id,hostname,status,ssl_status) values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6)",[domain.id,domain.organizationId,domain.projectId||null,domain.hostname,domain.status||"pending",domain.sslStatus||"pending"]);
+  await db.query("insert into domains(id,organization_id,project_id,hostname,status,ssl_status,verification_token,verified_at) values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8)",[domain.id,domain.organizationId,domain.projectId||null,domain.hostname,domain.status||"pending",domain.sslStatus||"pending",domain.verificationToken||null,domain.verifiedAt||null]);
   return domain;
+}
+
+export async function verifyDomain(domainId,organizationId){
+  const db=await getPool(); if(!db) return null;
+  const {rows}=await db.query(`update domains set status='verified',verified_at=now(),ssl_status=case when ssl_status='pending' then 'pending' else ssl_status end
+    where id=$1::uuid and organization_id=$2::uuid and status='pending' returning id::text,organization_id::text as "organizationId",project_id::text as "projectId",hostname,status,ssl_status as "sslStatus",verification_token as "verificationToken",verified_at as "verifiedAt"`,[domainId,organizationId]);
+  return rows[0]||null;
 }
 
 export async function saveRecord(table,item){

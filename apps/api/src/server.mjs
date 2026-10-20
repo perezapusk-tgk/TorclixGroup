@@ -70,7 +70,7 @@ const server=createServer(async(req,res)=>{
     if(pm&&(req.method==="PATCH"||req.method==="PUT")){
       const input=await body(req);
       const current=projects.get(pm[1]);
-      const all=await listProjects(projects,auth.organization.id);
+      const all=await listProjects(projects,"org_demo");
       const project=current||all.find(p=>p.id===pm[1]);
       if(!project){json(res,404,{error:"Project not found"});return;}
       const next={...project,...input,id:project.id};

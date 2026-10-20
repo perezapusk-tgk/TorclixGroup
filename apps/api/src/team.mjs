@@ -1,0 +1,1 @@
+export function teamForOrganization(orgId){if(orgId!=="org_demo") return [];return [{id:"user_demo",name:"Studio Owner",email:"demo@torclix.local",role:"owner",status:"active"},{id:"user_editor",name:"Creative Editor",email:"editor@torclix.local",role:"editor",status:"invited"}];}

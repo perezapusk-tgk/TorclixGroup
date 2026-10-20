@@ -22,7 +22,8 @@ export interface SiteDocument {
   activePage: string;
   accent: string;
   pages: EditorPage[];
-  miniApp?: { modules: string[]; navigation?: string[]; theme?: { accent?: string; mode?: "light" | "dark" } };\n  settings?: {
+  miniApp?: { modules: string[]; navigation?: string[]; theme?: { accent?: string; mode?: "light" | "dark" } };
+  settings?: {
     seoTitle?: string;
     seoDescription?: string;
     font?: string;

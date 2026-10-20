@@ -45,6 +45,18 @@ const server=createServer(async(req,res)=>{
       projects.set(project.id,project);await saveProject(project);await saveDocument(project.id,defaultDocument(project.id));json(res,201,{data:project});return;
     }
     const pm=path.match(/^\/api\/projects\/([^/]+)$/);
+    if(pm&&(req.method==="PATCH"||req.method==="PUT")){
+      const input=await body(req);
+      const current=projects.get(pm[1]);
+      const all=await listProjects(projects);
+      const project=current||all.find(p=>p.id===pm[1]);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      const next={...project,...input,id:project.id};
+      projects.set(project.id,next);
+      await saveProject(next);
+      json(res,200,{data:next});
+      return;
+    }
     if(pm&&req.method==="GET"){const project=projects.get(pm[1]);if(project){json(res,200,{data:project});return;}const all=await listProjects(projects);const found=all.find(p=>p.id===pm[1]);found?json(res,200,{data:found}):json(res,404,{error:"Project not found"});return;}
     const dm=path.match(/^\/api\/projects\/([^/]+)\/document$/);
     if(dm){const projectId=dm[1];const all=await listProjects(projects);if(!projects.has(projectId)&&!all.some(p=>p.id===projectId)){json(res,404,{error:"Project not found"});return;}if(req.method==="GET"){json(res,200,{data:await getDocument(projectId,()=>defaultDocument(projectId))});return;}if(req.method==="PUT"||req.method==="PATCH"){const input=await body(req);const current=await getDocument(projectId,()=>defaultDocument(projectId));const next={...current,...input,projectId};await saveDocument(projectId,next);json(res,200,{data:next});return;}}

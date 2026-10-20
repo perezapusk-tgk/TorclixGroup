@@ -1,0 +1,11 @@
+{
+  "name": "@torclix/api",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "node src/server.mjs",
+    "build": "node --check src/server.mjs",
+    "lint": "node --check src/server.mjs",
+    "typecheck": "node --check src/server.mjs"
+  }
+}

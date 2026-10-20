@@ -77,7 +77,9 @@ Run the API with `pnpm --filter @torclix/api dev`.
 
 The API now has two storage modes:
 - without `DATABASE_URL`: in-memory fallback for local prototyping;
-- with `DATABASE_URL`: PostgreSQL-backed projects and site documents.
+- with `DATABASE_URL`: PostgreSQL-backed multi-tenant projects, documents and CRM records.
+
+For production, `CORS_ORIGIN` should be set to the Studio origin. Production authentication remains an external identity-provider integration boundary; the API validates the resulting user membership and role before tenant data is returned or mutated.
 
 Set `VITE_API_URL` in the web app to point at the API. The API exposes:
 - `GET/POST /api/projects`

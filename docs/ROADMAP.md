@@ -5,15 +5,15 @@
 - [x] Studio dashboard shell
 - [x] Project model
 - [x] Design system
-- [ ] Authentication
-- [ ] Organizations and memberships
-- [ ] Database persistence
+- [~] Authentication boundary (external provider still required)
+- [x] Organizations and memberships foundation
+- [x] Database persistence foundation
 
 ## 02 — Studio
 - [x] Projects CRUD
 - [ ] Clients and client portal
 - [x] Template library
-- [ ] Team roles and permissions
+- [x] Team roles and permissions foundation
 - [ ] White-label branding
 
 ## 03 — Website Builder
@@ -59,10 +59,10 @@
 - [x] PostgreSQL multi-tenant schema foundation
 - [x] Visual block content editing in the builder
 - [x] API hydration with localStorage fallback
-- [~] Persistent PostgreSQL adapter (projects/documents)
-- [ ] Authentication and organization membership
-- [~] Published project runtime and preview URLs (preview endpoint)
-- [ ] Custom domains and SSL automation
+- [x] Persistent PostgreSQL adapter (projects/documents/CRM records)
+- [x] Authentication boundary + organization membership enforcement
+- [x] Published project runtime and preview URLs (publish/unpublish + public published endpoint)
+- [~] Custom domain records and API (SSL automation still pending)
 - [ ] Telegram Mini App runtime
 - [ ] Billing and usage enforcement
 
@@ -76,3 +76,12 @@
 - [ ] Production external authentication provider
 - [ ] Live billing provider (Stripe or equivalent)
 - [ ] Full client portal routing and approval workflow
+
+## Current execution priority
+1. Production identity provider and session verification
+2. Database migration runner and API integration tests
+3. Builder publishing pipeline and draft/published document versions
+4. Custom domains and SSL automation
+5. Telegram Mini App runtime
+6. CRM workflows, staff/calendar and business operations
+7. Billing provider, usage enforcement, analytics and audit logs

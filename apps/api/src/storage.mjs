@@ -167,6 +167,13 @@ export async function listRecords(table,fallback,organizationId){
   }));
 }
 
+export async function findDomain(hostname){
+  const db=await getPool();
+  if(!db) return null;
+  const {rows}=await db.query('select id::text,organization_id::text as "organizationId",project_id::text as "projectId",hostname,status,ssl_status as "sslStatus" from domains where hostname=$1 and status in (\'active\',\'verified\') limit 1',[hostname]);
+  return rows[0]||null;
+}
+
 export async function listDomains(organizationId){
   const db=await getPool(); if(!db) return [];
   const {rows}=await db.query('select id::text,organization_id::text as "organizationId",project_id::text as "projectId",hostname,status,ssl_status as "sslStatus" from domains where organization_id=$1::uuid order by created_at desc',[organizationId]);

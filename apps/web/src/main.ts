@@ -57,7 +57,6 @@ async function hydrateProjects(){
   saveProjects();
   hydrated=true;
   if(!editorProject) render();
-void hydrateProjects();
 }
 async function hydrateDocument(id:string){
   const remote=await api("/api/projects/"+id+"/document");
@@ -173,3 +172,4 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",()=>{const p=projects.find(x=>x.id===editorProject);if(p){p.status="Live";saveProjects();void api("/api/projects/"+p.id,{method:"PATCH",body:JSON.stringify({status:"active"})});notify(p.name+" marked as Live.")}}));
 }
 render();
+void hydrateProjects();

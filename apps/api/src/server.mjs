@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -121,6 +121,15 @@ const server=createServer(async(req,res)=>{
       if(!document){html(res,404,"<h1>Project is not published</h1>");return;}
       html(res,200,renderPreview(project,document));
       return;
+    }
+    const host=(req.headers.host||"").split(":")[0].toLowerCase();
+    if(host&&host!=="localhost"&&host!=="127.0.0.1"&&!host.endsWith(".localhost")&&!host.endsWith(".local")){
+      const domain=await findDomain(host);
+      if(domain?.projectId){
+        const project=await getPublishedProject(domain.projectId);
+        const document=project?await getPublishedDocument(project.id):null;
+        if(project&&document){html(res,200,renderPreview(project,document));return;}
+      }
     }
     if(path==="/api/domains"&&req.method==="GET"){
       const auth=await requirePermission(req,res,"domains:read");if(!auth)return;

@@ -15,6 +15,9 @@ const projects=new Map([
 ]);
 const clients=new Map(),leads=new Map(),bookings=new Map();
 const publishedProjects=new Set();
+const legacyProjectIds={p1:"00000000-0000-4000-8000-000000000101",p2:"00000000-0000-4000-8000-000000000102"};
+function resolvePublicProjectId(projectId){return legacyProjectIds[projectId]||projectId;}
+
 
 function headers(extra={}){return {
   "content-type":"application/json; charset=utf-8",
@@ -34,8 +37,8 @@ function defaultDocument(projectId){return {projectId,activePage:"home",accent:"
 ]}]};}
 function renderPreview(project,doc){
   const page=doc.pages.find(p=>p.id===doc.activePage)||doc.pages[0];
-  const blocks=(page?.blocks||[]).map((b,i)=>`<section style="padding:72px 8vw;border-top:1px solid #222"><small style="opacity:.55">0${i+1} · ${esc(b.type)}</small><h2 style="font-size:clamp(40px,7vw,92px);line-height:.95;margin:16px 0">${esc(b.title)}</h2><p style="max-width:640px;font-size:20px;line-height:1.6;opacity:.7">${esc(b.body)}</p><button style="margin-top:20px;padding:13px 20px;border:0;border-radius:999px;background:${esc(doc.accent)}">Learn more →</button></section>`).join("");
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(project.name)} — TorclixGroup</title></head><body style="margin:0;background:#080808;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><header style="padding:28px 8vw;display:flex;justify-content:space-between;border-bottom:1px solid #222"><strong>TORCLIXGROUP</strong><span>${esc(project.name)}</span></header><main>${blocks}</main><footer style="padding:48px 8vw;opacity:.45">Published with TorclixGroup</footer></body></html>`;
+  const blocks=(page?.blocks||[]).map((b,i)=>`<section style="padding:72px 8vw;border-top:1px solid #222"><small style="opacity:.55">0${i+1} · ${esc(b.type)}</small><h2 style="font-size:clamp(40px,7vw,92px);line-height:.95;margin:16px 0">${esc(b.title)}</h2><p style="max-width:640px;font-size:20px;line-height:1.6;opacity:.7">${esc(b.body)}</p><button style="margin-top:20px;padding:13px 20px;border:0;border-radius:999px;background:${esc(doc.accent)}">Подробнее →</button></section>`).join("");
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(project.name)} — TorclixGroup</title></head><body style="margin:0;background:#080808;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><header style="padding:28px 8vw;display:flex;justify-content:space-between;border-bottom:1px solid #222"><strong>TORCLIXGROUP</strong><span>${esc(project.name)}</span></header><main>${blocks}</main><footer style="padding:48px 8vw;opacity:.45">Опубликовано в TorclixGroup</footer></body></html>`;
 }
 async function session(req){
   const identity=await authenticateRequest(req);
@@ -116,18 +119,22 @@ const server=createServer(async(req,res)=>{
     }
     const miniApp=path.match(/^\/miniapp\/([^/]+)$/);
     if(miniApp&&req.method==="GET"){
-      const project=(!process.env.DATABASE_URL&&publishedProjects.has(miniApp[1]))?projects.get(miniApp[1]):await getPublishedProject(miniApp[1]);
+      const requestedProjectId=miniApp[1];
+      const projectId=resolvePublicProjectId(requestedProjectId);
+      const project=(!process.env.DATABASE_URL&&publishedProjects.has(requestedProjectId))?projects.get(requestedProjectId):await getPublishedProject(projectId);
       if(!project){html(res,404,"<h1>Мини-приложение не найдено</h1>");return;}
       const document=await getPublishedDocument(project.id);
       if(!document){html(res,404,"<h1>Мини-приложение не опубликовано</h1>");return;}
       const page=document.pages?.find(p=>p.id===document.activePage)||document.pages?.[0];
-      const blocks=(page?.blocks||[]).map((b,i)=>`<article style="padding:24px 0;border-bottom:1px solid #252525"><small style="opacity:.5">0${i+1} · ${esc(b.type)}</small><h2 style="font-size:32px;line-height:1;margin:10px 0">${esc(b.title)}</h2><p style="line-height:1.55;opacity:.72">${esc(b.body)}</p><button onclick="Telegram.WebApp.showAlert('Torclix action')" style="border:0;border-radius:999px;padding:12px 16px;background:${esc(document.accent||"#d8ff3e")}">Open</button></article>`).join("");
-      html(res,200,`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://telegram.org/js/telegram-web-app.js"></script><title>${esc(project.name)}</title></head><body style="margin:0;background:#0b0b0b;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><main style="max-width:560px;margin:auto;padding:20px 20px 48px"><header style="padding:12px 0 28px"><small style="opacity:.5">TORCLIXGROUP MINI APP</small><h1 style="font-size:42px;line-height:.95;margin:10px 0">${esc(project.name)}</h1></header>${blocks}</main><script>if(window.Telegram?.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}</script></body></html>`);
+      const blocks=(page?.blocks||[]).map((b,i)=>`<article style="padding:24px 0;border-bottom:1px solid #252525"><small style="opacity:.5">0${i+1} · ${esc(b.type)}</small><h2 style="font-size:32px;line-height:1;margin:10px 0">${esc(b.title)}</h2><p style="line-height:1.55;opacity:.72">${esc(b.body)}</p><button onclick="Telegram.WebApp.showAlert('Torclix action')" style="border:0;border-radius:999px;padding:12px 16px;background:${esc(document.accent||"#d8ff3e")}">Открыть</button></article>`).join("");
+      html(res,200,`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://telegram.org/js/telegram-web-app.js"></script><title>${esc(project.name)}</title></head><body style="margin:0;background:#0b0b0b;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><main style="max-width:560px;margin:auto;padding:20px 20px 48px"><header style="padding:12px 0 28px"><small style="opacity:.5">МИНИ-ПРИЛОЖЕНИЕ TORCLIXGROUP</small><h1 style="font-size:42px;line-height:.95;margin:10px 0">${esc(project.name)}</h1></header>${blocks}</main><script>if(window.Telegram?.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}</script></body></html>`);
       return;
     }
     const published=path.match(/^\/published\/([^/]+)$/);
     if(published&&req.method==="GET"){
-      const project=(!process.env.DATABASE_URL&&publishedProjects.has(published[1]))?projects.get(published[1]):await getPublishedProject(published[1]);
+      const requestedProjectId=published[1];
+      const projectId=resolvePublicProjectId(requestedProjectId);
+      const project=(!process.env.DATABASE_URL&&publishedProjects.has(requestedProjectId))?projects.get(requestedProjectId):await getPublishedProject(projectId);
       if(!project){html(res,404,"<h1>Опубликованный проект не найден</h1>");return;}
       const document=await getPublishedDocument(project.id);
       if(!document){html(res,404,"<h1>Проект не опубликован</h1>");return;}
@@ -184,12 +191,13 @@ const server=createServer(async(req,res)=>{
     const publicLead=path.match(/^\/public\/projects\/([^/]+)\/leads$/);
     if(publicLead&&req.method==="POST"){
       const projectId=publicLead[1];
-      const project=projects.get(projectId)||await getPublishedProject(projectId);
-      const document=project?await getPublishedDocument(projectId):null;
+      const resolvedProjectId=resolvePublicProjectId(projectId);
+      const project=projects.get(projectId)||await getPublishedProject(resolvedProjectId);
+      const document=project?await getPublishedDocument(project.id):null;
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.name){json(res,400,{error:"name is required"});return;}
-      const lead={id:newId(),organizationId:project.organizationId,projectId,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"published_site"),status:"new",createdAt:new Date().toISOString()};
+      const lead={id:newId(),organizationId:project.organizationId,projectId:project.id,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"published_site"),status:"new",createdAt:new Date().toISOString()};
       await saveRecord("leads",lead);if(!process.env.DATABASE_URL)leads.set(lead.id,lead);
       json(res,201,{data:{id:lead.id,received:true}});return;
     }
@@ -201,7 +209,7 @@ const server=createServer(async(req,res)=>{
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.customerName||!input.startAt){json(res,400,{error:"customerName and startAt are required"});return;}
-      const booking={id:newId(),organizationId:project.organizationId,projectId,customerName:String(input.customerName),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};
+      const booking={id:newId(),organizationId:project.organizationId,projectId:project.id,customerName:String(input.customerName),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};
       await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);
       json(res,201,{data:{id:booking.id,received:true,status:booking.status}});return;
     }

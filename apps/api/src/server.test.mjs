@@ -60,4 +60,8 @@ test("project publishing creates a public runtime in development",async()=>{
   const publicPage=await fetch(base+"/published/p1");
   assert.equal(publicPage.status,200);
   assert.match(await publicPage.text(),/Maison Noire/);
+
+  const legacyMini=await fetch(base+"/miniapp/p1");
+  assert.equal(legacyMini.status,200);
+  assert.match(await legacyMini.text(),/Maison Noire/);
 });

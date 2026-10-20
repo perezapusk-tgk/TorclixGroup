@@ -1,5 +1,5 @@
 {
   "name":"@torclix/api","private":true,"version":"0.2.0","type":"module",
-  "scripts":{"dev":"node src/server.mjs","migrate":"node src/migrate.mjs","build":"node --check src/server.mjs","lint":"node --check src/server.mjs","typecheck":"node --check src/server.mjs"},
+  "scripts":{"dev":"node src/server.mjs","start":"node src/server.mjs","migrate":"node src/migrate.mjs","build":"node --check src/server.mjs","lint":"node --check src/server.mjs","typecheck":"node --check src/server.mjs"},
   "dependencies":{"pg":"^8.16.3"}
 }

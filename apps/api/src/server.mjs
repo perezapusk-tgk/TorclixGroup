@@ -121,9 +121,11 @@ const server=createServer(async(req,res)=>{
     if(miniApp&&req.method==="GET"){
       const requestedProjectId=miniApp[1];
       const projectId=resolvePublicProjectId(requestedProjectId);
-      const project=(!process.env.DATABASE_URL&&publishedProjects.has(requestedProjectId))?projects.get(requestedProjectId):await getPublishedProject(projectId);
+      const project=(!process.env.DATABASE_URL)
+        ? (projects.get(requestedProjectId)||null)
+        : await getPublishedProject(projectId);
       if(!project){html(res,404,"<h1>Мини-приложение не найдено</h1>");return;}
-      const document=await getPublishedDocument(project.id);
+      const document=await getPublishedDocument(project.id) || (!process.env.DATABASE_URL ? defaultDocument(project.id) : null);
       if(!document){html(res,404,"<h1>Мини-приложение не опубликовано</h1>");return;}
       const page=document.pages?.find(p=>p.id===document.activePage)||document.pages?.[0];
       const blocks=(page?.blocks||[]).map((b,i)=>`<article style="padding:24px 0;border-bottom:1px solid #252525"><small style="opacity:.5">0${i+1} · ${esc(b.type)}</small><h2 style="font-size:32px;line-height:1;margin:10px 0">${esc(b.title)}</h2><p style="line-height:1.55;opacity:.72">${esc(b.body)}</p><button onclick="Telegram.WebApp.showAlert('Torclix action')" style="border:0;border-radius:999px;padding:12px 16px;background:${esc(document.accent||"#d8ff3e")}">Открыть</button></article>`).join("");
@@ -134,9 +136,11 @@ const server=createServer(async(req,res)=>{
     if(published&&req.method==="GET"){
       const requestedProjectId=published[1];
       const projectId=resolvePublicProjectId(requestedProjectId);
-      const project=(!process.env.DATABASE_URL&&publishedProjects.has(requestedProjectId))?projects.get(requestedProjectId):await getPublishedProject(projectId);
+      const project=(!process.env.DATABASE_URL)
+        ? (projects.get(requestedProjectId)||null)
+        : await getPublishedProject(projectId);
       if(!project){html(res,404,"<h1>Опубликованный проект не найден</h1>");return;}
-      const document=await getPublishedDocument(project.id);
+      const document=await getPublishedDocument(project.id) || (!process.env.DATABASE_URL ? defaultDocument(project.id) : null);
       if(!document){html(res,404,"<h1>Проект не опубликован</h1>");return;}
       html(res,200,renderPreview(project,document));
       return;

@@ -117,9 +117,9 @@ const server=createServer(async(req,res)=>{
     const miniApp=path.match(/^\/miniapp\/([^/]+)$/);
     if(miniApp&&req.method==="GET"){
       const project=(!process.env.DATABASE_URL&&publishedProjects.has(miniApp[1]))?projects.get(miniApp[1]):await getPublishedProject(miniApp[1]);
-      if(!project){html(res,404,"<h1>Mini App not found</h1>");return;}
+      if(!project){html(res,404,"<h1>Мини-приложение не найдено</h1>");return;}
       const document=await getPublishedDocument(project.id);
-      if(!document){html(res,404,"<h1>Mini App is not published</h1>");return;}
+      if(!document){html(res,404,"<h1>Мини-приложение не опубликовано</h1>");return;}
       const page=document.pages?.find(p=>p.id===document.activePage)||document.pages?.[0];
       const blocks=(page?.blocks||[]).map((b,i)=>`<article style="padding:24px 0;border-bottom:1px solid #252525"><small style="opacity:.5">0${i+1} · ${esc(b.type)}</small><h2 style="font-size:32px;line-height:1;margin:10px 0">${esc(b.title)}</h2><p style="line-height:1.55;opacity:.72">${esc(b.body)}</p><button onclick="Telegram.WebApp.showAlert('Torclix action')" style="border:0;border-radius:999px;padding:12px 16px;background:${esc(document.accent||"#d8ff3e")}">Open</button></article>`).join("");
       html(res,200,`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://telegram.org/js/telegram-web-app.js"></script><title>${esc(project.name)}</title></head><body style="margin:0;background:#0b0b0b;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><main style="max-width:560px;margin:auto;padding:20px 20px 48px"><header style="padding:12px 0 28px"><small style="opacity:.5">TORCLIXGROUP MINI APP</small><h1 style="font-size:42px;line-height:.95;margin:10px 0">${esc(project.name)}</h1></header>${blocks}</main><script>if(window.Telegram?.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}</script></body></html>`);
@@ -128,9 +128,9 @@ const server=createServer(async(req,res)=>{
     const published=path.match(/^\/published\/([^/]+)$/);
     if(published&&req.method==="GET"){
       const project=(!process.env.DATABASE_URL&&publishedProjects.has(published[1]))?projects.get(published[1]):await getPublishedProject(published[1]);
-      if(!project){html(res,404,"<h1>Published project not found</h1>");return;}
+      if(!project){html(res,404,"<h1>Опубликованный проект не найден</h1>");return;}
       const document=await getPublishedDocument(project.id);
-      if(!document){html(res,404,"<h1>Project is not published</h1>");return;}
+      if(!document){html(res,404,"<h1>Проект не опубликован</h1>");return;}
       html(res,200,renderPreview(project,document));
       return;
     }
@@ -186,7 +186,7 @@ const server=createServer(async(req,res)=>{
       const projectId=publicLead[1];
       const project=projects.get(projectId)||await getPublishedProject(projectId);
       const document=project?await getPublishedDocument(projectId):null;
-      if(!project||!document){json(res,404,{error:"Published project not found"});return;}
+      if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.name){json(res,400,{error:"name is required"});return;}
       const lead={id:newId(),organizationId:project.organizationId,projectId,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"published_site"),status:"new",createdAt:new Date().toISOString()};
@@ -198,7 +198,7 @@ const server=createServer(async(req,res)=>{
       const projectId=publicBooking[1];
       const project=projects.get(projectId)||await getPublishedProject(projectId);
       const document=project?await getPublishedDocument(projectId):null;
-      if(!project||!document){json(res,404,{error:"Published project not found"});return;}
+      if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.customerName||!input.startAt){json(res,400,{error:"customerName and startAt are required"});return;}
       const booking={id:newId(),organizationId:project.organizationId,projectId,customerName:String(input.customerName),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};

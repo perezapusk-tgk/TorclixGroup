@@ -6,7 +6,7 @@ type Page = { id:string; name:string; blocks:Block[] };
 type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string };
 
 const nav = [
-  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["⚙","Settings"]
+  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["⚙","Settings"]
 ] as const;
 
 const seed:Project[]=[

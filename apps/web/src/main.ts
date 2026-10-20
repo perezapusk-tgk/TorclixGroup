@@ -147,7 +147,10 @@ function buildTemplateDocument(id:string,industry:string):SiteDoc{
 function saveDoc(){localStorage.setItem("tg-doc-"+doc.projectId,JSON.stringify(doc));}
 function saveProjects(){localStorage.setItem("tg-projects",JSON.stringify(projects));}
 const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
-const DEMO_AUTH=true;
+const DEMO_AUTH=import.meta.env.VITE_TORCLIX_DEMO==="true";
+const TRIAL_AUTH=import.meta.env.VITE_TORCLIX_TRIAL==="true";
+const TRIAL_KEY="tg-trial-session";
+const trialToken=TRIAL_AUTH?(localStorage.getItem(TRIAL_KEY)||(()=>{const value=crypto.randomUUID().replace(/-/g,"")+crypto.randomUUID().replace(/-/g,"");localStorage.setItem(TRIAL_KEY,value);return value;})()):"";
 let hydrated=false;
 let telegramStatus:{enabled:boolean;miniAppUrl:string}={enabled:false,miniAppUrl:""};
 async function hydrateTelegram(){try{const result=await api("/api/telegram/status");telegramStatus=result?.data||telegramStatus;}catch{}}
@@ -201,7 +204,7 @@ async function hydrateDocument(id:string){
 async function api(path:string,options:RequestInit={}){
   if(!API_BASE) return {error:"API URL не настроен"};
   try{
-    const response=await fetch(API_BASE+path,{...options,headers:{"content-type":"application/json",...(DEMO_AUTH?{"x-torclix-user":"demo"}:{}),...(options.headers||{})}});
+    const response=await fetch(API_BASE+path,{...options,headers:{"content-type":"application/json",...(DEMO_AUTH?{"x-torclix-user":"demo"}:{}),...(TRIAL_AUTH?{"x-torclix-trial":trialToken}:{}),...(options.headers||{})}});
     const payload=await response.json().catch(()=>({}));
     if(!response.ok) return {error:String(payload?.error||("API "+response.status)),status:response.status};
     return payload;

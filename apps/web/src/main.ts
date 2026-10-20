@@ -27,32 +27,17 @@ let team:any[]=[];
 let domains:any[]=[];
 let doc:SiteDoc = loadDoc(editorProject||"p1");
 
-const uiRu:Record<string,string>={
-"Overview":"Обзор","Projects":"Проекты","Clients":"Клиенты","Leads":"Лиды","Bookings":"Бронирования","Websites":"Сайты","Mini Apps":"Мини-приложения","Templates":"Шаблоны","Components":"Компоненты","Analytics":"Аналитика","Domains":"Домены","Integrations":"Интеграции","Billing":"Тариф и оплата","Team":"Команда","Settings":"Настройки","Workspace":"Рабочее пространство",
-"Studio":"Студия","Build. Operate.":"Создавайте. Управляйте.","Scale.":"Масштабируйте.","Browse templates":"Открыть шаблоны","+ New project":"+ Новый проект","Active / Draft":"Активные / Черновики","Monthly revenue":"Доход в месяц","Leads this month":"Лиды за месяц","Recent projects":"Последние проекты","Activity":"Активность","Today":"Сегодня","Fast actions":"Быстрые действия","Start something new":"Начните новое","Create project":"Создать проект","Use a template":"Использовать шаблон","Add client":"Добавить клиента","Connect domain":"Подключить домен",
-"Business OS":"Бизнес-система","Refresh":"Обновить","Published":"Опубликовано","Draft":"Черновик","Live":"Опубликовано","Active":"Активен","Connected":"Подключен","Pending":"Ожидает","Ready":"Готово","Current":"Текущий","Usage":"Использование","No domains connected":"Домены пока не подключены","Add a custom hostname":"Добавьте собственный домен",
-"Template system":"Система шаблонов","Production-ready starting points. Select one to open it in the builder.":"Готовые стартовые решения. Выберите шаблон, чтобы открыть его в конструкторе.","Project builder":"Конструктор проекта","Design":"Дизайн","Content":"Контент","Pages":"Страницы","Add section":"Добавить секцию","Preview":"Предпросмотр","Publish":"Опубликовать","Page":"+ Страница","Global style":"Общий стиль","Responsive":"Адаптивность","SEO ready":"SEO готов","Custom domain":"Свой домен","Learn more →":"Подробнее →","Block editor":"Редактор блока","Title":"Заголовок","Body":"Текст","Save block":"Сохранить блок","Done":"Готово","New project":"Новый проект","Choose your starting point":"Выберите тип проекта","Project name":"Название проекта","Industry":"Индустрия","Cancel":"Отмена","Create":"Создать","Save":"Сохранить","No email":"Нет email","No contact":"Нет контакта","No time":"Время не указано"
-};
-function localizeUI(){
-for(const node of [...root.querySelectorAll("*")]){
-if(node.children.length) continue;
-const text=node.textContent?.trim(); if(!text) continue;
-let next=text; for(const [en,ru] of Object.entries(uiRu)) next=next.split(en).join(ru);
-if(next!==text) node.textContent=next;
-}}
-
-
 function loadDoc(id:string):SiteDoc{
  const saved=localStorage.getItem("tg-doc-"+id);
  if(saved) return JSON.parse(saved);
  return {projectId:id,activePage:"home",accent:"#d8ff3e",pages:[
-  {id:"home",name:"Главная",blocks:[
-   {id:"b1",type:"Hero",title:"Создано для следующего этапа вашего бизнеса.",body:"Премиальный цифровой опыт, которым можно управлять из одной студии."},
-   {id:"b2",type:"Features",title:"Всё необходимое вашим клиентам.",body:"Услуги, бронирование, каталог, лиды и клиентские сценарии в одной системе."},
-   {id:"b3",type:"CTA",title:"Готовы начать?",body:"Запишитесь на консультацию или создайте проект."}
+  {id:"home",name:"Home",blocks:[
+   {id:"b1",type:"Hero",title:"Built for the next version of your business.",body:"A premium digital experience, managed from one studio."},
+   {id:"b2",type:"Features",title:"Everything your clients need.",body:"Services, booking, catalog, leads and customer journeys in one system."},
+   {id:"b3",type:"CTA",title:"Ready when you are.",body:"Book a consultation or start a project."}
   ]},
-  {id:"about",name:"О компании",blocks:[{id:"b4",type:"Story",title:"Удобный способ работать.",body:"Расскажите о себе уверенно."}]},
-  {id:"contact",name:"Контакты",blocks:[{id:"b5",type:"Contact",title:"Давайте обсудим.",body:"hello@example.com"}]}
+  {id:"about",name:"About",blocks:[{id:"b4",type:"Story",title:"A better way to operate.",body:"Tell your story with confidence."}]},
+  {id:"contact",name:"Contact",blocks:[{id:"b5",type:"Contact",title:"Let's talk.",body:"hello@example.com"}]}
  ]};
 }
 function saveDoc(){localStorage.setItem("tg-doc-"+doc.projectId,JSON.stringify(doc));}
@@ -133,8 +118,7 @@ function render(){
  </aside>
  <main class="main"><header class="topbar"><div class="crumb">Studio / <strong>${project?project.name:active}</strong></div><div class="top-actions"><button class="icon-btn" data-action="back">←</button><button class="icon-btn">⌕</button><div class="avatar">PG</div></div></header>
  <section class="content">${editorProject&&project?editor(project):active==="Overview"?overview():workspace(active)}</section></main></div>
- ${modal?projectModal():""}${toast?`<div class="toast">${toast}</div>`:""}<nav class="mobile-nav">${nav.slice(0,5).map(([icon,label])=>`<button class="${active===label&&!editorProject?"active":""}" data-nav="${label}"><span>${icon}</span><small>${label}</small></button>`).join("")}</nav>`;
- localizeUI();
+ ${modal?projectModal():""}${toast?`<div class="toast">${toast}</div>`:""}`;
  bind();
 }
 

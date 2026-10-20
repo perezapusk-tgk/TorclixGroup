@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -23,7 +23,7 @@ const projects=new Map([
   ["p1",{id:"p1",name:"Maison Noire",type:"website_mini_app",industry:"restaurant",status:"active",organizationId:"org_demo",slug:"maison-noire"}],
   ["p2",{id:"p2",name:"Forma Fitness",type:"mini_app",industry:"fitness",status:"active",organizationId:"org_demo",slug:"forma-fitness"}]
 ]);
-const clients=new Map(),leads=new Map(),bookings=new Map();
+const clients=new Map(),leads=new Map(),bookings=new Map(),catalogItems=new Map();
 const publishedProjects=new Set();
 const legacyProjectIds={p1:"00000000-0000-4000-8000-000000000101",p2:"00000000-0000-4000-8000-000000000102"};
 function resolvePublicProjectId(projectId){return legacyProjectIds[projectId]||projectId;}
@@ -81,6 +81,69 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leadRecords=await listRecords("leads",leads,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leadRecords.length})});return;}
+    if(path==="/api/catalog"&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"catalog:read");if(!auth)return;
+      const url=new URL(req.url||"/","http://localhost");
+      const projectId=url.searchParams.get("projectId");
+      if(projectId){
+        const project=projects.get(projectId);
+        const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);
+        if(!owned){json(res,404,{error:"Project not found"});return;}
+      }
+      json(res,200,{data:await listCatalogItems(catalogItems,auth.organization.id,projectId)});return;
+    }
+    if(path==="/api/catalog"&&req.method==="POST"){
+      const auth=await requirePermission(req,res,"catalog:write");if(!auth)return;
+      const input=await body(req);
+      const projectId=String(input.projectId||"").trim();
+      const project=projects.get(projectId);
+      const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);
+      if(!owned){json(res,400,{error:"A valid projectId is required"});return;}
+      const name=String(input.name||"").trim();
+      if(!name){json(res,400,{error:"name is required"});return;}
+      const slug=(String(input.slug||name).toLowerCase().trim().replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"")||"item");
+      const item={id:newId(),organizationId:auth.organization.id,projectId,name,slug,
+        itemType:["product","service"].includes(String(input.itemType))?String(input.itemType):"service",
+        description:input.description?String(input.description):"",
+        price:Number.isFinite(Number(input.price))?Math.max(0,Number(input.price)):0,
+        currency:String(input.currency||"EUR").toUpperCase().slice(0,3),
+        category:input.category?String(input.category):null,
+        status:["active","draft","archived"].includes(String(input.status))?String(input.status):"active",
+        stock:input.stock===null||input.stock===undefined||input.stock===""?null:Math.max(0,Math.floor(Number(input.stock))),
+        imageUrl:input.imageUrl?String(input.imageUrl):null};
+      if(!Number.isFinite(item.price)||item.price>100000000){json(res,400,{error:"Invalid price"});return;}
+      if(item.stock!==null&&!Number.isFinite(item.stock)){json(res,400,{error:"Invalid stock"});return;}
+      const saved=await saveCatalogItem(item);if(!process.env.DATABASE_URL)catalogItems.set(item.id,item);
+      json(res,201,{data:saved});return;
+    }
+    const catalogId=path.match(/^\/api\/catalog\/([^/]+)$/);
+    if(catalogId&&(req.method==="PATCH"||req.method==="PUT")){
+      const auth=await requirePermission(req,res,"catalog:write");if(!auth)return;
+      const current=await getCatalogItem(catalogId[1],auth.organization.id) || catalogItems.get(catalogId[1]);
+      if(!current||current.organizationId!==auth.organization.id){json(res,404,{error:"Catalog item not found"});return;}
+      const input=await body(req);
+      const projectId=String(input.projectId||current.projectId);
+      const project=projects.get(projectId);
+      const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);
+      if(!owned){json(res,400,{error:"A valid projectId is required"});return;}
+      const price=input.price===undefined?Number(current.price):Number(input.price);
+      const stock=input.stock===undefined?current.stock:(input.stock===null||input.stock===""?null:Number(input.stock));
+      if(!Number.isFinite(price)||price<0||price>100000000){json(res,400,{error:"Invalid price"});return;}
+      if(stock!==null&&(!Number.isFinite(stock)||stock<0)){json(res,400,{error:"Invalid stock"});return;}
+      const next={...current,projectId,name:input.name===undefined?current.name:String(input.name).trim(),slug:input.slug===undefined?current.slug:(String(input.slug).toLowerCase().trim().replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"")||current.slug),itemType:input.itemType===undefined?current.itemType:(["product","service"].includes(String(input.itemType))?String(input.itemType):"service"),description:input.description===undefined?current.description:String(input.description),price,currency:input.currency===undefined?current.currency:String(input.currency).toUpperCase().slice(0,3),category:input.category===undefined?current.category:(input.category?String(input.category):null),status:input.status===undefined?current.status:(["active","draft","archived"].includes(String(input.status))?String(input.status):current.status),stock,imageUrl:input.imageUrl===undefined?current.imageUrl:(input.imageUrl?String(input.imageUrl):null)};
+      if(!next.name){json(res,400,{error:"name is required"});return;}
+      const saved=await saveCatalogItem(next);if(!process.env.DATABASE_URL)catalogItems.set(next.id,next);
+      json(res,200,{data:saved});return;
+    }
+    if(catalogId&&req.method==="DELETE"){
+      const auth=await requirePermission(req,res,"catalog:write");if(!auth)return;
+      const current=await getCatalogItem(catalogId[1],auth.organization.id) || catalogItems.get(catalogId[1]);
+      if(!current||current.organizationId!==auth.organization.id){json(res,404,{error:"Catalog item not found"});return;}
+      const archived=await archiveCatalogItem(catalogId[1],auth.organization.id);
+      if(!process.env.DATABASE_URL)catalogItems.delete(catalogId[1]);
+      json(res,200,{data:archived||{...current,status:"archived"}});return;
+    }
+
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}
     if(path==="/api/analytics"&&req.method==="GET"){
       const auth=await requirePermission(req,res,"analytics:read");if(!auth)return;
@@ -332,15 +395,17 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
       const requestedProjectId=publicBooking[1];
       const resolvedProjectId=resolvePublicProjectId(requestedProjectId);
       const project=projects.get(requestedProjectId)||await getPublishedProject(resolvedProjectId);
-      const document=project?await getPublishedDocument(project.id):(!process.env.DATABASE_URL?defaultDocument(project.id):null);
+      const document=project?await getPublishedDocument(project.id):null;
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.customerName||!input.startAt){json(res,400,{error:"customerName and startAt are required"});return;}
       const tgUser=input.tg_init?verifyTelegramInitData(String(input.tg_init),process.env.TELEGRAM_BOT_TOKEN||""):null;
       if(input.tg_init&&!tgUser){json(res,401,{error:"Telegram авторизация недействительна"});return;}
-      const booking={id:newId(),organizationId:project.organizationId,projectId:project.id,customerName:String(input.customerName),customerEmail:input.customerEmail?String(input.customerEmail):undefined,customerPhone:input.customerPhone?String(input.customerPhone):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,telegramUserId:tgUser?.id,telegramUsername:tgUser?.username,status:"pending",createdAt:new Date().toISOString()};
+      const idem=requestKey(req);const cacheKey=idem?project.id+":booking:"+idem:null;const cached=cacheKey?idempotencyCache.get(cacheKey):null;if(cached){json(res,cached.status,cached.body);return;}
+      const parsedStart=new Date(String(input.startAt));if(Number.isNaN(parsedStart.getTime())){json(res,400,{error:"Invalid startAt"});return;}
+      const booking={id:newId(),organizationId:project.organizationId,projectId:project.id,customerName:String(input.customerName),customerEmail:input.customerEmail?String(input.customerEmail):undefined,customerPhone:input.customerPhone?String(input.customerPhone):undefined,startAt:parsedStart.toISOString(),service:input.service?String(input.service):undefined,telegramUserId:tgUser?.id,telegramUsername:tgUser?.username,status:"pending",createdAt:new Date().toISOString()};
       await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);
-      json(res,201,{data:{id:booking.id,received:true,status:booking.status}});return;
+      const response={data:{id:booking.id,received:true,status:booking.status}};if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }
         if(path==="/api/telegram/me"&&req.method==="POST"){
       const input=await body(req);const user=verifyTelegramInitData(String(input.initData||""),process.env.TELEGRAM_BOT_TOKEN||"");
@@ -385,9 +450,9 @@ const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
     if(path==="/api/clients"&&req.method==="GET"){const auth=await requirePermission(req,res,"clients:read");if(!auth)return;json(res,200,{data:await listRecords("clients",clients,auth.organization.id)});return;}
     if(path==="/api/clients"&&req.method==="POST"){const auth=await requirePermission(req,res,"clients:write");if(!auth)return;const input=await body(req);const client={id:newId(),organizationId:auth.organization.id,name:String(input.name||"New client"),email:input.email?String(input.email):undefined};await saveRecord("clients",client);if(!process.env.DATABASE_URL)clients.set(client.id,client);json(res,201,{data:client});return;}
     if(path==="/api/leads"&&req.method==="GET"){const auth=await requirePermission(req,res,"leads:read");if(!auth)return;json(res,200,{data:await listRecords("leads",leads,auth.organization.id)});return;}
-    if(path==="/api/leads"&&req.method==="POST"){const auth=await requirePermission(req,res,"leads:write");if(!auth)return;const input=await body(req);const lead={id:newId(),organizationId:auth.organization.id,projectId:String(input.projectId||""),name:String(input.name||"Anonymous"),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"website"),status:"new",createdAt:new Date().toISOString()};await saveRecord("leads",lead);if(!process.env.DATABASE_URL)leads.set(lead.id,lead);json(res,201,{data:lead});return;}
+    if(path==="/api/leads"&&req.method==="POST"){const auth=await requirePermission(req,res,"leads:write");if(!auth)return;const input=await body(req);const projectId=String(input.projectId||"").trim();const project=projects.get(projectId);const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);if(!owned){json(res,400,{error:"A valid projectId is required"});return;}const lead={id:newId(),organizationId:auth.organization.id,projectId,name:String(input.name||"Anonymous"),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"website"),status:"new",createdAt:new Date().toISOString()};await saveRecord("leads",lead);if(!process.env.DATABASE_URL)leads.set(lead.id,lead);json(res,201,{data:lead});return;}
     if(path==="/api/bookings"&&req.method==="GET"){const auth=await requirePermission(req,res,"bookings:read");if(!auth)return;json(res,200,{data:await listRecords("bookings",bookings,auth.organization.id)});return;}
-    if(path==="/api/bookings"&&req.method==="POST"){const auth=await requirePermission(req,res,"bookings:write");if(!auth)return;const input=await body(req);if(!input.startAt){json(res,400,{error:"startAt is required"});return;}const booking={id:newId(),organizationId:auth.organization.id,projectId:String(input.projectId||""),customerName:String(input.customerName||"Guest"),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);json(res,201,{data:booking});return;}
+    if(path==="/api/bookings"&&req.method==="POST"){const auth=await requirePermission(req,res,"bookings:write");if(!auth)return;const input=await body(req);if(!input.startAt){json(res,400,{error:"startAt is required"});return;}const projectId=String(input.projectId||"").trim();const project=projects.get(projectId);const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);if(!owned){json(res,400,{error:"A valid projectId is required"});return;}const booking={id:newId(),organizationId:auth.organization.id,projectId,customerName:String(input.customerName||"Guest"),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);json(res,201,{data:booking});return;}
     if(path==="/api/templates"&&req.method==="GET"){json(res,200,{data:["restaurant-noir","beauty-atelier","fitness-forma","medical-northline","real-estate-north","services-studio"]});return;}
     json(res,404,{error:"Not found"});
   }catch(error){console.error(error);json(res,500,{error:"Internal server error"});}

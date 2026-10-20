@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -150,6 +150,19 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
 </script></body></html>`);
       return;
     }
+    if(path==="/api/telegram/integrations"&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
+      json(res,200,{data:await listTelegramIntegrations(auth.organization.id)});return;
+    }
+    const telegramIntegration=path.match(/^\\/api\\/telegram\\/integrations\\/([^/]+)$/);
+    if(telegramIntegration&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
+      const projectId=telegramIntegration[1];
+      const project=projects.get(projectId);
+      const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);
+      if(!owned){json(res,404,{error:"Project not found"});return;}
+      json(res,200,{data:await getTelegramIntegration(auth.organization.id,projectId)});return;
+    }
     if(path==="/api/telegram/status"&&req.method==="GET"){
       const enabled=!!process.env.TELEGRAM_BOT_TOKEN;
       json(res,200,{data:{enabled,configured:enabled,miniAppUrl:enabled?telegramMiniAppUrl(process.env.TELEGRAM_DEFAULT_PROJECT||"p1"):null}});
@@ -160,7 +173,13 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
       try{
         const result=await configureTelegramBot();
         if(!result.enabled){json(res,409,{error:"TELEGRAM_BOT_TOKEN is not configured"});return;}
-        json(res,200,{data:{...result,miniAppUrl:telegramMiniAppUrl(process.env.TELEGRAM_DEFAULT_PROJECT||"p1")}});
+        const projectId=String((await body(req)).projectId||process.env.TELEGRAM_DEFAULT_PROJECT||"p1");
+        const project=projects.get(projectId)||await getProject(projectId,auth.organization.id);
+        if(!project||project.organizationId!==auth.organization.id){json(res,404,{error:"Project not found"});return;}
+        const integration={id:newId(),organizationId:auth.organization.id,projectId,botId:result.id,botUsername:result.username,enabled:true,webhookUrl:(process.env.PUBLIC_URL||"").replace(/\\/$/,"")+"/tg/webhook"};
+        await saveTelegramIntegration(integration);
+        json(res,200,{data:{...result,projectId,miniAppUrl:telegramMiniAppUrl(projectId),integration}});
+
       }catch(error){json(res,502,{error:error instanceof Error?error.message:"Telegram setup failed"});}
       return;
     }

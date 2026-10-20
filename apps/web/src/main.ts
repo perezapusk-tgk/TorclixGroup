@@ -24,6 +24,7 @@ let crm: {clients:any[];leads:any[];bookings:any[]}={clients:[],leads:[],booking
 let session:any=null;
 let billing:any=null;
 let team:any[]=[];
+let domains:any[]=[];
 let doc:SiteDoc = loadDoc(editorProject||"p1");
 
 function loadDoc(id:string):SiteDoc{
@@ -50,8 +51,8 @@ async function hydrateSession(){
 }
 async function hydrateWorkspace(){
  if(!API_BASE) return;
- const [b,t]=await Promise.all([api("/api/billing"),api("/api/team")]);
- billing=b?.data||null; team=Array.isArray(t?.data)?t.data:[];
+ const [b,t,d]=await Promise.all([api("/api/billing"),api("/api/team"),api("/api/domains")]);
+ billing=b?.data||null; team=Array.isArray(t?.data)?t.data:[]; domains=Array.isArray(d?.data)?d.data:[];
  if(!editorProject) render();
 }
 async function hydrateCRM(){
@@ -135,7 +136,7 @@ function workspace(section:string){
  "Mini Apps":[["Maison Noire","Menu · Booking · Loyalty","Published"],["Forma Fitness","Classes · Membership","Published"]],
  Components:[["Hero","Marketing section","Core"],["Booking","Business module","Core"],["Pricing","Commerce section","Core"]],
  Analytics:[["Visitors","24.8k","↑ 18%"],["Leads","329","↑ 22%"],["Conversion","4.8%","↑ 0.7%"]],
- Domains:[["maisonnoire.studio","DNS verified","Connected"],["forma.fit","SSL active","Connected"],["northline.health","Awaiting DNS","Pending"]],
+ Domains:domains.length?domains.map(d=>[d.hostname,d.sslStatus==="active"?"SSL active":"SSL pending",d.status==="active"?"Connected":"Pending"]):[["No domains connected","Add a custom hostname","Pending"]],
  Integrations:[["Telegram","Mini Apps + notifications","Ready"],["Stripe","Payments","Connect"],["Email","Transactional email","Connect"]],
  Billing:[[billing?.plan||"Pro","€"+String(billing?.price||299)+" / month","Current"],["Projects",String(billing?.usage?.projects||projects.length)+" / "+String(billing?.limits?.projects||50),"Usage"],["Leads",String(billing?.usage?.leads||0)+" / "+String(billing?.limits?.leads||10000),"Usage"]],
  Team:team.map(m=>[m.name,m.email,m.role]),
@@ -207,7 +208,12 @@ function bind(){
  root.querySelector<HTMLInputElement>("#accent")?.addEventListener("input",e=>{doc.accent=(e.target as HTMLInputElement).value;saveDoc();document.documentElement.style.setProperty("--editor-accent",doc.accent)});
  root.querySelectorAll<HTMLElement>("[data-action='add-page']").forEach(el=>el.addEventListener("click",()=>{const id="page"+Date.now();doc.pages.push({id,name:"New page",blocks:[{id:"b"+Date.now(),type:"Hero",title:"New page.",body:"Start building this page."}]});doc.activePage=id;saveDoc();render()}));
  root.querySelectorAll<HTMLElement>("[data-action='preview']").forEach(el=>el.addEventListener("click",()=>{if(!editorProject){notify("Open a project first.");return;}if(!API_BASE){notify("Preview needs VITE_API_URL configured.");return;}window.open(API_BASE+"/preview/"+editorProject,"_blank","noopener,noreferrer");}));
- root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",()=>{const p=projects.find(x=>x.id===editorProject);if(p){p.status="Live";saveProjects();void api("/api/projects/"+p.id,{method:"PATCH",body:JSON.stringify({status:"active"})});notify(p.name+" marked as Live.")}}));
+ root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",async()=>{
+  const p=projects.find(x=>x.id===editorProject);if(!p)return;
+  const remote=await api("/api/projects/"+p.id+"/publish",{method:"POST"});
+  if(remote?.data?.published){p.status="Live";saveProjects();notify(p.name+" published successfully.");}
+  else notify("Publish failed — check API/auth configuration.");
+}));
 }
 render();
 void hydrateSession();

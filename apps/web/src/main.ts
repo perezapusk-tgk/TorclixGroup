@@ -6,7 +6,7 @@ type Page = { id:string; name:string; blocks:Block[] };
 type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string; miniApp?:{modules:string[];navigation?:string[];theme?:{accent:string;mode:"light"|"dark"}}; };
 
 const nav = [
-  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["♟","Team"],["⚙","Settings"]
+  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["▤","Catalog"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["♟","Team"],["⚙","Settings"]
 ] as const;
 
 const seed:Project[]=[
@@ -52,6 +52,9 @@ let crm: {clients:any[];leads:any[];bookings:any[]}={clients:[],leads:[],booking
 let session:any=null;
 let billing:any=null;
 let analytics:any=null;
+let catalogItems:any[]=[];
+let catalogModal=false;
+let editingCatalogId:string|null=null;
 let team:any[]=[];
 let domains:any[]=[];
 let doc:SiteDoc = loadDoc(editorProject||"p1");
@@ -154,6 +157,13 @@ const TRIAL_KEY="tg-trial-session";
 const trialToken=TRIAL_AUTH?(localStorage.getItem(TRIAL_KEY)||(()=>{const value=crypto.randomUUID().replace(/-/g,"")+crypto.randomUUID().replace(/-/g,"");localStorage.setItem(TRIAL_KEY,value);return value;})()):"";
 let hydrated=false;
 let telegramStatus:{enabled:boolean;miniAppUrl:string}={enabled:false,miniAppUrl:""};
+async function hydrateCatalog(){
+ if(!API_BASE) return;
+ const result=await api("/api/catalog");
+ catalogItems=Array.isArray(result?.data)?result.data:[];
+ if(!editorProject) render();
+}
+
 async function hydrateTelegram(){try{const result=await api("/api/telegram/status");telegramStatus=result?.data||telegramStatus;}catch{}}
 
 async function hydrateSession(){
@@ -257,8 +267,8 @@ function landing(){return `
 
 function overview(){
  return `<div class="hero"><div><div class="eyebrow">01 / Studio overview</div><h1>Создавайте.<br/>Управляйте.<br/>Масштабируйте.</h1><p class="hero-copy">One operating system for every client project. Websites, Mini Apps, leads, booking, domains and analytics — managed from one studio.</p></div><div class="actions"><button class="secondary" data-nav-direct="Templates">Browse templates</button><button class="primary" data-action="new-project">+ Новый проект</button></div></div>
- <div class="stats"><div class="stat"><div class="stat-label">Проекты</div><div class="stat-value">${projects.length}</div></div><div class="stat"><div class="stat-label">Активные / Черновики</div><div class="stat-value">${projects.filter(p=>p.status==="Live").length} / ${projects.filter(p=>p.status==="Draft").length}</div></div><div class="stat"><div class="stat-label">Доход в месяц</div><div class="stat-value">€12.8k <span class="stat-delta">+18.4%</span></div></div><div class="stat"><div class="stat-label">Лиды за месяц</div><div class="stat-value">${projects.reduce((n,p)=>n+p.leads,0)}</div></div></div>
- <div class="grid"><section class="card"><div class="card-head"><div class="card-title">Recent projects</div><div class="card-meta">local workspace</div></div><div class="project-list">${projects.slice(0,6).map((p,i)=>`<div class="project-row" data-open-project="${p.id}"><div><div class="project-name">${p.name}</div><div class="project-url">${p.url}</div></div><div class="project-type">${p.type}</div><span class="badge ${p.status==="Live"?"live":""}">${p.status}</span><div class="project-number">${p.leads} leads</div><button type="button" class="row-action" data-project="${p.id}" aria-label="Открыть проект">→</button></div>`).join("")}</div></section><section class="card"><div class="card-head"><div class="card-title">Активность</div><div class="card-meta">Сегодня</div></div><div class="activity">${["Открыто рабочее пространство проекта.","Библиотека шаблонов готова.","Менеджер доменов подготовлен.","Основа студии синхронизирована."].map((x,i)=>`<div class="activity-item"><div class="activity-dot"></div><div class="activity-text">${x}<span class="activity-time">${(i+1)*17} мин назад</span></div></div>`).join("")}</div></section></div>
+ <div class="stats"><div class="stat"><div class="stat-label">Проекты</div><div class="stat-value">${projects.length}</div></div><div class="stat"><div class="stat-label">Активные / Черновики</div><div class="stat-value">${projects.filter(p=>p.status==="Live").length} / ${projects.filter(p=>p.status==="Draft").length}</div></div><div class="stat"><div class="stat-label">Доход в месяц</div><div class="stat-value">—</div></div><div class="stat"><div class="stat-label">Лиды за месяц</div><div class="stat-value">${projects.reduce((n,p)=>n+p.leads,0)}</div></div></div>
+ <div class="grid"><section class="card"><div class="card-head"><div class="card-title">Recent projects</div><div class="card-meta">local workspace</div></div><div class="project-list">${projects.slice(0,6).map((p,i)=>`<div class="project-row" data-open-project="${p.id}"><div><div class="project-name">${p.name}</div><div class="project-url">${p.url}</div></div><div class="project-type">${p.type}</div><span class="badge ${p.status==="Live"?"live":""}">${p.status}</span><div class="project-number">${p.leads} leads</div><button type="button" class="row-action" data-project="${p.id}" aria-label="Открыть проект">→</button></div>`).join("")}</div></section><section class="card"><div class="card-head"><div class="card-title">Активность</div><div class="card-meta">Сейчас</div></div><div class="inspector-note">Здесь появятся реальные события проектов: публикации, заявки, бронирования и изменения каталога.</div></section></div>
  <section class="section"><div class="section-head"><div><div class="eyebrow">02 / Быстрые действия</div><div class="section-title">Start something new</div></div></div><div class="quick-grid"><button class="quick" data-action="new-project"><div class="quick-icon">＋</div><div class="quick-name">Create project</div><div class="quick-copy">Сайт, Mini App или оба продукта.</div></button><button class="quick" data-nav-direct="Templates"><div class="quick-icon">✦</div><div class="quick-name">Use a template</div><div class="quick-copy">Начните с отраслевого набора.</div></button><button class="quick" data-nav-direct="Clients"><div class="quick-icon">♙</div><div class="quick-name">Add client</div><div class="quick-copy">Рабочее пространство клиента.</div></button><button class="quick" data-nav-direct="Domains"><div class="quick-icon">⌁</div><div class="quick-name">Connect domain</div><div class="quick-copy">Менеджер домена и SSL.</div></button></div></section>`;
 }
 
@@ -361,17 +371,14 @@ function settingsView(){
 }
 
 function catalogView(){
- const entries:any[]=[];
- for(const p of projects){
-   const d=JSON.parse(localStorage.getItem("tg-doc-"+p.id)||"null");
-   for(const page of (d?.pages||[])) for(const block of (page.blocks||[])){
-     if(["Catalog","Pricing"].includes(block.type)) entries.push({project:p,page:page.name,title:block.title,body:block.body});
-   }
- }
- return `<div class="eyebrow">03 / Business OS</div><div class="workspace-head"><div><h2>Каталог</h2><p class="hero-copy">Услуги и товары из реальных клиентских проектов. Откройте проект, чтобы редактировать позиции и структуру.</p></div><button class="primary" data-action="new-project">+ Новый проект</button></div>
- <section class="card table-card"><div class="card-head"><div class="card-title">Каталожные блоки</div><div class="card-meta">${entries.length}</div></div>${entries.length?entries.map(x=>`<button class="workspace-row" data-project="${x.project.id}" style="width:100%;text-align:left;background:transparent;border:0;color:inherit;cursor:pointer"><div class="project-name">${x.title}</div><div class="project-type">${x.project.name} · ${x.page}</div><span class="badge live">Редактировать →</span></button>`).join(""):'<div class="inspector-note">Каталог пока пуст. Создайте проект из отраслевого шаблона — каталог появится автоматически.</div>'}</section>
- <section class="card table-card"><div class="card-head"><div class="card-title">Следующий уровень</div></div><div class="inspector-note">Следующий этап модуля — структурированные товары и услуги с ценой, категорией, остатком и связью с заказами.</div></section></div>`;
+ const projectOptions=projects.map(p=>'<option value="'+p.id+'">'+p.name+'</option>').join("");
+ const items=catalogItems.filter(x=>!editingCatalogId||x.id===editingCatalogId);
+ const rows=catalogItems.map(x=>'<div class="workspace-row"><div class="project-name">'+x.name+'</div><div class="project-type">'+(projects.find(p=>p.id===x.projectId)?.name||"Проект")+' · '+(x.itemType==="product"?"Товар":"Услуга")+(x.category?" · "+x.category:"")+'</div><span class="badge '+(x.status==="active"?"live":"")+'">'+(x.price||"0")+" "+(x.currency||"EUR")+'</span><button type="button" class="row-action" data-catalog-edit="'+x.id+'">→</button></div>').join("");
+ return '<div class="eyebrow">03 / Business OS</div><div class="workspace-head"><div><h2>Каталог</h2><p class="hero-copy">Реальные товары и услуги клиентских проектов. Эти позиции станут основой для заказов и оплат.</p></div><button class="primary" data-action="catalog-new">+ Добавить позицию</button></div>'+
+ '<section class="card table-card"><div class="card-head"><div class="card-title">Позиции каталога</div><div class="card-meta">'+catalogItems.length+'</div></div>'+(rows||'<div class="inspector-note">Каталог пока пуст. Добавьте первую услугу или товар.</div>')+'</section>'+
+ (catalogModal?'<div class="modal-backdrop" data-close="catalog-modal"><div class="modal"><div class="modal-head"><div><div class="eyebrow">Business OS</div><div class="modal-title">'+(editingCatalogId?"Редактировать позицию":"Новая позиция")+'</div></div><button class="close" data-close="catalog-modal">×</button></div><div class="modal-body"><div class="settings-grid"><label class="settings-field"><span>Проект</span><select id="catalog-project">'+projectOptions+'</select></label><label class="settings-field"><span>Название</span><input id="catalog-name" placeholder="Например, Комплексная мойка"/></label><label class="settings-field"><span>Тип</span><select id="catalog-type"><option value="service">Услуга</option><option value="product">Товар</option></select></label><label class="settings-field"><span>Категория</span><input id="catalog-category" placeholder="Основные"/></label><label class="settings-field"><span>Цена</span><input id="catalog-price" type="number" min="0" step="0.01" placeholder="0"/></label><label class="settings-field"><span>Валюта</span><select id="catalog-currency"><option>EUR</option><option>USD</option><option>RUB</option><option>GBP</option></select></label><label class="settings-field"><span>Остаток</span><input id="catalog-stock" type="number" min="0" step="1" placeholder="Не ограничивать"/></label><label class="settings-field"><span>Статус</span><select id="catalog-status"><option value="active">Активна</option><option value="draft">Черновик</option></select></label></div><label class="settings-field"><span>Описание</span><textarea id="catalog-description" placeholder="Короткое описание для клиента"></textarea></label></div><div class="modal-foot"><button class="secondary" data-close="catalog-modal">Отмена</button><button class="primary" data-action="catalog-save">Сохранить</button></div></div></div>':"")+'</div>';
 }
+
 function analyticsView(){
  const a=analytics||{projects:{total:0,live:0,draft:0},leads:{total:0,status:{}},bookings:{total:0,status:{}},clients:{total:0},byProject:[]};
  const statusRows=(obj:any)=>Object.entries(obj||{}).map(([k,v])=>`<div class="workspace-row"><div class="project-name">${k}</div><div class="project-type">Записей</div><span class="badge live">${v}</span></div>`).join("");
@@ -455,6 +462,22 @@ function bind(){
    else if(key==="animations"||key==="compactNav"||key==="emailNotifications"||key==="leadNotifications"||key==="bookingNotifications") studioSettings[key]=(el as HTMLInputElement).checked;
    saveSettings(); render();
  }));
+ root.querySelectorAll<HTMLElement>("[data-action='catalog-new']").forEach(el=>el.addEventListener("click",()=>{editingCatalogId=null;catalogModal=true;render();}));
+ root.querySelectorAll<HTMLElement>("[data-catalog-edit]").forEach(el=>el.addEventListener("click",()=>{editingCatalogId=el.dataset.catalogEdit||null;catalogModal=true;render();}));
+ root.querySelectorAll<HTMLElement>("[data-close='catalog-modal']").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).dataset.close==="catalog-modal"||el.classList.contains("close")||el.classList.contains("secondary")){catalogModal=false;editingCatalogId=null;render();}}));
+ if(catalogModal){
+   const current=editingCatalogId?catalogItems.find(x=>x.id===editingCatalogId):null;
+   const set=(id:string,value:any)=>{const el=root.querySelector<HTMLElement>("#"+id);if(el) (el as HTMLInputElement).value=String(value??"");};
+   set("catalog-project",current?.projectId||projects[0]?.id||"");set("catalog-name",current?.name||"");set("catalog-type",current?.itemType||"service");set("catalog-category",current?.category||"");set("catalog-price",current?.price||0);set("catalog-currency",current?.currency||"EUR");set("catalog-stock",current?.stock??"");set("catalog-status",current?.status||"active");set("catalog-description",current?.description||"");
+ }
+ root.querySelectorAll<HTMLElement>("[data-action='catalog-save']").forEach(el=>el.addEventListener("click",async()=>{
+   const value=(id:string)=>root.querySelector<HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement>("#"+id)?.value.trim()||"";
+   const projectId=value("catalog-project"),name=value("catalog-name");if(!projectId||!name){notify("Укажите проект и название позиции.");return;}
+   const payload={projectId,name,itemType:value("catalog-type"),category:value("catalog-category")||null,price:value("catalog-price")||0,currency:value("catalog-currency")||"EUR",stock:value("catalog-stock")||null,status:value("catalog-status")||"active",description:value("catalog-description")};
+   const result=await api(editingCatalogId?"/api/catalog/"+editingCatalogId:"/api/catalog",{method:editingCatalogId?"PATCH":"POST",body:JSON.stringify(payload)});
+   if(!result?.data){notify(result?.error||"Не удалось сохранить позицию.");return;}
+   catalogModal=false;editingCatalogId=null;await hydrateCatalog();notify("Позиция сохранена.");
+ }));
  root.querySelectorAll<HTMLElement>("[data-action='refresh-telegram']").forEach(el=>el.addEventListener("click",async()=>{await hydrateTelegram();render();notify(telegramStatus.enabled?"Telegram подключён.":"Telegram пока не подключён.");}));
  root.querySelectorAll<HTMLElement>("[data-action='configure-telegram']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject){notify("Сначала откройте проект.");return;}const result=await api("/api/telegram/configure",{method:"POST",body:JSON.stringify({projectId:editorProject})});if(result?.data){await hydrateTelegram();render();notify("Telegram подключён и Mini App настроен.");}else notify(result?.error||"Не удалось подключить Telegram.");}));
  root.querySelectorAll<HTMLElement>("[data-action='open-telegram-mini']").forEach(el=>el.addEventListener("click",()=>{if(telegramStatus.miniAppUrl)window.open(telegramStatus.miniAppUrl,"_blank","noopener,noreferrer");}));
@@ -462,7 +485,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
  root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={language:"ru",font:"Inter",accent:"#d8ff3e",theme:"dark",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};saveSettings();render();notify("Стиль возвращён к стандартному.");}));
 
- root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();render()}));
+ root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();if(active==="Catalog") await hydrateCatalog();render()}));
  root.querySelectorAll<HTMLElement>("[data-nav-direct]").forEach(el=>el.addEventListener("click",()=>{active=el.dataset.navDirect||"Overview";editorProject=null;render()}));
  root.querySelectorAll<HTMLElement>("[data-action='back']").forEach(el=>el.addEventListener("click",()=>{editorProject=null;active="Projects";render()}));
  root.querySelectorAll<HTMLElement>("[data-action='new-project']").forEach(el=>el.addEventListener("click",()=>{modal=true;wizardStep=1;selectedType="Website + Mini App";selectedIndustry="wash";render()}));
@@ -525,7 +548,7 @@ async function boot(){
   try{
     applyStudioSettings();
     render();
-    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateTelegram()]);
+    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateCatalog(),hydrateTelegram()]);
     if(!editorProject) render();
   }catch(error){
     console.error("TorclixGroup boot error",error);

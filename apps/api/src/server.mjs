@@ -86,7 +86,7 @@ const server=createServer(async(req,res)=>{
       if(req.method==="GET"){json(res,200,{data:await getDocument(projectId,auth.organization.id,()=>defaultDocument(projectId))});return;}
       if(req.method==="PUT"||req.method==="PATCH"){const input=await body(req);const currentDoc=await getDocument(projectId,auth.organization.id,()=>defaultDocument(projectId));const next={...currentDoc,...input,projectId};await saveDocument(projectId,auth.organization.id,next);json(res,200,{data:next});return;}
     }
-    const publish=path.match(/^\\/api\\/projects\\/([^/]+)\\/publish$/);
+    const publish=path.match(/^\/api\/projects\/([^/]+)\/publish$/);
     if(publish&&req.method==="POST"){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
       const projectId=publish[1];
@@ -113,7 +113,7 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:{published:false}});
       return;
     }
-    const published=path.match(/^\\/published\\/([^/]+)$/);
+    const published=path.match(/^\/published\/([^/]+)$/);
     if(published&&req.method==="GET"){
       const project=(!process.env.DATABASE_URL&&publishedProjects.has(published[1]))?projects.get(published[1]):await getPublishedProject(published[1]);
       if(!project){html(res,404,"<h1>Published project not found</h1>");return;}

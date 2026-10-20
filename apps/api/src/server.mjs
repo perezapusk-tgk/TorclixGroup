@@ -114,6 +114,17 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:{published:false}});
       return;
     }
+    const miniApp=path.match(/^\/miniapp\/([^/]+)$/);
+    if(miniApp&&req.method==="GET"){
+      const project=(!process.env.DATABASE_URL&&publishedProjects.has(miniApp[1]))?projects.get(miniApp[1]):await getPublishedProject(miniApp[1]);
+      if(!project){html(res,404,"<h1>Mini App not found</h1>");return;}
+      const document=await getPublishedDocument(project.id);
+      if(!document){html(res,404,"<h1>Mini App is not published</h1>");return;}
+      const page=document.pages?.find(p=>p.id===document.activePage)||document.pages?.[0];
+      const blocks=(page?.blocks||[]).map((b,i)=>`<article style="padding:24px 0;border-bottom:1px solid #252525"><small style="opacity:.5">0${i+1} · ${esc(b.type)}</small><h2 style="font-size:32px;line-height:1;margin:10px 0">${esc(b.title)}</h2><p style="line-height:1.55;opacity:.72">${esc(b.body)}</p><button onclick="Telegram.WebApp.showAlert('Torclix action')" style="border:0;border-radius:999px;padding:12px 16px;background:${esc(document.accent||"#d8ff3e")}">Open</button></article>`).join("");
+      html(res,200,`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://telegram.org/js/telegram-web-app.js"></script><title>${esc(project.name)}</title></head><body style="margin:0;background:#0b0b0b;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><main style="max-width:560px;margin:auto;padding:20px 20px 48px"><header style="padding:12px 0 28px"><small style="opacity:.5">TORCLIXGROUP MINI APP</small><h1 style="font-size:42px;line-height:.95;margin:10px 0">${esc(project.name)}</h1></header>${blocks}</main><script>if(window.Telegram?.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}</script></body></html>`);
+      return;
+    }
     const published=path.match(/^\/published\/([^/]+)$/);
     if(published&&req.method==="GET"){
       const project=(!process.env.DATABASE_URL&&publishedProjects.has(published[1]))?projects.get(published[1]):await getPublishedProject(published[1]);

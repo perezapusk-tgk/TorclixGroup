@@ -64,7 +64,6 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});
       return;
     }
-    if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
     if(path==="/api/team"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:teamForOrganization(auth.organization.id)});return;}
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;const p=await listProjects(projects,auth.organization.id);const clients=await listRecords("clients",new Map(),auth.organization.id);const leads=await listRecords("leads",new Map(),auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:teamForOrganization(auth.organization.id).length,leads:leads.length})});return;}
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}

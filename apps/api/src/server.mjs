@@ -4,6 +4,7 @@ import {
   newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
+import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
 import { billingSnapshot } from "./billing.mjs";
 
 const port=Number(process.env.PORT||4000);
@@ -35,9 +36,9 @@ function renderPreview(project,doc){
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(project.name)} — TorclixGroup</title></head><body style="margin:0;background:#080808;color:#f5f5f0;font-family:Inter,Arial,sans-serif"><header style="padding:28px 8vw;display:flex;justify-content:space-between;border-bottom:1px solid #222"><strong>TORCLIXGROUP</strong><span>${esc(project.name)}</span></header><main>${blocks}</main><footer style="padding:48px 8vw;opacity:.45">Published with TorclixGroup</footer></body></html>`;
 }
 async function session(req){
-  const userKey=req.headers["x-torclix-user"]||(process.env.NODE_ENV!=="production"?"demo":"");
-  if(!userKey)return null;
-  const user=await getSessionUser(String(userKey));if(!user)return null;
+  const identity=await authenticateRequest(req);
+  if(!identity)return null;
+  const user=await getSessionUser(identity.subject,identity.email,identity.name);if(!user)return null;
   const organizations=await listOrganizationsForUser(user.id);if(!organizations.length)return null;
   const requested=req.headers["x-torclix-organization"];
   const organization=organizations.find(o=>o.id===requested)||organizations[0];

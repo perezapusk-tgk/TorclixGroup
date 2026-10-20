@@ -153,6 +153,12 @@ export async function saveProject(project){
   return project;
 }
 
+export async function getPublishedDocument(projectId){
+  const db=await getPool(); if(!db) return null;
+  const {rows}=await db.query("select published_document from site_documents where project_id=$1::uuid limit 1",[projectId]);
+  return rows[0]?.published_document ?? null;
+}
+
 export async function getDocument(projectId,organizationId,fallback){
   const db=await getPool();
   if(!db) return fallback();

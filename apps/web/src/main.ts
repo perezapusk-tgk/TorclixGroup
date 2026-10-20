@@ -19,6 +19,7 @@ const templates=[["Restaurant / Noir","Website + Mini App","Menu · booking · l
 
 let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")||seed;
 let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", toast="", editorTab="Design", selectedBlock:string|null=null;
+let miniModules:string[]=["home","catalog","booking","profile","notifications"];
 let doc:SiteDoc = loadDoc(editorProject||"p1");
 
 function loadDoc(id:string):SiteDoc{
@@ -129,12 +130,19 @@ function templateView(){
 
 function editor(project:Project){
  const page=doc.pages.find(p=>p.id===doc.activePage)||doc.pages[0];
+ const miniEnabled=project.type.includes("Mini App");
+ const industryKey=project.industry.toLowerCase().replace(" ","_");
+ const moduleCatalog=[["home","Home","Personalized start screen and shortcuts."],["catalog","Catalog","Products, services and categories."],["booking","Booking","Availability, slots and confirmations."],["calendar","Calendar","Schedules and upcoming visits."],["cart","Cart & Order","Cart, checkout and order status."],["membership","Membership","Plans, passes and subscriptions."],["loyalty","Loyalty","Points, rewards and customer tiers."],["profile","Profile","Account, preferences and history."],["notifications","Notifications","Transactional notifications."],["telegram","Telegram","Telegram Mini App bridge and bot actions."]].filter(m=>m[0]==="home"||m[0]==="profile"||m[0]==="notifications"||["restaurant","beauty","fitness","medical","services","real_estate"].includes(industryKey));
  return `<div class="editor-shell"><div class="editor-top"><div><div class="eyebrow">04 / Project builder</div><h2>${project.name}</h2><div class="editor-url">${project.url} · ${project.type}</div></div><div class="editor-actions"><button class="secondary" data-action="add-page">+ Page</button><button class="secondary" data-action="preview">Preview</button><button class="primary" data-action="publish">Publish</button></div></div>
  <div class="builder"><aside class="builder-side"><div class="builder-tabs"><button class="${editorTab==="Design"?"selected":""}" data-tab="Design">Design</button><button class="${editorTab==="Content"?"selected":""}" data-tab="Content">Content</button></div>
  <div class="panel-title">Pages</div>${doc.pages.map(p=>`<button class="page-item ${p.id===doc.activePage?"selected":""}" data-page="${p.id}"><span>${p.name}</span><small>${p.blocks.length} blocks</small></button>`).join("")}
  <div class="panel-title">Add section</div><div class="block-palette">${["Hero","Features","Gallery","Pricing","Testimonials","FAQ","Booking","Contact","CTA"].map(type=>`<button class="palette-item" data-add-block="${type}">+ ${type}</button>`).join("")}</div></aside>
  <div class="canvas"><div class="site-preview" style="--editor-accent:${doc.accent}">${page.blocks.map((b,i)=>`<article class="canvas-block" data-block="${b.id}"><div class="block-number">0${i+1}</div><div><div class="block-type">${b.type}</div><h3>${b.title}</h3><p>${b.body}</p><button class="preview-button">Learn more →</button></div><button class="block-remove" data-remove-block="${b.id}">×</button></article>`).join("")}</div></div>
  <aside class="inspector"><div class="panel-title">${selectedBlock?"Block editor":"Global style"}</div>${selectedBlock?blockInspector(page):`<label class="field"><span>Accent</span><input id="accent" type="color" value="${doc.accent}"/></label><div class="style-chip">Responsive</div><div class="style-chip">SEO ready</div><div class="style-chip">Custom domain</div><div class="style-chip">Analytics</div><div class="inspector-note">Select any block in the canvas to edit its content. Changes are saved to the active project document.</div>`}</aside></div></div>`;
+}
+
+function miniAppPanel(moduleCatalog:string[][]){
+ return '<section class="mini-app-panel"><div class="card-head"><div><div class="eyebrow">05 / Mini App runtime</div><div class="card-title">Compose the client app</div></div><div class="card-meta">'+miniModules.length+' modules enabled</div></div><div class="mini-module-grid">'+moduleCatalog.map(m=>'<button class="mini-module '+(miniModules.includes(m[0])?"selected":"")+'" data-mini-module="'+m[0]+'"><span class="mini-module-mark">'+(miniModules.includes(m[0])?"✓":"+")+'</span><strong>'+m[1]+'</strong><small>'+m[2]+'</small></button>').join("")+'</div></section>';
 }
 
 function blockInspector(page:Page){
@@ -161,6 +169,8 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-template]").forEach(el=>el.addEventListener("click",()=>{const t=templates[Number(el.dataset.template)];selectedType=t[1];modal=true;render()}));
  root.querySelectorAll<HTMLElement>("[data-page]").forEach(el=>el.addEventListener("click",()=>{doc.activePage=el.dataset.page||doc.activePage;saveDoc();render()}));
  root.querySelectorAll<HTMLElement>("[data-tab]").forEach(el=>el.addEventListener("click",()=>{editorTab=el.dataset.tab||"Design";render()}));
+ root.querySelectorAll<HTMLElement>("[data-mini-module]").forEach(el=>el.addEventListener("click",()=>{const id=el.dataset.miniModule||"";miniModules=miniModules.includes(id)?miniModules.filter(x=>x!==id):[...miniModules,id];render();}));
+ root.querySelectorAll<HTMLElement>("[data-action='toggle-mini']").forEach(el=>el.addEventListener("click",()=>{notify("Mini App runtime is ready to configure.");}));
  root.querySelectorAll<HTMLElement>("[data-add-block]").forEach(el=>el.addEventListener("click",()=>{const type=el.dataset.addBlock||"Section";const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks.push({id:"b"+Date.now(),type,title:type==="Hero"?"Your next chapter starts here.":type+" section",body:"Edit this section to match your client's business."});saveDoc();void syncDocument();notify(type+" section added.")}));
  root.querySelectorAll<HTMLElement>("[data-block]").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).closest("[data-remove-block]")) return;selectedBlock=el.dataset.block||null;render();}));
  root.querySelectorAll<HTMLElement>("[data-action='save-block']").forEach(el=>el.addEventListener("click",()=>{const page=doc.pages.find(p=>p.id===doc.activePage)!;const block=page.blocks.find(b=>b.id===selectedBlock);if(block){block.title=root.querySelector<HTMLTextAreaElement>("#block-title")?.value||block.title;block.body=root.querySelector<HTMLTextAreaElement>("#block-body")?.value||block.body;saveDoc();void syncDocument();notify("Block saved.");}}));

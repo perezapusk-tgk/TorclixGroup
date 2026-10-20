@@ -365,6 +365,23 @@ const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
       const next={...current,status:input.status?String(input.status):current.status,startAt:input.startAt?String(input.startAt):current.startAt,service:input.service?String(input.service):current.service};
       await saveRecord("bookings",next);if(!process.env.DATABASE_URL)bookings.set(next.id,next);json(res,200,{data:next});return;
     }
+    const client360=path.match(/^\/api\/clients\/([^/]+)\/360$/);
+    if(client360&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"clients:read");if(!auth)return;
+      const clientRows=await listRecords("clients",clients,auth.organization.id);
+      const client=clientRows.find(x=>x.id===client360[1]);
+      if(!client){json(res,404,{error:"Client not found"});return;}
+      const [projectRows,leadRows,bookingRows]=await Promise.all([
+        listProjects(projects,auth.organization.id),
+        listRecords("leads",leads,auth.organization.id),
+        listRecords("bookings",bookings,auth.organization.id)
+      ]);
+      const linkedProjects=projectRows.filter(p=>p.clientId===client.id);
+      const linkedLeads=leadRows.filter(x=>x.email&&client.email&&x.email.toLowerCase()===client.email.toLowerCase());
+      const linkedBookings=bookingRows.filter(x=>x.customerEmail&&client.email&&x.customerEmail.toLowerCase()===client.email.toLowerCase());
+      json(res,200,{data:{client,projects:linkedProjects,leads:linkedLeads,bookings:linkedBookings,summary:{projects:linkedProjects.length,leads:linkedLeads.length,bookings:linkedBookings.length}}});
+      return;
+    }
     if(path==="/api/clients"&&req.method==="GET"){const auth=await requirePermission(req,res,"clients:read");if(!auth)return;json(res,200,{data:await listRecords("clients",clients,auth.organization.id)});return;}
     if(path==="/api/clients"&&req.method==="POST"){const auth=await requirePermission(req,res,"clients:write");if(!auth)return;const input=await body(req);const client={id:newId(),organizationId:auth.organization.id,name:String(input.name||"New client"),email:input.email?String(input.email):undefined};await saveRecord("clients",client);if(!process.env.DATABASE_URL)clients.set(client.id,client);json(res,201,{data:client});return;}
     if(path==="/api/leads"&&req.method==="GET"){const auth=await requirePermission(req,res,"leads:read");if(!auth)return;json(res,200,{data:await listRecords("leads",leads,auth.organization.id)});return;}

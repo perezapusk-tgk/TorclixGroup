@@ -189,7 +189,7 @@ export async function listDomains(organizationId){
 
 export async function saveDomain(domain){
   const db=await getPool(); if(!db) return domain;
-  await db.query("insert into domains(id,organization_id,project_id,hostname,status,ssl_status,verification_token,verified_at) values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8)",[domain.id,domain.organizationId,domain.projectId||null,domain.hostname,domain.status||"pending",domain.sslStatus||"pending",domain.verificationToken||null,domain.verifiedAt||null]);
+  await db.query("insert into domains(id,organization_id,project_id,hostname,status,ssl_status) values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6)",[domain.id,domain.organizationId,domain.projectId||null,domain.hostname,domain.status||"pending",domain.sslStatus||"pending"]);
   return domain;
 }
 

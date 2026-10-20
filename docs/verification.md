@@ -46,3 +46,14 @@ There is currently no public hosted TorclixGroup URL configured in this reposito
 4. Client Portal.
 5. Analytics and audit log.
 6. Public endpoint anti-abuse controls and PostgreSQL integration tests.
+
+
+## Public demo deployment
+
+The repository now includes a Render Blueprint at `render.yaml`. It provisions the API, static web app and PostgreSQL database in Frankfurt. Render gives both the API and web app public `onrender.com` URLs after the Blueprint is deployed.
+
+Deploy from the Render Dashboard: https://dashboard.render.com/blueprints
+
+The hosted demo uses the seeded `demo` workspace and development-header authentication so the dashboard can be reviewed without an external identity provider. This is a demo deployment configuration, not the final production authentication setup.
+
+After deployment, use the web service URL for the dashboard. The API exposes `/health`, `/published/{projectId}` and `/miniapp/{projectId}`.

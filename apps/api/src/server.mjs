@@ -16,7 +16,7 @@ const clients=new Map(),leads=new Map(),bookings=new Map();
 
 function headers(extra={}){return {
   "content-type":"application/json; charset=utf-8",
-  "access-control-allow-origin":process.env.CORS_ORIGIN||"*",
+  ...(process.env.CORS_ORIGIN?{"access-control-allow-origin":process.env.CORS_ORIGIN}:{}),
   "access-control-allow-methods":"GET,POST,PUT,PATCH,OPTIONS",
   "access-control-allow-headers":"content-type,x-torclix-user,x-torclix-organization",
   ...extra

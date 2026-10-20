@@ -33,7 +33,7 @@ export async function initStorage(){
     plan text not null default 'starter', created_at timestamptz not null default now()
   )`);
   await db.query(`create table if not exists users (
-    id uuid primary key default gen_random_uuid(), email text not null unique, name text not null,
+    id uuid primary key default gen_random_uuid(), external_id text unique, email text not null unique, name text not null,
     created_at timestamptz not null default now()
   )`);
   await db.query(`create table if not exists memberships (

@@ -35,12 +35,14 @@ export async function telegramApi(method, payload = {}, token = process.env.TELE
   return data.result;
 }
 
-export function telegramMiniAppUrl(projectId = "p1") {
+export function telegramMiniAppUrl(projectId) {
+  if (!projectId) throw new Error("projectId is required");
   const base = String(process.env.PUBLIC_URL || process.env.API_PUBLIC_URL || "https://torclixgroup-api.onrender.com").replace(/\/$/, "");
   return `${base}/miniapp/${encodeURIComponent(projectId)}`;
 }
 
-export async function configureTelegramBot() {
+export async function configureTelegramBot(projectId) {
+  if (!projectId) throw new Error("projectId is required");
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return {enabled:false};
   const base = String(process.env.PUBLIC_URL || process.env.API_PUBLIC_URL || "https://torclixgroup-api.onrender.com").replace(/\/$/, "");
@@ -53,7 +55,7 @@ export async function configureTelegramBot() {
     allowed_updates: ["message","callback_query"]
   }, token);
   await telegramApi("setChatMenuButton", {
-    menu_button: {type:"web_app", text:"Открыть мини‑приложение", web_app:{url:telegramMiniAppUrl(process.env.TELEGRAM_DEFAULT_PROJECT || "p1")}}
+    menu_button: {type:"web_app", text:"Открыть мини‑приложение", web_app:{url:telegramMiniAppUrl(projectId)}}
   }, token);
   return {enabled:true, username:bot.username || null, webhook, secret};
 }

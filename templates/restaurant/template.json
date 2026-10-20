@@ -1,0 +1,45 @@
+{
+  "id": "restaurant-noir",
+  "industry": "restaurant",
+  "name": "Restaurant / Noir",
+  "projectType": "website_mini_app",
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "blocks": [
+        {
+          "type": "Hero",
+          "title": "A table worth remembering.",
+          "body": "Reservations, menu and orders in one experience."
+        },
+        {
+          "type": "Features",
+          "title": "Everything for the guest journey.",
+          "body": "Menu, booking, loyalty and ordering."
+        },
+        {
+          "type": "Booking",
+          "title": "Reserve your table.",
+          "body": "Choose date, time and party size."
+        }
+      ]
+    },
+    {
+      "id": "menu",
+      "name": "Menu",
+      "blocks": [
+        {
+          "type": "Gallery",
+          "title": "Signature menu.",
+          "body": "Seasonal dishes, drinks and chef selections."
+        },
+        {
+          "type": "Pricing",
+          "title": "Featured dishes.",
+          "body": "A flexible catalog for your kitchen."
+        }
+      ]
+    }
+  ]
+}

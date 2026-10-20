@@ -167,6 +167,17 @@ export async function getDocument(projectId,organizationId,fallback){
   return rows[0]?.document ?? fallback();
 }
 
+export async function publishDocument(projectId,organizationId,document){
+  const db=await getPool(); if(!db) return document;
+  await db.query("update site_documents set published_document=$3::jsonb,updated_at=now() where project_id=$1::uuid and exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)",[projectId,organizationId,JSON.stringify(document)]);
+  return document;
+}
+
+export async function unpublishDocument(projectId,organizationId){
+  const db=await getPool(); if(!db) return;
+  await db.query("update site_documents set published_document=null,updated_at=now() where project_id=$1::uuid and exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)",[projectId,organizationId]);
+}
+
 export async function saveDocument(projectId,organizationId,document){
   const db=await getPool();
   if(!db) return document;

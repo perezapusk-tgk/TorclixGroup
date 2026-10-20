@@ -428,3 +428,15 @@ h1 {
 
 /* TorclixGroup product-showcase landing */
 .landing{padding:34px 0 80px;max-width:1280px}.landing-kicker{font-size:10px;letter-spacing:.24em;color:var(--accent);margin-bottom:54px}.landing h1{font-size:clamp(58px,8.5vw,132px);line-height:.86;letter-spacing:-.075em;max-width:1200px;margin:0}.landing h1 span{color:#777}.landing-lead{max-width:650px;color:#a0a09a;font-size:16px;line-height:1.6;margin:34px 0}.landing-actions{display:flex;gap:10px;margin-bottom:86px}.landing-grid{border-top:1px solid #262626;display:grid;grid-template-columns:90px 1fr;max-width:900px}.landing-grid>div{border-bottom:1px solid #262626;padding:28px 0}.landing-index{font-size:11px;color:var(--accent);letter-spacing:.15em}.landing-label{font-size:9px;letter-spacing:.22em;color:#666;margin-bottom:12px}.landing-grid h2{font-size:clamp(28px,4vw,52px);letter-spacing:-.055em;margin:0 0 10px}.landing-grid p{max-width:650px;color:#777;line-height:1.55;font-size:12px;margin:0}@media(max-width:700px){.landing{padding-top:12px}.landing-kicker{margin-bottom:38px}.landing h1{font-size:clamp(50px,15vw,78px)}.landing-actions{margin-bottom:54px;flex-direction:column;align-items:flex-start}.landing-grid{grid-template-columns:50px 1fr}}
+
+.mini-app-panel{grid-column:1/-1;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius);padding:20px;margin:0 0 18px}
+.mini-app-toolbar{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:14px 0 18px;border-bottom:1px solid var(--line)}
+.mini-app-toolbar small{display:block;color:var(--muted);margin-top:5px;max-width:620px;line-height:1.45}
+.mini-app-toolbar-actions{display:flex;gap:8px;flex-wrap:wrap}
+.mini-module-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px}
+.mini-module{min-height:118px;text-align:left;border:1px solid var(--line);background:var(--panel-2);color:var(--white);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.mini-module.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.mini-module-mark{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:#202020;color:var(--accent);font-weight:800}
+.mini-module strong{font-size:14px}.mini-module small{color:var(--muted);line-height:1.35}
+@media(max-width:1000px){.mini-module-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.mini-app-toolbar{align-items:flex-start;flex-direction:column}.mini-module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

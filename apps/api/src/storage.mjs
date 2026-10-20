@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID,createHash } from "node:crypto";
 
 let pool = null;
 let initialized = false;
@@ -38,6 +38,20 @@ export async function getSessionUser(userKey,email=null,name=null){
   if(userKey==="demo" && !process.env.DATABASE_URL){
     return {id:"user_demo",email:"demo@torclix.local",name:"Studio Owner"};
   }
+  if(String(userKey).startsWith("trial:")){
+    const digest=createHash("sha256").update(String(userKey)).digest("hex");
+    const id=process.env.DATABASE_URL
+      ? digest.slice(0,8)+"-"+digest.slice(8,12)+"-4"+digest.slice(13,16)+"-8"+digest.slice(17,20)+"-"+digest.slice(20,32)
+      : "user_trial_"+digest.slice(0,24);
+    const trialEmail="trial-"+digest.slice(0,24)+"@torclix.local";
+    const db=await getPool();
+    if(!db) return {id,email:trialEmail,name:name||"Владелец пробной студии"};
+    const {rows}=await db.query(
+      "insert into users(id,external_id,email,name) values($1::uuid,$2,$3,$4) on conflict(external_id) do update set name=excluded.name returning id::text,email,name",
+      [id,String(userKey),trialEmail,name||"Владелец пробной студии"]
+    );
+    return rows[0];
+  }
   const db=await getPool();
   if(!db) return null;
   let {rows}=await db.query("select id::text,email,name from users where external_id=$1 or id::text=$1 or email=$2 limit 1",[userKey,email||""]);
@@ -61,9 +75,12 @@ export async function listOrganizationsForUser(userId){
     from organizations o join memberships m on m.organization_id=o.id
     where m.user_id=$1 order by o.created_at asc`,[userId]);
   if(!rows.length){
+    const isTrial=!String(userId).startsWith("user_demo");
+    const orgId=isTrial?randomUUID():"00000000-0000-4000-8000-000000000001";
+    const slug=isTrial?("trial-"+String(userId).replace(/[^a-z0-9_]/gi,"").slice(-24)):"torclix-demo";
     const org=await db.query(
       "insert into organizations(id,name,slug,plan) values($1,$2,$3,$4) on conflict(slug) do update set name=excluded.name,plan=excluded.plan returning id::text,name,slug,plan",
-      ["00000000-0000-4000-8000-000000000001","Torclix Demo","torclix-demo","pro"]
+      [orgId,isTrial?"Пробная студия":"Демо TorclixGroup",slug,isTrial?"starter":"pro"]
     );
     await db.query(
       "insert into memberships(organization_id,user_id,role) values($1::uuid,$2::uuid,$3) on conflict(organization_id,user_id) do update set role=excluded.role",

@@ -183,7 +183,7 @@ export async function findDomain(hostname){
 
 export async function listDomains(organizationId){
   const db=await getPool(); if(!db) return [];
-  const {rows}=await db.query('select id::text,organization_id::text as "organizationId",project_id::text as "projectId",hostname,status,ssl_status as "sslStatus",verification_token as "verificationToken",verified_at as "verifiedAt" from domains where organization_id=$1::uuid order by created_at desc',[organizationId]);
+  const {rows}=await db.query('select id::text,organization_id::text as "organizationId",project_id::text as "projectId",hostname,status,ssl_status as "sslStatus" from domains where organization_id=$1::uuid order by created_at desc',[organizationId]);
   return rows;
 }
 

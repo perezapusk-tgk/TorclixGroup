@@ -181,6 +181,48 @@ const server=createServer(async(req,res)=>{
     }
     const preview=path.match(/^\/preview\/([^/]+)$/);
     if(preview&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;const memory=projects.get(preview[1]);const project=memory?.organizationId===auth.organization.id?memory:await getProject(preview[1],auth.organization.id);if(!project){html(res,404,"<h1>Project not found</h1>");return;}const doc=await getDocument(project.id,auth.organization.id,()=>defaultDocument(project.id));html(res,200,renderPreview(project,doc));return;}
+    const publicLead=path.match(/^\/public\/projects\/([^/]+)\/leads$/);
+    if(publicLead&&req.method==="POST"){
+      const projectId=publicLead[1];
+      const project=projects.get(projectId)||await getPublishedProject(projectId);
+      const document=project?await getPublishedDocument(projectId):null;
+      if(!project||!document){json(res,404,{error:"Published project not found"});return;}
+      const input=await body(req);
+      if(!input.name){json(res,400,{error:"name is required"});return;}
+      const lead={id:newId(),organizationId:project.organizationId,projectId,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"published_site"),status:"new",createdAt:new Date().toISOString()};
+      await saveRecord("leads",lead);if(!process.env.DATABASE_URL)leads.set(lead.id,lead);
+      json(res,201,{data:{id:lead.id,received:true}});return;
+    }
+    const publicBooking=path.match(/^\/public\/projects\/([^/]+)\/bookings$/);
+    if(publicBooking&&req.method==="POST"){
+      const projectId=publicBooking[1];
+      const project=projects.get(projectId)||await getPublishedProject(projectId);
+      const document=project?await getPublishedDocument(projectId):null;
+      if(!project||!document){json(res,404,{error:"Published project not found"});return;}
+      const input=await body(req);
+      if(!input.customerName||!input.startAt){json(res,400,{error:"customerName and startAt are required"});return;}
+      const booking={id:newId(),organizationId:project.organizationId,projectId,customerName:String(input.customerName),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};
+      await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);
+      json(res,201,{data:{id:booking.id,received:true,status:booking.status}});return;
+    }
+    const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
+    if(leadId&&(req.method==="PATCH"||req.method==="PUT")){
+      const auth=await requirePermission(req,res,"leads:write");if(!auth)return;
+      const current=(await listRecords("leads",leads,auth.organization.id)).find(x=>x.id===leadId[1]);
+      if(!current){json(res,404,{error:"Lead not found"});return;}
+      const input=await body(req);
+      const next={...current,status:input.status?String(input.status):current.status,name:input.name?String(input.name):current.name,email:input.email?String(input.email):current.email,phone:input.phone?String(input.phone):current.phone};
+      await saveRecord("leads",next);if(!process.env.DATABASE_URL)leads.set(next.id,next);json(res,200,{data:next});return;
+    }
+    const bookingId=path.match(/^\/api\/bookings\/([^/]+)$/);
+    if(bookingId&&(req.method==="PATCH"||req.method==="PUT")){
+      const auth=await requirePermission(req,res,"bookings:write");if(!auth)return;
+      const current=(await listRecords("bookings",bookings,auth.organization.id)).find(x=>x.id===bookingId[1]);
+      if(!current){json(res,404,{error:"Booking not found"});return;}
+      const input=await body(req);
+      const next={...current,status:input.status?String(input.status):current.status,startAt:input.startAt?String(input.startAt):current.startAt,service:input.service?String(input.service):current.service};
+      await saveRecord("bookings",next);if(!process.env.DATABASE_URL)bookings.set(next.id,next);json(res,200,{data:next});return;
+    }
     if(path==="/api/clients"&&req.method==="GET"){const auth=await requirePermission(req,res,"clients:read");if(!auth)return;json(res,200,{data:await listRecords("clients",clients,auth.organization.id)});return;}
     if(path==="/api/clients"&&req.method==="POST"){const auth=await requirePermission(req,res,"clients:write");if(!auth)return;const input=await body(req);const client={id:newId(),organizationId:auth.organization.id,name:String(input.name||"New client"),email:input.email?String(input.email):undefined};await saveRecord("clients",client);if(!process.env.DATABASE_URL)clients.set(client.id,client);json(res,201,{data:client});return;}
     if(path==="/api/leads"&&req.method==="GET"){const auth=await requirePermission(req,res,"leads:read");if(!auth)return;json(res,200,{data:await listRecords("leads",leads,auth.organization.id)});return;}

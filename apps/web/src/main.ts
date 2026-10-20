@@ -106,8 +106,7 @@ async function syncDocument(){
 
 
 
-const root=document.querySelector<HTMLDivElement>("#root");
-if(!root) throw new Error("Root element not found");
+const root=document.querySelector<HTMLDivElement>("#root")!;
 
 function render(){
  const project=projects.find(p=>p.id===editorProject);

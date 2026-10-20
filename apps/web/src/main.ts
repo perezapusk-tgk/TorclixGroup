@@ -21,6 +21,9 @@ let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")
 let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", toast="", editorTab="Design", selectedBlock:string|null=null;
 let miniModules:string[]=["home","catalog","booking","profile","notifications"];
 let crm: {clients:any[];leads:any[];bookings:any[]}={clients:[],leads:[],bookings:[]};
+let session:any=null;
+let billing:any=null;
+let team:any[]=[];
 let doc:SiteDoc = loadDoc(editorProject||"p1");
 
 function loadDoc(id:string):SiteDoc{
@@ -40,6 +43,17 @@ function saveDoc(){localStorage.setItem("tg-doc-"+doc.projectId,JSON.stringify(d
 function saveProjects(){localStorage.setItem("tg-projects",JSON.stringify(projects));}
 const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
 let hydrated=false;
+async function hydrateSession(){
+ if(!API_BASE) return;
+ const remote=await api("/api/session");
+ if(remote?.data){session=remote.data; render();}
+}
+async function hydrateWorkspace(){
+ if(!API_BASE) return;
+ const [b,t]=await Promise.all([api("/api/billing"),api("/api/team")]);
+ billing=b?.data||null; team=Array.isArray(t?.data)?t.data:[];
+ if(!editorProject) render();
+}
 async function hydrateCRM(){
  if(!API_BASE) return;
  const [clients,leads,bookings]=await Promise.all([api("/api/clients"),api("/api/leads"),api("/api/bookings")]);
@@ -99,7 +113,7 @@ function render(){
  <div class="app"><aside class="sidebar">
   <div class="brand"><div class="brand-mark">T</div><div><div class="brand-name">TORCLIXGROUP</div><span class="brand-sub">Studio OS / 02</span></div></div>
   <nav><div class="nav-label">Workspace</div>${nav.map(([icon,label],i)=>(i===8?'<div class="nav-label">Workspace</div>':"")+`<button class="nav-item ${active===label&&!editorProject?"active":""}" data-nav="${label}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`).join("")}</nav>
-  <div class="sidebar-bottom"><div class="workspace"><div class="avatar">PG</div><div><div class="workspace-name">Perezapusk Studio</div><div class="workspace-role">Owner · Pro</div></div></div></div>
+  <div class="sidebar-bottom"><div class="workspace"><div class="avatar">PG</div><div><div class="workspace-name">${session?.organization?.name||"Perezapusk Studio"}</div><div class="workspace-role">${session?.user?.name||"Studio Owner"} · ${session?.organization?.plan||"Pro"}</div></div></div></div>
  </aside>
  <main class="main"><header class="topbar"><div class="crumb">Studio / <strong>${project?project.name:active}</strong></div><div class="top-actions"><button class="icon-btn" data-action="back">←</button><button class="icon-btn">⌕</button><div class="avatar">PG</div></div></header>
  <section class="content">${editorProject&&project?editor(project):active==="Overview"?overview():workspace(active)}</section></main></div>
@@ -195,5 +209,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",()=>{const p=projects.find(x=>x.id===editorProject);if(p){p.status="Live";saveProjects();void api("/api/projects/"+p.id,{method:"PATCH",body:JSON.stringify({status:"active"})});notify(p.name+" marked as Live.")}}));
 }
 render();
+void hydrateSession();
+void hydrateWorkspace();
 void hydrateProjects();
 void hydrateCRM();

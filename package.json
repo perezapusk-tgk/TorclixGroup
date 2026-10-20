@@ -1,7 +1,7 @@
 {
   "name": "torclixgroup",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packageManager": "pnpm@10.12.4",
   "scripts": {
     "dev": "pnpm --parallel --filter @torclix/web --filter @torclix/api dev",
@@ -10,7 +10,6 @@
     "typecheck": "pnpm -r typecheck",
     "test": "node --test packages/access/src/index.test.mjs apps/api/src/server.test.mjs"
   },
-  "devDependencies": {
-    "typescript": "^5.8.3"
-  }
+  "devDependencies": { "typescript": "5.9.2" },
+  "pnpm": { "overrides": { "esbuild": "0.25.12" } }
 }

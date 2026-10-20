@@ -24,7 +24,7 @@ function headers(extra={}){return {
   "content-type":"application/json; charset=utf-8",
   ...(process.env.CORS_ORIGIN?{"access-control-allow-origin":process.env.CORS_ORIGIN}:{}),
   "access-control-allow-methods":"GET,POST,PUT,PATCH,OPTIONS",
-  "access-control-allow-headers":"content-type,x-torclix-user,x-torclix-organization",
+  "access-control-allow-headers":"content-type,authorization,x-torclix-user,x-torclix-organization",
   ...extra
 };}
 function json(res,status,data){res.writeHead(status,headers());res.end(JSON.stringify(data));}
@@ -65,7 +65,7 @@ const server=createServer(async(req,res)=>{
     if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.7.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":"development-session"});return;}
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
-    if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leads=await listRecords("leads",leadsMap,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leads.length})});return;}
+    if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leadRecords=await listRecords("leads",leads,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leadRecords.length})});return;}
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}
     if(path==="/api/projects"&&req.method==="POST"){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;

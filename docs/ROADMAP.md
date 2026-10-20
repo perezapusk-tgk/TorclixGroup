@@ -10,24 +10,24 @@
 - [ ] Database persistence
 
 ## 02 — Studio
-- [ ] Projects CRUD
+- [x] Projects CRUD
 - [ ] Clients and client portal
-- [ ] Template library
+- [x] Template library
 - [ ] Team roles and permissions
 - [ ] White-label branding
 
 ## 03 — Website Builder
-- [ ] Visual canvas
-- [ ] Pages and routing
-- [ ] Section library
-- [ ] Global styles
+- [x] Visual canvas
+- [x] Pages and routing
+- [x] Section library
+- [x] Global styles
 - [ ] Responsive layouts
 - [ ] SEO and publishing
 - [ ] Custom domains
 
 ## 04 — Mini App Builder
-- [ ] Modular app shell
-- [ ] Restaurant modules
+- [x] Modular app shell
+- [x] Industry module catalog foundation
 - [ ] Beauty / salon modules
 - [ ] Fitness modules
 - [ ] Accounts and notifications
@@ -58,9 +58,10 @@
 - [x] API resources for projects, site documents, clients, leads, bookings and templates
 - [x] PostgreSQL multi-tenant schema foundation
 - [x] Visual block content editing in the builder
-- [ ] Persistent PostgreSQL adapter
+- [x] API hydration with localStorage fallback
+- [~] Persistent PostgreSQL adapter (projects/documents)
 - [ ] Authentication and organization membership
-- [ ] Published project runtime and preview URLs
+- [~] Published project runtime and preview URLs (preview endpoint)
 - [ ] Custom domains and SSL automation
 - [ ] Telegram Mini App runtime
 - [ ] Billing and usage enforcement

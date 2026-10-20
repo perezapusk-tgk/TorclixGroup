@@ -209,6 +209,46 @@ export async function listRecords(table,fallback,organizationId){
   }));
 }
 
+export async function listOrders(fallback,organizationId,projectId=null){
+  const db=await getPool();
+  if(!db) return [...fallback.values()].filter(x=>x.organizationId===organizationId&&(!projectId||x.projectId===projectId));
+  const params=[organizationId]; let where="organization_id=$1::uuid";
+  if(projectId){params.push(projectId);where+=" and project_id=$2::uuid";}
+  const {rows}=await db.query(`select id::text,organization_id::text as "organizationId",project_id::text as "projectId",
+    customer_id::text as "customerId",customer_name as "customerName",customer_email as "customerEmail",
+    customer_phone as "customerPhone",status,currency,total::text,source,created_at as "createdAt",updated_at as "updatedAt"
+    from orders where ${where} order by created_at desc`,params);
+  return rows;
+}
+export async function saveOrder(order,items){
+  const db=await getPool();
+  if(!db) return {...order,items};
+  const client=await db.connect();
+  try{
+    await client.query("begin");
+    await client.query(`insert into orders(id,organization_id,project_id,customer_id,customer_name,customer_email,customer_phone,status,currency,total,source)
+      values($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10::numeric,$11)`,
+      [order.id,order.organizationId,order.projectId,order.customerId||null,order.customerName,order.customerEmail||null,order.customerPhone||null,order.status,order.currency,order.total,order.source]);
+    for(const item of items){
+      await client.query(`insert into order_items(id,order_id,catalog_item_id,name,quantity,unit_price,total)
+        values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6::numeric,$7::numeric)`,
+        [item.id,order.id,item.catalogItemId||null,item.name,item.quantity,item.unitPrice,item.total]);
+    }
+    await client.query("commit");
+    return {...order,items};
+  }catch(error){await client.query("rollback");throw error;}finally{client.release();}
+}
+export async function updateOrderStatus(orderId,organizationId,status){
+  const db=await getPool(); if(!db) return null;
+  const {rows}=await db.query(`update orders set status=$3,updated_at=now()
+    where id=$1::uuid and organization_id=$2::uuid
+    returning id::text,organization_id::text as "organizationId",project_id::text as "projectId",
+    customer_name as "customerName",customer_email as "customerEmail",customer_phone as "customerPhone",
+    status,currency,total::text,source,created_at as "createdAt",updated_at as "updatedAt"`,
+    [orderId,organizationId,status]);
+  return rows[0]||null;
+}
+
 export async function listCatalogItems(fallback,organizationId,projectId=null){
   const db=await getPool();
   if(!db){

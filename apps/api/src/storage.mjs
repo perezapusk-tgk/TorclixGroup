@@ -170,7 +170,7 @@ export async function listRecords(table,fallback,organizationId){
   return rows.map(r=>({
     id:r.id?.toString(),organizationId:r.organization_id?.toString(),projectId:r.project_id?.toString(),
     name:r.name,email:r.email,phone:r.phone,source:r.source,status:r.status,
-    customerName:r.customer_name,customerEmail:r.customer_email,startAt:r.start_at,service:r.service
+    customerName:r.customer_name,customerEmail:r.customer_email,customerPhone:r.customer_phone,telegramUserId:r.telegram_user_id?.toString(),telegramUsername:r.telegram_username,startAt:r.start_at,service:r.service
   }));
 }
 
@@ -210,11 +210,12 @@ export async function saveRecord(table,item){
       values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8)
       on conflict(id) do update set status=excluded.status,name=excluded.name,email=excluded.email,phone=excluded.phone,source=excluded.source`,
       [item.id,item.organizationId,item.projectId||null,item.name,item.email||null,item.phone||null,item.source||"website",item.status||"new"]],
-    bookings:[`insert into bookings(id,organization_id,project_id,customer_name,customer_email,start_at,service,status)
-      values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8)
+    bookings:[`insert into bookings(id,organization_id,project_id,customer_name,customer_email,customer_phone,telegram_user_id,telegram_username,start_at,service,status)
+      values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10,$11)
       on conflict(id) do update set status=excluded.status,customer_name=excluded.customer_name,
-      customer_email=excluded.customer_email,start_at=excluded.start_at,service=excluded.service`,
-      [item.id,item.organizationId,item.projectId||null,item.customerName,item.customerEmail||null,item.startAt,item.service||null,item.status||"pending"]]
+      customer_email=excluded.customer_email,customer_phone=excluded.customer_phone,telegram_user_id=excluded.telegram_user_id,
+      telegram_username=excluded.telegram_username,start_at=excluded.start_at,service=excluded.service`,
+      [item.id,item.organizationId,item.projectId||null,item.customerName,item.customerEmail||null,item.customerPhone||null,item.telegramUserId||null,item.telegramUsername||null,item.startAt,item.service||null,item.status||"pending"]]
   };
   const q=queries[table]; if(q) await db.query(q[0],q[1]);
   return item;

@@ -13,6 +13,7 @@ const projects=new Map([
   ["p2",{id:"p2",name:"Forma Fitness",type:"mini_app",industry:"fitness",status:"active",organizationId:"org_demo",slug:"forma-fitness"}]
 ]);
 const clients=new Map(),leads=new Map(),bookings=new Map();
+const publishedProjects=new Set();
 
 function headers(extra={}){return {
   "content-type":"application/json; charset=utf-8",
@@ -94,6 +95,7 @@ const server=createServer(async(req,res)=>{
       if(!project){json(res,404,{error:"Project not found"});return;}
       const document=await getDocument(projectId,auth.organization.id,()=>defaultDocument(projectId));
       await publishDocument(projectId,auth.organization.id,document);
+      if(!process.env.DATABASE_URL) publishedProjects.add(projectId);
       if(!process.env.DATABASE_URL) project.status="active";
       if(!process.env.DATABASE_URL) projects.set(project.id,project);
       if(process.env.DATABASE_URL) await saveProject({...project,status:"active"});
@@ -107,12 +109,13 @@ const server=createServer(async(req,res)=>{
       const project=memory?.organizationId===auth.organization.id?memory:await getProject(projectId,auth.organization.id);
       if(!project){json(res,404,{error:"Project not found"});return;}
       await unpublishDocument(projectId,auth.organization.id);
+      if(!process.env.DATABASE_URL) publishedProjects.delete(projectId);
       json(res,200,{data:{published:false}});
       return;
     }
     const published=path.match(/^\\/published\\/([^/]+)$/);
     if(published&&req.method==="GET"){
-      const project=await getPublishedProject(published[1]);
+      const project=(!process.env.DATABASE_URL&&publishedProjects.has(published[1]))?projects.get(published[1]):await getPublishedProject(published[1]);
       if(!project){html(res,404,"<h1>Published project not found</h1>");return;}
       const document=await getPublishedDocument(project.id);
       if(!document){html(res,404,"<h1>Project is not published</h1>");return;}

@@ -123,12 +123,13 @@ async function hydrateDocument(id:string){
 }
 
 async function api(path:string,options:RequestInit={}){
-  if(!API_BASE) return null;
+  if(!API_BASE) return {error:"API URL не настроен"};
   try{
     const response=await fetch(API_BASE+path,{headers:{"content-type":"application/json",...(DEMO_AUTH?{"x-torclix-user":"demo"}:{}),...(options.headers||{})},...options});
-    if(!response.ok) throw new Error("API "+response.status);
-    return await response.json();
-  }catch{ return null; }
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok) return {error:String(payload?.error||("API "+response.status)),status:response.status};
+    return payload;
+  }catch(error){ return {error:error instanceof Error?error.message:"Ошибка соединения с API"}; }
 }
 
 async function syncDocument(){

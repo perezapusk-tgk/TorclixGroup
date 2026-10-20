@@ -1,0 +1,40 @@
+{
+  "id": "real-estate-north",
+  "industry": "real_estate",
+  "name": "Real Estate / North",
+  "projectType": "website",
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "blocks": [
+        {
+          "type": "Hero",
+          "title": "Find a place with perspective.",
+          "body": "Listings, agents and inquiries in one digital experience."
+        },
+        {
+          "type": "Gallery",
+          "title": "Featured properties.",
+          "body": "Showcase the inventory that matters."
+        },
+        {
+          "type": "Contact",
+          "title": "Talk to an agent.",
+          "body": "Capture qualified property inquiries."
+        }
+      ]
+    },
+    {
+      "id": "properties",
+      "name": "Properties",
+      "blocks": [
+        {
+          "type": "Features",
+          "title": "Browse the collection.",
+          "body": "Filter and present properties by location and type."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": "beauty-atelier",
+  "industry": "beauty",
+  "name": "Beauty / Atelier",
+  "projectType": "website_mini_app",
+  "pages": [
+    {
+      "id": "home",
+      "name": "Home",
+      "blocks": [
+        {
+          "type": "Hero",
+          "title": "Your time. Your ritual.",
+          "body": "Services, specialists and booking in one elegant experience."
+        },
+        {
+          "type": "Features",
+          "title": "Designed around the appointment.",
+          "body": "Discover services, staff and availability."
+        },
+        {
+          "type": "Booking",
+          "title": "Book your visit.",
+          "body": "Pick a service, specialist and time."
+        }
+      ]
+    },
+    {
+      "id": "services",
+      "name": "Services",
+      "blocks": [
+        {
+          "type": "Pricing",
+          "title": "Treatments & services.",
+          "body": "Organize your catalog with clear pricing."
+        },
+        {
+          "type": "Testimonials",
+          "title": "Clients who return.",
+          "body": "Social proof from your community."
+        }
+      ]
+    }
+  ]
+}

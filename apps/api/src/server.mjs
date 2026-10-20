@@ -154,7 +154,7 @@ document.getElementById("submit").addEventListener("click",async()=>{const statu
       const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
       json(res,200,{data:await listTelegramIntegrations(auth.organization.id)});return;
     }
-    const telegramIntegration=path.match(/^\\/api\\/telegram\\/integrations\\/([^/]+)$/);
+    const telegramIntegration=path.match(/^\/api\/telegram\/integrations\/([^/]+)$/);
     if(telegramIntegration&&req.method==="GET"){
       const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
       const projectId=telegramIntegration[1];

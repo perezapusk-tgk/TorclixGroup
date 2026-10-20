@@ -5,8 +5,17 @@ let jwks;
 export async function authenticateRequest(req) {
   const devAuthEnabled = process.env.NODE_ENV !== "production" && process.env.TORCLIX_DEV_AUTH === "true";
   if (devAuthEnabled) {
+    // Demo/local mode must remain usable when the browser opens the app directly
+    // (for example from Telegram or a public preview) and cannot attach the
+    // development identity header. A supplied header still selects another
+    // deterministic demo identity.
     const userKey = req.headers["x-torclix-user"];
-    return userKey ? { subject: String(userKey), email: null, name: null, source: "development-header" } : null;
+    return {
+      subject: String(userKey || "demo"),
+      email: null,
+      name: null,
+      source: userKey ? "development-header" : "development-demo"
+    };
   }
 
   const header = req.headers.authorization || "";

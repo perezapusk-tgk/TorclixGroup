@@ -175,7 +175,11 @@ export async function getDocument(projectId,organizationId,fallback){
 
 export async function publishDocument(projectId,organizationId,document){
   const db=await getPool(); if(!db) return document;
-  await db.query("update site_documents set published_document=$3::jsonb,updated_at=now() where project_id=$1::uuid and exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)",[projectId,organizationId,JSON.stringify(document)]);
+  await db.query(`insert into site_documents(project_id,document,published_document)
+    select $1::uuid,$3::jsonb,$3::jsonb
+    where exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)
+    on conflict(project_id) do update set published_document=excluded.published_document,updated_at=now()`,
+    [projectId,organizationId,JSON.stringify(document)]);
   return document;
 }
 

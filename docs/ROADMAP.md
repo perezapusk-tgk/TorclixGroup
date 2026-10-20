@@ -65,3 +65,14 @@
 - [ ] Custom domains and SSL automation
 - [ ] Telegram Mini App runtime
 - [ ] Billing and usage enforcement
+
+## Product platform expansion
+- [x] Organization / tenant session foundation
+- [x] Team workspace foundation
+- [x] Roles and permission catalog
+- [x] Billing plan and usage foundation
+- [x] Client portal surface foundation
+- [x] Dashboard session + billing + team hydration
+- [ ] Production external authentication provider
+- [ ] Live billing provider (Stripe or equivalent)
+- [ ] Full client portal routing and approval workflow

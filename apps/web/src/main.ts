@@ -51,6 +51,7 @@ let miniModules:string[]=["home","catalog","booking","profile","notifications"];
 let crm: {clients:any[];leads:any[];bookings:any[]}={clients:[],leads:[],bookings:[]};
 let session:any=null;
 let billing:any=null;
+let analytics:any=null;
 let team:any[]=[];
 let domains:any[]=[];
 let doc:SiteDoc = loadDoc(editorProject||"p1");
@@ -159,6 +160,12 @@ async function hydrateSession(){
  if(!API_BASE) return;
  const remote=await api("/api/session");
  if(remote?.data){session=remote.data; render();}
+}
+async function hydrateAnalytics(){
+ if(!API_BASE) return;
+ const result=await api("/api/analytics");
+ analytics=result?.data||null;
+ if(!editorProject) render();
 }
 async function hydrateWorkspace(){
  if(!API_BASE) return;
@@ -314,6 +321,7 @@ function settingsView(){
   </div>
  </div>`;
 }
+ if(section==="Analytics") return analyticsView();
  if(section==="Templates") return templateView();
  if(section==="Settings") return settingsView();
  if(section==="Clients") return crmView("Clients",crm.clients.map(x=>[x.name,x.email||"No email",x.projectIds?.length?x.projectIds.length+" projects":"No projects"]));
@@ -350,6 +358,15 @@ function settingsView(){
 
 }
 
+function analyticsView(){
+ const a=analytics||{projects:{total:0,live:0,draft:0},leads:{total:0,status:{}},bookings:{total:0,status:{}},clients:{total:0},byProject:[]};
+ const statusRows=(obj:any)=>Object.entries(obj||{}).map(([k,v])=>`<div class="workspace-row"><div class="project-name">${k}</div><div class="project-type">Записей</div><span class="badge live">${v}</span></div>`).join("");
+ return `<div class="eyebrow">03 / Business OS</div><div class="workspace-head"><div><h2>Аналитика</h2><p class="hero-copy">Единая картина по всем клиентским проектам студии.</p></div><button class="primary" data-action="analytics-refresh">Обновить</button></div>
+ <div class="project-kpis"><div class="stat"><div class="stat-label">Проекты</div><div class="stat-value">${a.projects.total}</div><small>${a.projects.live} опубликовано · ${a.projects.draft} черновиков</small></div><div class="stat"><div class="stat-label">Лиды</div><div class="stat-value">${a.leads.total}</div><small>Все источники</small></div><div class="stat"><div class="stat-label">Бронирования</div><div class="stat-value">${a.bookings.total}</div><small>Все проекты</small></div><div class="stat"><div class="stat-label">Клиенты</div><div class="stat-value">${a.clients.total}</div><small>CRM</small></div></div>
+ <div class="project-overview-grid"><section class="card table-card"><div class="card-head"><div class="card-title">Лиды по статусам</div></div>${statusRows(a.leads.status)||'<div class="inspector-note">Пока нет лидов.</div>'}</section><section class="card table-card"><div class="card-head"><div class="card-title">Бронирования по статусам</div></div>${statusRows(a.bookings.status)||'<div class="inspector-note">Пока нет бронирований.</div>'}</section></div>
+ <section class="card table-card"><div class="card-head"><div class="card-title">Результаты по проектам</div><div class="card-meta">${a.byProject.length}</div></div>${a.byProject.length?a.byProject.map((p:any)=>`<div class="workspace-row"><div class="project-name">${p.name}</div><div class="project-type">${p.leads} лидов · ${p.bookings} бронирований</div><span class="badge live">Проект</span></div>`).join(""):'<div class="inspector-note">Создайте первый проект, чтобы увидеть аналитику.</div>'}</section>
+ </div>`;
+}
 function crmView(title:string,items:string[][]){ return `<div class="eyebrow">03 / Business OS</div><div class="workspace-head"><div><h2>${title}</h2><p class="hero-copy">Live operational records connected to the TorclixGroup API.</p></div><button class="primary" data-action="crm-refresh">Refresh</button></div><section class="card table-card"><div class="card-head"><div class="card-title">${title} workspace</div><div class="card-meta">${items.length} записей</div></div>${items.length?items.map(r=>`<div class="workspace-row"><div class="project-name">${r[0]}</div><div class="project-type">${r[1]}</div><span class="badge live">${r[2]}</span></div>`).join(""):`<div class="inspector-note">No records yet. Connect a website, Mini App or API form to start collecting data.</div>`}</section>`; }
 
 function templateView(){
@@ -471,6 +488,7 @@ if(!name.trim()){notify("Введите название проекта.");retur
     notify("Не удалось опубликовать Mini App: "+(result?.error||"ошибка API")+".");
   }
 }));
+ root.querySelectorAll<HTMLElement>("[data-action='analytics-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateAnalytics();notify("Аналитика обновлена.");}));
  root.querySelectorAll<HTMLElement>("[data-action='crm-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateCRM();notify("Данные обновлены.");}));
  root.querySelectorAll<HTMLElement>("[data-add-block]").forEach(el=>el.addEventListener("click",()=>{const type=el.dataset.addBlock||"Section";const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks.push({id:"b"+Date.now(),type,title:type==="Hero"?"Новая история клиента начинается здесь.":type+" section",body:"Отредактируйте этот блок под бизнес клиента."});saveDoc();void syncDocument();notify("Секция «"+type+"» добавлена.")}));
  root.querySelectorAll<HTMLElement>("[data-block]").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).closest("[data-remove-block]")) return;selectedBlock=el.dataset.block||null;render();}));
@@ -492,7 +510,7 @@ async function boot(){
   try{
     applyStudioSettings();
     render();
-    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateTelegram()]);
+    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateTelegram()]);
     if(!editorProject) render();
   }catch(error){
     console.error("TorclixGroup boot error",error);

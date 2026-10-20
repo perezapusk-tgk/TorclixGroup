@@ -50,3 +50,17 @@
 - [ ] Analytics
 - [ ] Audit logs
 - [ ] Backups
+
+
+## Phase 3 — Product infrastructure foundation
+- [x] Industry template manifests for restaurant, beauty, fitness, medical, real estate and services
+- [x] Expanded shared domain model for organizations, memberships, leads, bookings and domains
+- [x] API resources for projects, site documents, clients, leads, bookings and templates
+- [x] PostgreSQL multi-tenant schema foundation
+- [x] Visual block content editing in the builder
+- [ ] Persistent PostgreSQL adapter
+- [ ] Authentication and organization membership
+- [ ] Published project runtime and preview URLs
+- [ ] Custom domains and SSL automation
+- [ ] Telegram Mini App runtime
+- [ ] Billing and usage enforcement

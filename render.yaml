@@ -22,6 +22,14 @@ services:
           name: torclixgroup-web
           type: web
           envVarKey: RENDER_EXTERNAL_URL
+      - key: PUBLIC_URL
+        value: https://torclixgroup-api.onrender.com
+      - key: TELEGRAM_DEFAULT_PROJECT
+        value: p1
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
 
   - type: web
     name: torclixgroup-web

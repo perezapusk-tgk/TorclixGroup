@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 let pool = null;
 let initialized = false;
 let databaseUnavailable = false;
+const memoryPublishedDocuments = new Map();
 
 async function getPool(){
   if(pool || databaseUnavailable || !process.env.DATABASE_URL) return pool;
@@ -160,7 +161,8 @@ export async function saveProject(project){
 }
 
 export async function getPublishedDocument(projectId){
-  const db=await getPool(); if(!db) return null;
+  const db=await getPool();
+  if(!db) return memoryPublishedDocuments.get(projectId)||null;
   const {rows}=await db.query("select published_document from site_documents where project_id=$1::uuid limit 1",[projectId]);
   return rows[0]?.published_document ?? null;
 }
@@ -174,7 +176,8 @@ export async function getDocument(projectId,organizationId,fallback){
 }
 
 export async function publishDocument(projectId,organizationId,document){
-  const db=await getPool(); if(!db) return document;
+  const db=await getPool();
+  if(!db){ memoryPublishedDocuments.set(projectId,document); return document; }
   await db.query(`insert into site_documents(project_id,document,published_document)
     select $1::uuid,$3::jsonb,$3::jsonb
     where exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)
@@ -184,7 +187,8 @@ export async function publishDocument(projectId,organizationId,document){
 }
 
 export async function unpublishDocument(projectId,organizationId){
-  const db=await getPool(); if(!db) return;
+  const db=await getPool();
+  if(!db){ memoryPublishedDocuments.delete(projectId); return; }
   await db.query("update site_documents set published_document=null,updated_at=now() where project_id=$1::uuid and exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)",[projectId,organizationId]);
 }
 

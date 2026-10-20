@@ -71,7 +71,7 @@ function loadDoc(id:string):SiteDoc{
 function saveDoc(){localStorage.setItem("tg-doc-"+doc.projectId,JSON.stringify(doc));}
 function saveProjects(){localStorage.setItem("tg-projects",JSON.stringify(projects));}
 const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
-const DEMO_AUTH=true; // Hosted demo always sends the deterministic demo identity header.
+const DEMO_AUTH=true;
 let hydrated=false;
 let telegramStatus:{enabled:boolean;miniAppUrl:string}={enabled:false,miniAppUrl:""};
 async function hydrateTelegram(){try{const result=await api("/api/telegram/status");telegramStatus=result?.data||telegramStatus;}catch{}}

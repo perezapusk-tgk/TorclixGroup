@@ -117,6 +117,7 @@ async function hydrateDocument(id:string){
   const remote=await api("/api/projects/"+id+"/document");
   if(remote?.data){
     doc=remote.data as SiteDoc;
+    miniModules=Array.isArray(doc.miniApp?.modules)&&doc.miniApp.modules.length?doc.miniApp.modules:["home","catalog","booking","profile","notifications"];
     saveDoc();
   }
 }
@@ -261,7 +262,8 @@ function editor(project:Project){
 }
 
 function miniAppPanel(moduleCatalog:string[][]){
- return '<section class="mini-app-panel"><div class="card-head"><div><div class="eyebrow">05 / Mini App runtime</div><div class="card-title">Compose the client app</div></div><div class="card-meta">'+miniModules.length+' modules enabled</div></div><div class="mini-module-grid">'+moduleCatalog.map(m=>'<button class="mini-module '+(miniModules.includes(m[0])?"selected":"")+'" data-mini-module="'+m[0]+'"><span class="mini-module-mark">'+(miniModules.includes(m[0])?"✓":"+")+'</span><strong>'+m[1]+'</strong><small>'+m[2]+'</small></button>').join("")+'</div></section>';
+ const miniUrl=API_BASE&&editorProject?API_BASE+"/miniapp/"+editorProject:"";
+ return '<section class="mini-app-panel"><div class="card-head"><div><div class="eyebrow">05 / Mini App runtime</div><div class="card-title">Конструктор Mini App</div></div><div class="card-meta">'+miniModules.length+' модулей · Telegram ready</div></div><div class="mini-app-toolbar"><div><strong>Публикация</strong><small>Настройки сохраняются в документ проекта и используются опубликованным Mini App.</small></div><div class="mini-app-toolbar-actions">'+(miniUrl?'<button class="secondary" data-action="open-miniapp">Открыть Mini App</button>':"")+'<button class="primary" data-action="publish-miniapp">Опубликовать</button></div></div><div class="mini-module-grid">'+moduleCatalog.map(m=>'<button class="mini-module '+(miniModules.includes(m[0])?"selected":"")+'" data-mini-module="'+m[0]+'"><span class="mini-module-mark">'+(miniModules.includes(m[0])?"✓":"+")+'</span><strong>'+m[1]+'</strong><small>'+m[2]+'</small></button>').join("")+'</div></section>';
 }
 
 function blockInspector(page:Page){
@@ -307,7 +309,9 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-page]").forEach(el=>el.addEventListener("click",()=>{doc.activePage=el.dataset.page||doc.activePage;saveDoc();render()}));
  root.querySelectorAll<HTMLElement>("[data-tab]").forEach(el=>el.addEventListener("click",()=>{editorTab=el.dataset.tab||"Design";render()}));
  root.querySelectorAll<HTMLElement>("[data-mini-module]").forEach(el=>el.addEventListener("click",()=>{const id=el.dataset.miniModule||"";miniModules=miniModules.includes(id)?miniModules.filter(x=>x!==id):[...miniModules,id];doc.miniApp={modules:miniModules,navigation:miniModules,theme:{accent:doc.accent,mode:doc.miniApp?.theme?.mode==="light"?"light":"dark"}};if(editorProject){localStorage.setItem("tg-mini-"+editorProject,JSON.stringify(miniModules));saveDoc();void syncDocument();}render();}));
- root.querySelectorAll<HTMLElement>("[data-action='toggle-mini']").forEach(el=>el.addEventListener("click",()=>{notify("Mini App runtime is ready to configure.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='toggle-mini']").forEach(el=>el.addEventListener("click",()=>{notify("Mini App открыт в конструкторе проекта.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='open-miniapp']").forEach(el=>el.addEventListener("click",()=>{if(editorProject&&API_BASE)window.open(API_BASE+"/miniapp/"+editorProject,"_blank","noopener,noreferrer");}));
+ root.querySelectorAll<HTMLElement>("[data-action='publish-miniapp']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject)return;doc.miniApp={modules:miniModules,navigation:miniModules,theme:{accent:doc.accent,mode:doc.miniApp?.theme?.mode==="light"?"light":"dark"}};saveDoc();await syncDocument();const result=await api("/api/projects/"+editorProject+"/publish",{method:"POST"});if(result?.data?.published){const p=projects.find(x=>x.id===editorProject);if(p){p.status="Live";saveProjects();}notify("Mini App опубликован. Можно открыть его по ссылке.");}else notify("Не удалось опубликовать Mini App.");}));
  root.querySelectorAll<HTMLElement>("[data-action='crm-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateCRM();notify("Business data refreshed.");}));
  root.querySelectorAll<HTMLElement>("[data-add-block]").forEach(el=>el.addEventListener("click",()=>{const type=el.dataset.addBlock||"Section";const page=doc.pages.find(p=>p.id===doc.activePage)!;page.blocks.push({id:"b"+Date.now(),type,title:type==="Hero"?"Your next chapter starts here.":type+" section",body:"Edit this section to match your client's business."});saveDoc();void syncDocument();notify(type+" section added.")}));
  root.querySelectorAll<HTMLElement>("[data-block]").forEach(el=>el.addEventListener("click",e=>{if((e.target as HTMLElement).closest("[data-remove-block]")) return;selectedBlock=el.dataset.block||null;render();}));

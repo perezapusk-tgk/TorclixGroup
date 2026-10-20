@@ -22,7 +22,8 @@ function resolvePublicProjectId(projectId){return legacyProjectIds[projectId]||p
 
 function headers(extra={}){return {
   "content-type":"application/json; charset=utf-8",
-  ...(process.env.CORS_ORIGIN?{"access-control-allow-origin":process.env.CORS_ORIGIN}:{}),
+  "access-control-allow-origin":process.env.CORS_ORIGIN||"*",
+  "vary":"Origin",
   "access-control-allow-methods":"GET,POST,PUT,PATCH,OPTIONS",
   "access-control-allow-headers":"content-type,authorization,x-torclix-user,x-torclix-organization",
   ...extra

@@ -69,7 +69,7 @@ Next infrastructure layers:
 
 ## Development
 
-Requires Node.js 20.19+ or 22.12+ and pnpm 10.
+Requires Node.js 22.14.0 and pnpm 10.12.4.
 
 Run the web app with `pnpm --filter @torclix/web dev`.
 

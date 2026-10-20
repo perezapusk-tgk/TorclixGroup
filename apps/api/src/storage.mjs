@@ -81,13 +81,13 @@ export async function initStorage(){
   initialized=true;
 }
 
-export async function getSessionUser(userKey){
+export async function getSessionUser(userKey,email=null,name=null){
   if(userKey==="demo" && !process.env.DATABASE_URL){
     return {id:"user_demo",email:"demo@torclix.local",name:"Studio Owner"};
   }
   const db=await getPool();
   if(!db) return null;
-  const {rows}=await db.query("select id::text,email,name from users where id::text=$1 or email=$1 limit 1",[userKey]);
+  const {rows}=await db.query("select id::text,email,name from users where external_id=$1 or id::text=$1 or email=$2 limit 1",[userKey,email||""]);
   return rows[0]||null;
 }
 

@@ -1,5 +1,7 @@
 {
-  "name": "@torclix/auth",
-  "private": true,
-  "version": "0.1.0"
+  "name":"@torclix/auth",
+  "private":true,
+  "version":"0.1.0",
+  "type":"module",
+  "dependencies":{"jose":"^6.1.0"}
 }

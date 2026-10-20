@@ -56,7 +56,7 @@ const server=createServer(async(req,res)=>{
   if(req.method==="OPTIONS"){json(res,204,{});return;}
   const {pathname:path}=new URL(req.url||"/","http://localhost");
   try{
-    if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.6.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":"development-session"});return;}
+    if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.7.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":"development-session"});return;}
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leads=await listRecords("leads",leadsMap,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leads.length})});return;}
@@ -84,6 +84,61 @@ const server=createServer(async(req,res)=>{
       if(!owned){json(res,404,{error:"Project not found"});return;}
       if(req.method==="GET"){json(res,200,{data:await getDocument(projectId,auth.organization.id,()=>defaultDocument(projectId))});return;}
       if(req.method==="PUT"||req.method==="PATCH"){const input=await body(req);const currentDoc=await getDocument(projectId,auth.organization.id,()=>defaultDocument(projectId));const next={...currentDoc,...input,projectId};await saveDocument(projectId,auth.organization.id,next);json(res,200,{data:next});return;}
+    }
+    const publish=path.match(/^\\/api\\/projects\\/([^/]+)\\/publish$/);
+    if(publish&&req.method==="POST"){
+      const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
+      const projectId=publish[1];
+      const memory=projects.get(projectId);
+      const project=memory?.organizationId===auth.organization.id?memory:await getProject(projectId,auth.organization.id);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      const document=await getDocument(projectId,auth.organization.id,()=>defaultDocument(projectId));
+      await publishDocument(projectId,auth.organization.id,document);
+      if(!process.env.DATABASE_URL) project.status="active";
+      if(!process.env.DATABASE_URL) projects.set(project.id,project);
+      if(process.env.DATABASE_URL) await saveProject({...project,status:"active"});
+      json(res,200,{data:{project:{...project,status:"active"},published:true}});
+      return;
+    }
+    if(publish&&req.method==="DELETE"){
+      const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
+      const projectId=publish[1];
+      const memory=projects.get(projectId);
+      const project=memory?.organizationId===auth.organization.id?memory:await getProject(projectId,auth.organization.id);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      await unpublishDocument(projectId,auth.organization.id);
+      json(res,200,{data:{published:false}});
+      return;
+    }
+    const published=path.match(/^\\/published\\/([^/]+)$/);
+    if(published&&req.method==="GET"){
+      const project=await getPublishedProject(published[1]);
+      if(!project){html(res,404,"<h1>Published project not found</h1>");return;}
+      const document=await getPublishedDocument(project.id);
+      if(!document){html(res,404,"<h1>Project is not published</h1>");return;}
+      html(res,200,renderPreview(project,document));
+      return;
+    }
+    if(path==="/api/domains"&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"domains:read");if(!auth)return;
+      json(res,200,{data:await listDomains(auth.organization.id)});return;
+    }
+    if(path==="/api/domains"&&req.method==="POST"){
+      const auth=await requirePermission(req,res,"domains:read");if(!auth)return;
+      const input=await body(req);
+      const projectId=input.projectId?String(input.projectId):null;
+      if(projectId){
+        const project=projects.get(projectId);
+        const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);
+        if(!owned){json(res,404,{error:"Project not found"});return;}
+      }
+      const hostname=String(input.hostname||"").trim().toLowerCase();
+      if(!hostname||!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(hostname)){
+        json(res,400,{error:"Valid hostname is required"});return;
+      }
+      const domain={id:newId(),organizationId:auth.organization.id,projectId,hostname,status:"pending",sslStatus:"pending"};
+      await saveDomain(domain);
+      json(res,201,{data:domain});return;
     }
     const preview=path.match(/^\/preview\/([^/]+)$/);
     if(preview&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;const memory=projects.get(preview[1]);const project=memory?.organizationId===auth.organization.id?memory:await getProject(preview[1],auth.organization.id);if(!project){html(res,404,"<h1>Project not found</h1>");return;}const doc=await getDocument(project.id,auth.organization.id,()=>defaultDocument(project.id));html(res,200,renderPreview(project,doc));return;}

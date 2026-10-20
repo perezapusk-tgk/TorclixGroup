@@ -133,7 +133,7 @@ export async function publishDocument(projectId,organizationId,document){
   await db.query(`insert into site_documents(project_id,document,published_document)
     select $1::uuid,$3::jsonb,$3::jsonb
     where exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)
-    on conflict(project_id) do update set published_document=excluded.published_document,updated_at=now()`,
+    on conflict(project_id) do update set published_document=excluded.published_document,published_version=site_documents.version,updated_at=now()`,
     [projectId,organizationId,JSON.stringify(document)]);
   return document;
 }
@@ -141,7 +141,7 @@ export async function publishDocument(projectId,organizationId,document){
 export async function unpublishDocument(projectId,organizationId){
   const db=await getPool();
   if(!db){ memoryPublishedDocuments.delete(projectId); return; }
-  await db.query("update site_documents set published_document=null,updated_at=now() where project_id=$1::uuid and exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)",[projectId,organizationId]);
+  await db.query("update site_documents set published_document=null,published_version=null,updated_at=now() where project_id=$1::uuid and exists(select 1 from projects where id=$1::uuid and organization_id=$2::uuid)",[projectId,organizationId]);
 }
 
 export async function saveDocument(projectId,organizationId,document){

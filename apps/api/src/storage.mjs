@@ -221,4 +221,22 @@ export async function saveRecord(table,item){
   return item;
 }
 
+export async function getTelegramIntegration(organizationId,projectId){
+  const db=await getPool(); if(!db) return null;
+  const {rows}=await db.query(`select id::text,organization_id::text as "organizationId",project_id::text as "projectId",bot_id as "botId",bot_username as "botUsername",enabled,webhook_url as "webhookUrl",last_checked_at as "lastCheckedAt",created_at as "createdAt",updated_at as "updatedAt" from telegram_integrations where organization_id=$1::uuid and project_id=$2::uuid limit 1`,[organizationId,projectId]);
+  return rows[0]||null;
+}
+export async function listTelegramIntegrations(organizationId){
+  const db=await getPool(); if(!db) return [];
+  const {rows}=await db.query(`select id::text,organization_id::text as "organizationId",project_id::text as "projectId",bot_id as "botId",bot_username as "botUsername",enabled,webhook_url as "webhookUrl",last_checked_at as "lastCheckedAt",created_at as "createdAt",updated_at as "updatedAt" from telegram_integrations where organization_id=$1::uuid order by created_at desc`,[organizationId]);
+  return rows;
+}
+export async function saveTelegramIntegration(integration){
+  const db=await getPool(); if(!db) return integration;
+  await db.query(`insert into telegram_integrations(id,organization_id,project_id,bot_id,bot_username,enabled,webhook_url,last_checked_at)
+    values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,now())
+    on conflict(organization_id,project_id) do update set bot_id=excluded.bot_id,bot_username=excluded.bot_username,enabled=excluded.enabled,webhook_url=excluded.webhook_url,last_checked_at=now(),updated_at=now()`,
+    [integration.id,integration.organizationId,integration.projectId,integration.botId||null,integration.botUsername||null,integration.enabled!==false,integration.webhookUrl||null]);
+  return integration;
+}
 export function newId(){ return randomUUID(); }

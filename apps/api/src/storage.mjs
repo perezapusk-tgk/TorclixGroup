@@ -209,6 +209,58 @@ export async function listRecords(table,fallback,organizationId){
   }));
 }
 
+export async function listCatalogItems(fallback,organizationId,projectId=null){
+  const db=await getPool();
+  if(!db){
+    return [...fallback.values()].filter(item=>item.organizationId===organizationId&&(!projectId||item.projectId===projectId)&&item.status!=="archived");
+  }
+  const params=[organizationId];
+  let where="organization_id=$1::uuid and status <> 'archived'";
+  if(projectId){params.push(projectId);where+=" and project_id=$2::uuid";}
+  const {rows}=await db.query(`select id::text,organization_id::text as "organizationId",project_id::text as "projectId",
+    name,slug,item_type as "itemType",description,price::text,currency,category,status,stock,image_url as "imageUrl",
+    created_at as "createdAt",updated_at as "updatedAt"
+    from catalog_items where ${where} order by created_at desc`,params);
+  return rows;
+}
+
+export async function getCatalogItem(itemId,organizationId){
+  const db=await getPool();
+  if(!db) return null;
+  const {rows}=await db.query(`select id::text,organization_id::text as "organizationId",project_id::text as "projectId",
+    name,slug,item_type as "itemType",description,price::text,currency,category,status,stock,image_url as "imageUrl",
+    created_at as "createdAt",updated_at as "updatedAt"
+    from catalog_items where id=$1::uuid and organization_id=$2::uuid limit 1`,[itemId,organizationId]);
+  return rows[0]||null;
+}
+
+export async function saveCatalogItem(item){
+  const db=await getPool();
+  if(!db) return item;
+  const {rows}=await db.query(`insert into catalog_items(
+    id,organization_id,project_id,name,slug,item_type,description,price,currency,category,status,stock,image_url)
+    values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8::numeric,$9,$10,$11,$12,$13)
+    on conflict(id) do update set name=excluded.name,slug=excluded.slug,item_type=excluded.item_type,
+    description=excluded.description,price=excluded.price,currency=excluded.currency,category=excluded.category,
+    status=excluded.status,stock=excluded.stock,image_url=excluded.image_url,updated_at=now()
+    returning id::text,organization_id::text as "organizationId",project_id::text as "projectId",
+    name,slug,item_type as "itemType",description,price::text,currency,category,status,stock,image_url as "imageUrl",
+    created_at as "createdAt",updated_at as "updatedAt"`,
+    [item.id,item.organizationId,item.projectId,item.name,item.slug,item.itemType,item.description||null,item.price,item.currency,item.category||null,item.status,item.stock,item.imageUrl||null]);
+  return rows[0]||item;
+}
+
+export async function archiveCatalogItem(itemId,organizationId){
+  const db=await getPool();
+  if(!db) return null;
+  const {rows}=await db.query(`update catalog_items set status='archived',updated_at=now()
+    where id=$1::uuid and organization_id=$2::uuid
+    returning id::text,organization_id::text as "organizationId",project_id::text as "projectId",name,slug,
+    item_type as "itemType",description,price::text,currency,category,status,stock,image_url as "imageUrl",
+    created_at as "createdAt",updated_at as "updatedAt"`,[itemId,organizationId]);
+  return rows[0]||null;
+}
+
 export async function findDomain(hostname){
   const db=await getPool();
   if(!db) return null;

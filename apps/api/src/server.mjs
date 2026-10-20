@@ -1,7 +1,8 @@
 import { createServer } from "node:http";
+import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -136,7 +137,7 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:await listDomains(auth.organization.id)});return;
     }
     if(path==="/api/domains"&&req.method==="POST"){
-      const auth=await requirePermission(req,res,"domains:read");if(!auth)return;
+      const auth=await requirePermission(req,res,"domains:write");if(!auth)return;
       const input=await body(req);
       const projectId=input.projectId?String(input.projectId):null;
       if(projectId){
@@ -148,9 +149,24 @@ const server=createServer(async(req,res)=>{
       if(!hostname||!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(hostname)){
         json(res,400,{error:"Valid hostname is required"});return;
       }
-      const domain={id:newId(),organizationId:auth.organization.id,projectId,hostname,status:"pending",sslStatus:"pending"};
+      const domain={id:newId(),organizationId:auth.organization.id,projectId,hostname,status:"pending",sslStatus:"pending",verificationToken:"torclix-"+newId().replace(/-/g,"")};
       await saveDomain(domain);
-      json(res,201,{data:domain});return;
+      json(res,201,{data:{...domain,verification:{type:"dns_txt",name:"_torclix."+hostname,value:domain.verificationToken}}});return;
+    }
+    const domainVerify=path.match(/^\/api\/domains\/([^/]+)\/verify$/);
+    if(domainVerify&&req.method==="POST"){
+      const auth=await requirePermission(req,res,"domains:write");if(!auth)return;
+      const existing=(await listDomains(auth.organization.id)).find(d=>d.id===domainVerify[1]);
+      if(!existing){json(res,404,{error:"Domain not found"});return;}
+      if(existing.status==="verified"||existing.status==="active"){json(res,200,{data:{...existing,verified:true}});return;}
+      const expected=existing.verificationToken;
+      if(!expected){json(res,409,{error:"Domain verification is not configured for this record"});return;}
+      let records=[];
+      try{records=await lookup("_torclix."+existing.hostname,"TXT");}catch{records=[];}
+      const values=records.flatMap(r=>Array.isArray(r)?r:[String(r)]);
+      if(!values.includes(expected)){json(res,409,{error:"DNS verification record not found",verification:{type:"dns_txt",name:"_torclix."+existing.hostname,value:expected}});return;}
+      const verified=await verifyDomain(existing.id,auth.organization.id);
+      json(res,200,{data:{...verified,verified:true,ssl:{status:"pending",next:"SSL automation"}}});return;
     }
     const preview=path.match(/^\/preview\/([^/]+)$/);
     if(preview&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;const memory=projects.get(preview[1]);const project=memory?.organizationId===auth.organization.id?memory:await getProject(preview[1],auth.organization.id);if(!project){html(res,404,"<h1>Project not found</h1>");return;}const doc=await getDocument(project.id,auth.organization.id,()=>defaultDocument(project.id));html(res,200,renderPreview(project,doc));return;}

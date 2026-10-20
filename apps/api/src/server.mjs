@@ -70,7 +70,11 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/projects"&&req.method==="POST"){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
       const input=await body(req);const name=String(input.name||"Untitled project");
-      const project={id:newId(),name,type:String(input.type||"website"),industry:String(input.industry||"services"),status:"draft",organizationId:auth.organization.id,slug:String(input.slug||name).toLowerCase().trim().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"").replace(/-+/g,"-").replace(/^-|-$/g,"")||"untitled"};
+      const type=String(input.type||"website");
+      if(!["website","mini_app","website_mini_app"].includes(type)){json(res,400,{error:"Unsupported project type"});return;}
+      const industry=String(input.industry||"services").toLowerCase().trim().replace(/\s+/g,"_");
+      const slug=String(input.slug||name).toLowerCase().trim().replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"")||"untitled";
+      const project={id:newId(),name,type,industry,status:"draft",organizationId:auth.organization.id,slug};
       await saveProject(project);if(!process.env.DATABASE_URL)projects.set(project.id,project);await saveDocument(project.id,project.organizationId,defaultDocument(project.id));json(res,201,{data:project});return;
     }
     const pm=path.match(/^\/api\/projects\/([^/]+)$/);

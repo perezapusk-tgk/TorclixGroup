@@ -52,10 +52,7 @@ services:
       - key: NODE_VERSION
         value: 22.14.0
       - key: VITE_API_URL
-        fromService:
-          name: torclixgroup-api
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://torclixgroup-api.onrender.com
       - key: VITE_TORCLIX_DEMO
         value: "true"
 

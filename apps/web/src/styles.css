@@ -305,3 +305,123 @@ html[data-theme="light"] .notification-row{border-color:#e5e5e5}
  .settings-actions{flex-direction:column-reverse}
  .settings-actions button{width:100%}
 }
+
+
+/* TorclixGroup editorial system — reference-led, not generic SaaS */
+:root {
+  --accent: #d8ff3e;
+  --line: #242424;
+  --panel: #0d0d0d;
+}
+body {
+  letter-spacing: -0.005em;
+}
+.sidebar {
+  background: #070707;
+  border-right-color: #1e1e1e;
+}
+.brand {
+  padding-top: 4px;
+  padding-bottom: 34px;
+}
+.brand-mark {
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+}
+.nav-label {
+  margin-top: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #171717;
+}
+.nav-item {
+  border-radius: 0;
+  padding: 11px 10px;
+  border-left: 1px solid transparent;
+}
+.nav-item.active {
+  background: transparent;
+  border-left-color: var(--accent);
+}
+.topbar {
+  height: 64px;
+  background: rgba(8,8,8,.82);
+  border-bottom-color: #1e1e1e;
+}
+.content {
+  padding: 54px 42px 100px;
+  max-width: 1720px;
+}
+.hero {
+  min-height: 360px;
+  margin-bottom: 42px;
+  padding-bottom: 38px;
+  border-bottom: 1px solid #202020;
+}
+.eyebrow {
+  color: var(--accent);
+  letter-spacing: .24em;
+}
+h1 {
+  font-size: clamp(48px, 6.4vw, 96px);
+  max-width: 1050px;
+}
+.hero-copy {
+  max-width: 560px;
+  font-size: 15px;
+}
+.stats {
+  border-radius: 0;
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+}
+.stat {
+  background: transparent;
+  padding: 26px 18px;
+}
+.card, .quick, .template-card, .builder {
+  border-radius: 0;
+}
+.card {
+  background: #0b0b0b;
+}
+.card-head {
+  padding-left: 22px;
+  padding-right: 22px;
+}
+.section {
+  margin-top: 44px;
+}
+.section-title {
+  font-size: 22px;
+  letter-spacing: -.045em;
+}
+.quick {
+  min-height: 150px;
+  padding: 22px;
+  background: #0b0b0b;
+}
+.template-card {
+  min-height: 210px;
+  background: #0b0b0b;
+  padding: 24px;
+}
+.template-card strong {
+  font-size: 20px;
+}
+.editor-top h2, .workspace-head h2 {
+  font-size: clamp(46px, 6vw, 86px);
+}
+.primary {
+  border-radius: 999px;
+  padding: 13px 22px;
+}
+.secondary {
+  border-radius: 999px;
+}
+@media (max-width: 700px) {
+  .content { padding: 34px 18px 70px; }
+  .hero { min-height: 300px; padding-bottom: 28px; }
+  h1 { font-size: clamp(44px, 14vw, 68px); }
+}

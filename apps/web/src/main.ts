@@ -301,6 +301,11 @@ function projectCRM(project:Project){
 function projectSettings(project:Project){
  return `<div class="project-module-view"><div class="settings-card"><div class="settings-card-head"><div><h3>Настройки проекта</h3><p>Основные параметры проекта клиента.</p></div><span class="badge ${project.status==="Live"?"live":""}">${project.status==="Live"?"Опубликован":"Черновик"}</span></div><div class="security-grid"><div><span>Название</span><strong>${project.name}</strong></div><div><span>Тип</span><strong>${project.type}</strong></div><div><span>Отрасль</span><strong>${project.industry}</strong></div><div><span>Проект ID</span><strong>${project.id}</strong></div></div></div><div class="settings-card"><div class="settings-card-head"><div><h3>Публикация и домен</h3><p>Следующий шаг — подключить собственный домен клиента.</p></div></div><div class="quick-actions"><button class="secondary" data-nav-direct="Domains">Домены</button><button class="secondary" data-nav-direct="Analytics">Аналитика</button></div></div></div>`;
 }
+function miniAppPanel(moduleCatalog:string[][]){
+ const miniUrl=API_BASE&&editorProject?API_BASE+"/miniapp/"+editorProject:"";
+ return '<section class="mini-app-panel"><div class="card-head"><div><div class="eyebrow">05 / Mini App runtime</div><div class="card-title">Конструктор Mini App</div></div><div class="card-meta">'+miniModules.length+' модулей · Telegram ready</div></div><div class="mini-app-toolbar"><div><strong>Публикация</strong><small>Настройки сохраняются в документ проекта и используются опубликованным Mini App.</small></div><div class="mini-app-toolbar-actions">'+(miniUrl?'<button class="secondary" data-action="open-miniapp">Открыть Mini App</button>':"")+'<button class="primary" data-action="publish-miniapp">Опубликовать</button></div></div><div class="mini-module-grid">'+moduleCatalog.map(m=>'<button class="mini-module '+(miniModules.includes(m[0])?"selected":"")+'" data-mini-module="'+m[0]+'"><span class="mini-module-mark">'+(miniModules.includes(m[0])?"✓":"+")+'</span><strong>'+m[1]+'</strong><small>'+m[2]+'</small></button>').join("")+'</div></section>';
+}
+
 function blockInspector(page:Page){
  const block=page.blocks.find(b=>b.id===selectedBlock);
  if(!block) return `<div class="inspector-note">Select a block to edit it.</div>`;

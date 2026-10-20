@@ -133,8 +133,8 @@ async function api(path:string,options:RequestInit={}){
 }
 
 async function syncDocument(){
-  if(!editorProject) return;
-  await api("/api/projects/"+editorProject+"/document",{method:"PUT",body:JSON.stringify(doc)});
+  if(!editorProject) return {error:"Проект не выбран"};
+  return await api("/api/projects/"+editorProject+"/document",{method:"PUT",body:JSON.stringify(doc)});
 }
 
 

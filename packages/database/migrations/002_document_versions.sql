@@ -8,3 +8,5 @@ create table if not exists site_document_versions(
   unique(project_id,version)
 );
 create index if not exists site_document_versions_project_idx on site_document_versions(project_id,version desc);
+
+alter table site_documents add column if not exists published_version integer;

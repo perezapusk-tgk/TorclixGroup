@@ -572,6 +572,14 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     }
     const preview=path.match(/^\/preview\/([^/]+)$/);
     if(preview&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;const memory=projects.get(preview[1]);const project=memory?.organizationId===auth.organization.id?memory:await getProject(preview[1],auth.organization.id);if(!project){html(res,404,"<h1>Project not found</h1>");return;}const doc=await getDocument(project.id,auth.organization.id,()=>defaultDocument(project.id));html(res,200,renderPreview(project,doc));return;}
+    const publicHealth=path.match(/^\/public\/projects\/([^/]+)\/health$/);
+    if(publicHealth&&req.method==="GET"){
+      const project=await getPublicProject(resolvePublicProjectId(publicHealth[1]));
+      if(!project){json(res,404,{error:"Опубликованный проект не найден"});return;}
+      const document=await getPublishedDocument(project.id);
+      json(res,200,{data:{projectId:project.id,name:project.name,status:project.status,version:document?.version||null,published:!!document}});
+      return;
+    }
     const publicEvent=path.match(/^\/public\/projects\/([^/]+)\/events$/);
     if(publicEvent&&req.method==="POST"){
       const resolvedProjectId=resolvePublicProjectId(publicEvent[1]);

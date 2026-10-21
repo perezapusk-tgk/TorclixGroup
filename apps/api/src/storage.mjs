@@ -227,11 +227,13 @@ export async function saveOrder(order,items){
   try{
     await client.query("begin");
     let customerId=order.customerId||null;
-    if(!customerId&&order.customerEmail){
-      const existing=await client.query(`select id from clients where organization_id=$1::uuid and lower(email)=lower($2) order by created_at asc limit 1`,[order.organizationId,order.customerEmail]);
-      if(existing.rowCount) customerId=existing.rows[0].id;
-      else{
-        const created=await client.query(`insert into clients(id,organization_id,name,email) values($1::uuid,$2::uuid,$3,$4) returning id`,[newId(),order.organizationId,order.customerName,order.customerEmail]);
+    if(!customerId&&order.telegramUserId){
+      const existing=await client.query(`select id from clients where organization_id=$1::uuid and telegram_user_id=$2::bigint limit 1`,[order.organizationId,order.telegramUserId]);
+      if(existing.rowCount){
+        customerId=existing.rows[0].id;
+        await client.query(`update clients set name=$2,email=coalesce($3,email),telegram_username=coalesce($4,telegram_username) where id=$1::uuid`,[customerId,order.customerName,order.customerEmail||null,order.telegramUsername||null]);
+      }else{
+        const created=await client.query(`insert into clients(id,organization_id,name,email,telegram_user_id,telegram_username) values($1::uuid,$2::uuid,$3,$4,$5::bigint,$6) returning id`,[newId(),order.organizationId,order.customerName,order.customerEmail||null,order.telegramUserId,order.telegramUsername||null]);
         customerId=created.rows[0].id;
       }
     }
@@ -349,9 +351,9 @@ export async function verifyDomain(domainId,organizationId){
 export async function saveRecord(table,item){
   const db=await getPool(); if(!db) return item;
   const queries={
-    clients:[`insert into clients(id,organization_id,name,email) values($1::uuid,$2::uuid,$3,$4)
-      on conflict(id) do update set name=excluded.name,email=excluded.email`,
-      [item.id,item.organizationId,item.name,item.email||null]],
+    clients:[`insert into clients(id,organization_id,name,email,telegram_user_id,telegram_username) values($1::uuid,$2::uuid,$3,$4,$5::bigint,$6)
+      on conflict(id) do update set name=excluded.name,email=excluded.email,telegram_user_id=excluded.telegram_user_id,telegram_username=excluded.telegram_username`,
+      [item.id,item.organizationId,item.name,item.email||null,item.telegramUserId||null,item.telegramUsername||null]],
     leads:[`insert into leads(id,organization_id,project_id,name,email,phone,source,status)
       values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8)
       on conflict(id) do update set status=excluded.status,name=excluded.name,email=excluded.email,phone=excluded.phone,source=excluded.source`,

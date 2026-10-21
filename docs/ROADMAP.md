@@ -47,8 +47,8 @@
 - [ ] Plans and subscriptions
 - [ ] Usage limits
 - [ ] Billing
-- [ ] Analytics
-- [ ] Audit logs
+- [x] Analytics
+- [x] Audit logs
 - [ ] Backups
 
 

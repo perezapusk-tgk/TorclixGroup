@@ -6,7 +6,7 @@ type Page = { id:string; name:string; blocks:Block[] };
 type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string; miniApp?:{modules:string[];navigation?:string[];theme?:{accent:string;mode:"light"|"dark"}}; };
 
 const nav = [
-  ["⌂","Overview"],["▦","Projects"],["♙","Clients"],["◉","Leads"],["◷","Bookings"],["▤","Catalog"],["▣","Orders"],["◫","Websites"],["◈","Mini Apps"],["✦","Templates"],["◇","Components"],["↗","Analytics"],["⌁","Domains"],["⇄","Integrations"],["◌","Billing"],["♟","Team"],["⚙","Settings"]
+  ["⌂","Overview"],["▦","Projects"],["✦","Templates"],["♙","Clients & Leads"],["↗","Analytics"],["⌁","Audit"],["◌","Billing"],["▣","Client Portal"],["✦","Branding"],["▤","Invoices"],["◇","Economics"]
 ] as const;
 
 const seed:Project[]=[
@@ -262,7 +262,7 @@ function render(){
   <div class="sidebar-bottom"><div class="workspace"><div class="avatar">PG</div><div><div class="workspace-name">${session?.organization?.name||"Perezapusk Studio"}</div><div class="workspace-role">${session?.user?.name||"Studio Owner"} · ${session?.organization?.plan||"Pro"}</div></div></div></div>
  </aside>
  <main class="main"><header class="topbar"><div class="crumb">Studio / <strong>${project?project.name:active}</strong></div><div class="top-actions"><button class="icon-btn" data-action="back">←</button><button class="icon-btn">⌕</button><div class="avatar">PG</div></div></header>
- <section class="content">${editorProject&&project?editor(project):active==="Overview"?overview():workspace(active)}</section></main></div>
+ <section class="content">${editorProject&&project?editor(project):active==="Overview"?overview():active==="Projects"?workspace("Projects"):active==="Templates"?templateView():active==="Clients & Leads"?crmView("Clients",crm.clients.map((x:any)=>[x.name||x.email||"Клиент",x.email||"","Active",x.id])):active==="Analytics"?analyticsView():studioStructureView(active)||workspace(active)}</section></main></div>
  ${modal?projectModal():""}${toast?`<div class="toast">${toast}</div>`:""}`;
  bind();
 localizeUI();
@@ -413,6 +413,38 @@ function templateView(){
  return `<div class="eyebrow">03 / Template system</div><div class="workspace-head"><div><h2>Templates</h2><p class="hero-copy">Production-ready starting points. Select one to open it in the builder.</p></div><button class="primary" data-action="new-project">+ New project</button></div><div class="template-grid">${templates.map((t,i)=>`<button class="template-card" data-template="${i}"><div class="template-index">0${i+1}</div><strong>${t[0]}</strong><span>${t[1]}</span><small>${t[2]}</small></button>`).join("")}</div>`;
 }
 
+function studioStructureView(section:string){
+ if(section==="Audit") return auditStructureView();
+ if(section==="Billing") return billingStructureView();
+ if(section==="Client Portal") return clientPortalStructureView();
+ if(section==="Branding") return brandingStructureView();
+ if(section==="Invoices") return invoiceStructureView();
+ if(section==="Economics") return economicsStructureView();
+ return "";
+}
+function auditStructureView(){
+ const rows=(audit||[]).map((x:any)=>"<div class=\"workspace-row\"><div class=\"project-name\">"+htmlEsc(x.action||"action")+"</div><div class=\"project-type\">"+htmlEsc(x.actorEmail||x.actorId||"Система")+"</div><span class=\"badge live\">"+htmlEsc(x.createdAt||"")+"</span></div>").join("");
+ return "<div class=\"eyebrow\">06 / Audit</div><div class=\"workspace-head\"><div><h2>Журнал аудита</h2><p class=\"hero-copy\">Кто и что сделал в рабочем пространстве.</p></div><button class=\"secondary\" data-action=\"analytics-refresh\">Обновить</button></div><section class=\"card table-card\"><div class=\"card-head\"><div class=\"card-title\">Последние действия</div><div class=\"card-meta\">"+(audit?.length||0)+"</div></div>"+(rows||"<div class=\"inspector-note\">Записей пока нет.</div>")+"</section>";
+}
+function billingStructureView(){
+ const plan=billing?.plan||"Pro",price=billing?.price||299,usage=billing?.usage?.projects||projects.length,limit=billing?.limits?.projects||50;
+ return "<div class=\"eyebrow\">07 / Billing</div><div class=\"workspace-head\"><div><h2>Тариф и оплата</h2><p class=\"hero-copy\">Тариф студии, лимиты и использование.</p></div></div><div class=\"stats\"><div class=\"stat\"><div class=\"stat-label\">Тариф</div><div class=\"stat-value\">"+htmlEsc(plan)+"</div></div><div class=\"stat\"><div class=\"stat-label\">В месяц</div><div class=\"stat-value\">€"+htmlEsc(price)+"</div></div><div class=\"stat\"><div class=\"stat-label\">Проекты</div><div class=\"stat-value\">"+usage+"/"+limit+"</div></div><div class=\"stat\"><div class=\"stat-label\">Лиды</div><div class=\"stat-value\">"+(billing?.usage?.leads||crm.leads.length)+"</div></div></div><section class=\"card\"><div class=\"card-head\"><div class=\"card-title\">Использование</div></div><div style=\"padding:20px\"><div class=\"project-type\">Проекты</div><div class=\"bar\"><i style=\"width:"+Math.min(100,usage/Math.max(limit,1)*100)+"%\"></i></div><div class=\"project-type\">Лиды</div><div class=\"bar\"><i style=\"width:"+Math.min(100,(billing?.usage?.leads||crm.leads.length)/Math.max(billing?.limits?.leads||10000,1)*100)+"%\"></i></div></div></section>";
+}
+function clientPortalStructureView(){
+ const p=projects.find(x=>x.id===editorProject)||projects[0];
+ return "<div class=\"eyebrow\">08 / Client Portal</div><div class=\"workspace-head\"><div><h2>Портал клиента</h2><p class=\"hero-copy\">Так клиент видит состояние своего проекта под брендом студии.</p></div></div><section class=\"card\"><div class=\"card-head\"><div class=\"card-title\">Проект клиента</div><span class=\"badge live\">"+htmlEsc(p?.status||"Draft")+"</span></div><div style=\"padding:20px\"><h3>"+htmlEsc(p?.name||"Выберите проект")+"</h3><p class=\"hero-copy\">"+htmlEsc(p?.type||"")+"</p><div class=\"quick-grid\" style=\"margin-top:18px\"><div class=\"quick\"><div class=\"quick-name\">Сайт</div><div class=\"quick-copy\">"+(p?.status==="Live"?"Опубликован":"Черновик")+"</div></div><div class=\"quick\"><div class=\"quick-name\">Лиды</div><div class=\"quick-copy\">"+(p?.leads||0)+"</div></div><div class=\"quick\"><div class=\"quick-name\">Бронирования</div><div class=\"quick-copy\">"+crm.bookings.length+"</div></div><div class=\"quick\"><div class=\"quick-name\">Счета</div><div class=\"quick-copy\">"+invoices.length+"</div></div></div></div></section>";
+}
+function brandingStructureView(){
+ return "<div class=\"eyebrow\">09 / Branding</div><div class=\"workspace-head\"><div><h2>Брендинг</h2><p class=\"hero-copy\">White-label настройки студии: имя, цвет и интерфейс.</p></div><button class=\"primary\" data-action=\"save-settings\">Сохранить</button></div><section class=\"card\"><div style=\"padding:20px\"><div class=\"settings-grid\"><label class=\"settings-field\"><span>Название бренда</span><input data-setting=\"brand-name\" value=\"TorclixGroup\"/></label><label class=\"settings-field\"><span>Акцентный цвет</span><input data-setting=\"accent\" type=\"color\" value=\""+htmlEsc(studioSettings.accent)+"\"/></label><label class=\"settings-field\"><span>Тема</span><select data-setting=\"theme\"><option value=\"dark\" "+(studioSettings.theme==="dark"?"selected":"")+">Тёмная</option><option value=\"light\" "+(studioSettings.theme==="light"?"selected":"")+">Светлая</option></select></label><label class=\"settings-field\"><span>Шрифт</span><select data-setting=\"font\"><option>Inter</option><option>Manrope</option><option>system-ui</option></select></label></div></div></section>";
+}
+function invoiceStructureView(){
+ const list=(invoices||[]).map((x:any)=>"<div class=\"workspace-row\"><div class=\"project-name\">"+htmlEsc(x.number||x.id||"Счёт")+"</div><div class=\"project-type\">"+htmlEsc(x.clientName||x.customerName||"Клиент")+"</div><span class=\"badge "+(x.status==="paid"?"live":"")+"\">"+htmlEsc(x.status||"draft")+"</span></div>").join("");
+ return "<div class=\"eyebrow\">10 / Invoices</div><div class=\"workspace-head\"><div><h2>Счета</h2><p class=\"hero-copy\">Выставляйте и отслеживайте счета клиентам.</p></div><button class=\"primary\" data-action=\"invoice-create\">+ Новый счёт</button></div><section class=\"card table-card\"><div class=\"card-head\"><div class=\"card-title\">Счета</div><div class=\"card-meta\">"+(invoices?.length||0)+"</div></div>"+(list||"<div class=\"inspector-note\">Счетов пока нет.</div>")+"</section>";
+}
+function economicsStructureView(){
+ const n=Math.max(projects.length,1),price=90,revenue=n*price,platform=299+n,left=revenue-platform;
+ return "<div class=\"eyebrow\">11 / Economics</div><div class=\"workspace-head\"><div><h2>Экономика</h2><p class=\"hero-copy\">Модель дохода студии при росте клиентских проектов.</p></div></div><div class=\"stats\"><div class=\"stat\"><div class=\"stat-label\">Клиенты</div><div class=\"stat-value\">"+n+"</div></div><div class=\"stat\"><div class=\"stat-label\">Цена клиента</div><div class=\"stat-value\">€"+price+"</div></div><div class=\"stat\"><div class=\"stat-label\">Выручка / мес</div><div class=\"stat-value\">€"+revenue+"</div></div><div class=\"stat\"><div class=\"stat-label\">Остаётся</div><div class=\"stat-value\">€"+left+"</div></div></div><section class=\"card\"><div style=\"padding:20px\"><p class=\"hero-copy\">Расчёт является моделью и не включает налоги, комиссии платежей и труд студии.</p></div></section>";
+}
 function editor(project:Project){
  const page=doc.pages.find(p=>p.id===doc.activePage)||doc.pages[0];
  const websiteEnabled=project.type==="Website"||project.type==="Website + Mini App";
@@ -509,7 +541,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
  root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={language:"ru",font:"Inter",accent:"#d8ff3e",theme:"dark",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};saveSettings();render();notify("Стиль возвращён к стандартному.");}));
 
- root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();if(active==="Catalog") await hydrateCatalog();if(active==="Orders") await hydrateOrders();if(active==="Billing") await hydrateInvoices();render()}));
+ root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Clients & Leads","Leads","Bookings"].includes(active)) await hydrateCRM();if(active==="Catalog") await hydrateCatalog();if(active==="Orders") await hydrateOrders();if(["Billing","Invoices"].includes(active)) await hydrateInvoices();if(["Analytics","Audit"].includes(active)) await hydrateAnalytics();render()}));
  root.querySelectorAll<HTMLElement>("[data-nav-direct]").forEach(el=>el.addEventListener("click",()=>{active=el.dataset.navDirect||"Overview";editorProject=null;render()}));
  root.querySelectorAll<HTMLElement>("[data-action='back']").forEach(el=>el.addEventListener("click",()=>{editorProject=null;active="Projects";render()}));
  root.querySelectorAll<HTMLElement>("[data-action='new-project']").forEach(el=>el.addEventListener("click",()=>{modal=true;wizardStep=1;selectedType="Website + Mini App";selectedIndustry="wash";render()}));

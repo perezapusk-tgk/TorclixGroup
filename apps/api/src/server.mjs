@@ -170,7 +170,7 @@ const server=createServer(async(req,res)=>{
       await recordAudit(auth,"billing.checkout.create","organization",auth.organization.id,{plan});
       json(res,200,{data:result});return;
     }
-    if(path==="/api/billing/plan"&&req.method==="POST"){const auth=await requirePermission(req,res,"billing:write");if(!auth)return;const input=await body(req);const result=await changePlan(auth.organization.id,String(input.plan||""));if(!result){json(res,404,{error:"Organization not found"});return;}await recordAudit(auth,"billing.plan.change","organization",auth.organization.id,{plan:result.plan});json(res,200,{data:result});return;}
+    if(path==="/api/billing/plan"&&req.method==="POST"){const auth=await requirePermission(req,res,"billing:write");if(!auth)return;const input=await body(req);let result;try{result=await changePlan(auth.organization.id,String(input.plan||""));}catch(error){json(res,400,{error:error?.message||"Invalid plan"});return;}if(!result){json(res,404,{error:"Organization not found"});return;}await recordAudit(auth,"billing.plan.change","organization",auth.organization.id,{plan:result.plan});json(res,200,{data:result});return;}
     if(path.startsWith("/public/projects/")&&path.endsWith("/catalog")&&req.method==="GET"){
       const match=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);
       const project=await getPublicProject(projectId);

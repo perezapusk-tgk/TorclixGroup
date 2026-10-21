@@ -367,6 +367,14 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
       if(!owned){json(res,404,{error:"Project not found"});return;}
       json(res,200,{data:await getTelegramIntegration(auth.organization.id,projectId)});return;
     }
+    if(path==="/api/telegram/bot"&&req.method==="GET"){
+      if(!process.env.TELEGRAM_BOT_TOKEN){json(res,200,{data:{enabled:false,botUrl:null,botUsername:null}});return;}
+      try{
+        const bot=await telegramApi("getMe",{},process.env.TELEGRAM_BOT_TOKEN);
+        json(res,200,{data:{enabled:true,botUrl:bot?.username?"https://t.me/"+bot.username:null,botUsername:bot?.username||null}});
+      }catch(error){json(res,502,{error:"Telegram bot is unavailable"});}
+      return;
+    }
     if(path==="/api/telegram/status"&&req.method==="GET"){
       const enabled=!!process.env.TELEGRAM_BOT_TOKEN;
       const projectId=new URL(req.url||"/","http://localhost").searchParams.get("projectId");

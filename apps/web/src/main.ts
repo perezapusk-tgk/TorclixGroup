@@ -585,6 +585,7 @@ function bind(){
    if(key==="workspaceName") studioSettings.workspaceName=(el as HTMLInputElement).value.trim()||"Perezapusk Studio";
    else if(key==="brandName") studioSettings.brandName=(el as HTMLInputElement).value.trim()||"TorclixGroup";
    else if(key==="language") studioSettings.language=(el as HTMLSelectElement).value;
+   else if(key==="currency") studioSettings.currency=(el as HTMLSelectElement).value;
    else if(key==="font") studioSettings.font=(el as HTMLSelectElement).value;
    else if(key==="accent") studioSettings.accent=(el as HTMLInputElement).value;
    else if(key==="theme") studioSettings.theme=(el as HTMLSelectElement).value;
@@ -593,6 +594,7 @@ function bind(){
    else if(key==="animations"||key==="compactNav"||key==="emailNotifications"||key==="leadNotifications"||key==="bookingNotifications") studioSettings[key]=(el as HTMLInputElement).checked;
    saveSettings(); render();
  }));
+ root.querySelectorAll<HTMLElement>("[data-billing-currency]").forEach(el=>el.addEventListener("click",()=>{const currency=el.dataset.billingCurrency||"EUR";studioSettings.currency=currency;saveSettings();render();notify("Валюта оплаты: "+currency+".");}));
  root.querySelectorAll<HTMLElement>("[data-action='save-project-settings']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject)return;const name=root.querySelector<HTMLInputElement>("#project-settings-name")?.value.trim();const slug=root.querySelector<HTMLInputElement>("#project-settings-slug")?.value.trim();if(!name){notify("Введите название проекта.");return;}const result=await api("/api/projects/"+editorProject,{method:"PATCH",body:JSON.stringify({name,slug})});if(result?.data){projects=projects.map((p:any)=>p.id===editorProject?{...p,...result.data}:p);await hydrateProjects();notify("Настройки проекта сохранены.");render();}else notify(result?.error||"Не удалось сохранить проект.");}));
  root.querySelectorAll<HTMLElement>("[data-action='save-client-portal']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject)return;const status=root.querySelector<HTMLSelectElement>("#client-portal-status")?.value||"draft";const note=root.querySelector<HTMLTextAreaElement>("#client-portal-note")?.value||"";const result=await api("/api/projects/"+editorProject+"/client-portal",{method:"PATCH",body:JSON.stringify({status,note})});if(result?.data){projects=projects.map((p:any)=>p.id===editorProject?{...p,clientPortal:result.data}:p);saveProjects();notify("Статус клиентского портала сохранён.");render();}else notify(result?.error||"Не удалось сохранить статус.");}));
  root.querySelectorAll<HTMLElement>("[data-action='open-client-portal']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject)return;const r=await api("/api/projects/"+editorProject+"/client-portal");const token=r?.data?.token;if(!token){notify("Не удалось получить ссылку портала.");return;}window.open(location.origin+"/?portal="+encodeURIComponent(token),"_blank","noopener,noreferrer");}));

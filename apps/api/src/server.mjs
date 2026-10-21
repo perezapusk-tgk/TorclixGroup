@@ -7,7 +7,7 @@ import {
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
-import { billingSnapshot,changePlan,plans,createCheckoutSession,stripeConfigured } from "./billing.mjs";
+import { billingSnapshot,changePlan,plans,createCheckoutSession,stripeConfigured,billingCurrencies,checkoutCurrencyConfigured } from "./billing.mjs";
 import { configureTelegramBot, telegramApi, telegramMiniAppUrl, verifyTelegramInitData } from "./telegram.mjs";
 import { updateOrderStatusWithStockRelease } from "./order-status.mjs";
 import { listInvoices,createInvoice,updateInvoiceStatus } from "./invoices.mjs";
@@ -195,12 +195,14 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/billing/plans"&&req.method==="GET"){json(res,200,{data:Object.entries(plans).map(([id,x])=>({id,name:id==="starter"?"Starter":id==="pro"?"Pro":"Scale",price:x.price,limits:x}))});return;}
     if(path==="/api/billing/checkout"&&req.method==="POST"){
       const auth=await requirePermission(req,res,"billing:write");if(!auth)return;
-      const input=await body(req);const plan=String(input.plan||"");
+      const input=await body(req);const plan=String(input.plan||"");const currency=String(input.currency||"EUR").toUpperCase();
       if(!plans[plan]){json(res,400,{error:"Invalid plan"});return;}
       if(!stripeConfigured()){json(res,503,{error:"Платёжный провайдер пока не настроен",configured:false});return;}
+      if(!billingCurrencies().includes(currency)){json(res,400,{error:"Неподдерживаемая валюта",availableCurrencies:billingCurrencies()});return;}
+      if(!checkoutCurrencyConfigured(plan,currency)){json(res,503,{error:"Для выбранного тарифа и валюты Stripe Price не настроен",currency,plan});return;}
       const origin=String(input.origin||process.env.WEB_PUBLIC_BASE||"").replace(/\/$/,"");
       if(!origin){json(res,400,{error:"origin is required"});return;}
-      const result=await createCheckoutSession({organizationId:auth.organization.id,plan,successUrl:origin+"?billing=success",cancelUrl:origin+"?billing=cancelled"});
+      const result=await createCheckoutSession({organizationId:auth.organization.id,plan,currency,successUrl:origin+"?billing=success",cancelUrl:origin+"?billing=cancelled"});
       if(result.error){json(res,502,{error:result.error,configured:result.configured});return;}
       await recordAudit(auth,"billing.checkout.create","organization",auth.organization.id,{plan});
       json(res,200,{data:result});return;

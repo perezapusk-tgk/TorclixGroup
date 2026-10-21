@@ -226,9 +226,18 @@ export async function saveOrder(order,items){
   const client=await db.connect();
   try{
     await client.query("begin");
+    let customerId=order.customerId||null;
+    if(!customerId&&order.customerEmail){
+      const existing=await client.query(`select id from clients where organization_id=$1::uuid and lower(email)=lower($2) order by created_at asc limit 1`,[order.organizationId,order.customerEmail]);
+      if(existing.rowCount) customerId=existing.rows[0].id;
+      else{
+        const created=await client.query(`insert into clients(id,organization_id,name,email) values($1::uuid,$2::uuid,$3,$4) returning id`,[newId(),order.organizationId,order.customerName,order.customerEmail]);
+        customerId=created.rows[0].id;
+      }
+    }
     await client.query(`insert into orders(id,organization_id,project_id,customer_id,customer_name,customer_email,customer_phone,status,currency,total,source)
       values($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10::numeric,$11)`,
-      [order.id,order.organizationId,order.projectId,order.customerId||null,order.customerName,order.customerEmail||null,order.customerPhone||null,order.status,order.currency,order.total,order.source]);
+      [order.id,order.organizationId,order.projectId,customerId,order.customerName,order.customerEmail||null,order.customerPhone||null,order.status,order.currency,order.total,order.source]);
     for(const item of items){
       if(item.catalogItemId){
         const stock=await client.query(`update catalog_items

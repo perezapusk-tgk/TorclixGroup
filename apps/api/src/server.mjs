@@ -476,7 +476,7 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     if(publicLead&&req.method==="POST"){
       const projectId=publicLead[1];
       const resolvedProjectId=resolvePublicProjectId(projectId);
-      const project=projects.get(projectId)||await getPublishedProject(resolvedProjectId);
+      const project=await getPublicProject(resolvedProjectId);
       const document=project?await getPublishedDocument(project.id):null;
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
@@ -499,7 +499,7 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     if(publicBooking&&req.method==="POST"){
       const requestedProjectId=publicBooking[1];
       const resolvedProjectId=resolvePublicProjectId(requestedProjectId);
-      const project=projects.get(requestedProjectId)||await getPublishedProject(resolvedProjectId);
+      const project=await getPublicProject(resolvedProjectId);
       const document=project?await getPublishedDocument(project.id):null;
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);

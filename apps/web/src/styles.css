@@ -998,3 +998,8 @@ select,input,textarea,.field input,.field select{background:#fff!important;color
 .inbox-secondary{margin-top:0}.inbox-secondary .dashboard-card{min-height:250px}
 @media(max-width:900px){.template-grid.reference-template-grid{grid-template-columns:1fr 1fr}.inbox-row{grid-template-columns:34px 1fr auto}.inbox-row select{grid-column:2;max-width:180px}}
 @media(max-width:600px){.template-grid.reference-template-grid{grid-template-columns:1fr}.inbox-row{grid-template-columns:34px 1fr}.inbox-row .badge{grid-column:2}.inbox-row select{grid-column:2;width:100%}}
+
+
+.analytics-performance{margin-bottom:14px}.analytics-bars{padding:18px 22px}
+.analytics-bar-row{display:grid;grid-template-columns:120px 1fr 40px;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid #eef0f3;font-size:11px}
+.analytics-bar-row:last-child{border-bottom:0}.analytics-bar-row>div{height:8px;background:#eef1f5;border-radius:99px;overflow:hidden}.analytics-bar-row i{display:block;height:100%;background:#2f6bea;border-radius:99px}.analytics-bar-row b{text-align:right}

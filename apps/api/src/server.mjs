@@ -30,8 +30,24 @@ const publishedProjects=new Set();
 const legacyProjectIds={p1:"00000000-0000-4000-8000-000000000101",p2:"00000000-0000-4000-8000-000000000102"};
 function resolvePublicProjectId(projectId){return legacyProjectIds[projectId]||projectId;}
 async function getPublicProject(projectId){
+  const demo=projects.get(projectId);
+  if(demo && demo.organizationId==="org_demo") return demo;
   if(process.env.DATABASE_URL) return await getPublishedProject(projectId);
-  return projects.get(projectId)||await getPublishedProject(projectId);
+  return demo||await getPublishedProject(projectId);
+}
+function isDemoProject(projectId){return !!projects.get(projectId)&&projects.get(projectId).organizationId==="org_demo";}
+function demoCatalog(projectId){
+  if(projectId==="p1") return [
+    {id:"demo-p1-1",projectId,name:"Авторский завтрак",description:"Яйцо, авокадо, тост и кофе",price:14.9,currency:"EUR",status:"active",stock:null,itemType:"service"},
+    {id:"demo-p1-2",projectId,name:"Паста трюфель",description:"Домашняя паста с пармезаном",price:19.5,currency:"EUR",status:"active",stock:null,itemType:"product"},
+    {id:"demo-p1-3",projectId,name:"Дегустационный сет",description:"Выбор шефа на двоих",price:32,currency:"EUR",status:"active",stock:null,itemType:"product"}
+  ];
+  if(projectId==="p2") return [
+    {id:"demo-p2-1",projectId,name:"Пробная тренировка",description:"Знакомство с тренером — 45 минут",price:0,currency:"EUR",status:"active",stock:null,itemType:"service"},
+    {id:"demo-p2-2",projectId,name:"Персональная тренировка",description:"Индивидуальная программа",price:35,currency:"EUR",status:"active",stock:null,itemType:"service"},
+    {id:"demo-p2-3",projectId,name:"Месячный абонемент",description:"Безлимитный доступ к залу",price:79,currency:"EUR",status:"active",stock:null,itemType:"service"}
+  ];
+  return [];
 }
 
 
@@ -326,11 +342,10 @@ const server=createServer(async(req,res)=>{
       const requestedProjectId=miniApp[1];
       const projectId=resolvePublicProjectId(requestedProjectId);
       const demoProject=projects.get(requestedProjectId)||null;
-      const project=(!process.env.DATABASE_URL)
-        ? demoProject
-        : await getPublishedProject(projectId) || (demoProject ? {...demoProject,status:"active"} : null);
+      const project=await getPublicProject(projectId);
       if(!project){html(res,404,"<h1>Мини‑приложение не найдено</h1>");return;}
-      const document=await getPublishedDocument(project.id) || defaultDocument(project.id);
+      const document=await getPublishedDocument(project.id) || (isDemoProject(project.id)?defaultDocument(project.id):null);
+      if(!document){html(res,404,"<h1>Мини‑приложение ещё не опубликовано</h1>");return;}
       if(!document){html(res,404,"<h1>Мини‑приложение ещё не опубликовано</h1>");return;}
       const page=document.pages?.find(p=>p.id===document.activePage)||document.pages?.[0];
       const modules=Array.isArray(document.miniApp?.modules)&&document.miniApp.modules.length?document.miniApp.modules:["home","profile","notifications"];
@@ -430,11 +445,9 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     if(published&&req.method==="GET"){
       const requestedProjectId=published[1];
       const projectId=resolvePublicProjectId(requestedProjectId);
-      const project=(!process.env.DATABASE_URL)
-        ? (projects.get(requestedProjectId)||null)
-        : await getPublishedProject(projectId);
+      const project=await getPublicProject(projectId);
       if(!project){html(res,404,"<h1>Опубликованный проект не найден</h1>");return;}
-      const document=await getPublishedDocument(project.id) || (!process.env.DATABASE_URL ? defaultDocument(project.id) : null);
+      const document=await getPublishedDocument(project.id) || (isDemoProject(project.id)?defaultDocument(project.id):null);
       if(!document){html(res,404,"<h1>Проект не опубликован</h1>");return;}
       html(res,200,renderPreview(project,document));
       return;
@@ -486,6 +499,15 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     }
     const preview=path.match(/^\/preview\/([^/]+)$/);
     if(preview&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;const memory=projects.get(preview[1]);const project=memory?.organizationId===auth.organization.id?memory:await getProject(preview[1],auth.organization.id);if(!project){html(res,404,"<h1>Project not found</h1>");return;}const doc=await getDocument(project.id,auth.organization.id,()=>defaultDocument(project.id));html(res,200,renderPreview(project,doc));return;}
+    const publicCatalog=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);
+    if(publicCatalog&&req.method==="GET"){
+      const requestedProjectId=publicCatalog[1];
+      const resolvedProjectId=resolvePublicProjectId(requestedProjectId);
+      if(isDemoProject(resolvedProjectId)){json(res,200,{data:demoCatalog(resolvedProjectId)});return;}
+      const project=await getPublicProject(resolvedProjectId);
+      if(!project){json(res,404,{error:"Опубликованный проект не найден"});return;}
+      json(res,200,{data:await listCatalogItems(catalogItems,project.organizationId,resolvedProjectId)});return;
+    }
     const publicLead=path.match(/^\/public\/projects\/([^/]+)\/leads$/);
     if(publicLead&&req.method==="POST"){
       const projectId=publicLead[1];

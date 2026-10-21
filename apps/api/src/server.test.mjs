@@ -63,7 +63,6 @@ test("project publishing creates a public runtime in development",async()=>{
   assert.match(await legacyMini.text(),/Maison Noire/);
 });
 
-
 test("published project health and catalog endpoints are usable",async()=>{
   const health=await fetch(base+"/public/projects/p1/health");
   const healthBody=await health.json();
@@ -91,6 +90,16 @@ test("public analytics event endpoint accepts a valid pageview",async()=>{
   assert.equal(event.status,202);
 });
 
+test("billing endpoint exposes plan limits and live usage",async()=>{
+  const response=await fetch(base+"/api/billing");
+  const body=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(body.data.plan,"pro");
+  assert.equal(body.data.limits.projects,50);
+  assert.equal(body.data.limits.leads,10000);
+  assert.equal(typeof body.data.usage.projects,"number");
+  assert.equal(typeof body.data.usage.leads,"number");
+});
 
 test("project creation enforces the starter project limit",async()=>{
   for(let i=0;i<3;i++){

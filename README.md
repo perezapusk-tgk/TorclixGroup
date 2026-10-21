@@ -110,3 +110,5 @@ The platform records privacy-minimized public-site events (page views, clicks an
 
 
 <!-- Production deployment synced with main. -->
+
+<!-- Render sync checkpoint 2026-10-21 -->

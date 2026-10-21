@@ -485,7 +485,7 @@ function auditStructureView(){
  return "<div class=\"eyebrow\">06 / Audit</div><div class=\"workspace-head\"><div><h2>Журнал аудита</h2><p class=\"hero-copy\">Кто и что сделал в рабочем пространстве.</p></div><button class=\"secondary\" data-action=\"analytics-refresh\">Обновить</button></div><section class=\"card table-card\"><div class=\"card-head\"><div class=\"card-title\">Последние действия</div><div class=\"card-meta\">"+(audit?.length||0)+"</div></div>"+(rows||"<div class=\"inspector-note\">Записей пока нет.</div>")+"</section>";
 }
 function billingStructureView(){
- const plan=billing?.plan||"pro",price=billing?.price||299,usage=billing?.usage?.projects||projects.length,limit=billing?.limits?.projects||50,memberUsage=billing?.usage?.members||1,memberLimit=billing?.limits?.members||10,leadUsage=billing?.usage?.leads||crm.leads.length,leadLimit=billing?.limits?.leads||10000,currency=studioSettings.currency||"EUR";
+ const plan=billing?.plan||"pro",price=billing?.price||299,usage=billing?.usage?.projects||projects.length,limit=billing?.limits?.projects||50,memberUsage=billing?.usage?.members||1,memberLimit=billing?.limits?.members||10,staffUsage=billing?.usage?.staff||0,leadUsage=billing?.usage?.leads||crm.leads.length,leadLimit=billing?.limits?.leads||10000,currency=studioSettings.currency||"EUR";
  const currencySymbol:any={EUR:"€",USD:"$",RUB:"₽"};
  const symbol=currencySymbol[currency]||currency;
  const available=Array.isArray(billing?.availableCurrencies)&&billing.availableCurrencies.length?billing.availableCurrencies:["EUR"];

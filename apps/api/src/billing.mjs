@@ -6,7 +6,7 @@ export async function createCheckoutSession({organizationId,plan,successUrl,canc
   const secret=String(process.env.STRIPE_SECRET_KEY||"").trim();
   const priceId=String(process.env["STRIPE_PRICE_"+String(plan||"").toUpperCase()]||"").trim();
   if(!secret||!priceId) return {configured:false,error:"Stripe billing is not configured"};
-  const form=new URLSearchParams({mode:"subscription",success_url:successUrl||"",cancel_url:cancelUrl||"",client_reference_id:organizationId,"line_items[0][price]":priceId,"line_items[0][quantity]":"1"});
+  const form=new URLSearchParams({mode:"subscription",success_url:successUrl||"",cancel_url:cancelUrl||"",client_reference_id:organizationId,"metadata[organization_id]":organizationId,"metadata[plan]":plan,"line_items[0][price]":priceId,"line_items[0][quantity]":"1"});
   const response=await fetch("https://api.stripe.com/v1/checkout/sessions",{method:"POST",headers:{authorization:"Bearer "+secret,"content-type":"application/x-www-form-urlencoded"},body:form});
   const data=await response.json();
   if(!response.ok) return {configured:true,error:data?.error?.message||"Stripe checkout failed"};

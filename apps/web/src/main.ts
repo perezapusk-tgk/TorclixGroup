@@ -214,6 +214,7 @@ async function hydrateProjects(){
   const mapped:Project[]=remote.data.map((p:any)=>({
     id:p.id,
     name:p.name,
+    slug:p.slug,
     url:publicSiteUrl(p.id),
     type:p.type==="website_mini_app"?"Website + Mini App":p.type==="mini_app"?"Mini App":"Website",
     status:p.status==="active"?"Live":"Draft",

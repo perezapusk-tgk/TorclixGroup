@@ -11,42 +11,42 @@
 
 ## 02 — Studio
 - [x] Projects CRUD
-- [ ] Clients and client portal
+- [x] Clients and client portal
 - [x] Template library
 - [x] Team roles and permissions foundation
-- [ ] White-label branding
+- [x] White-label branding
 
 ## 03 — Website Builder
 - [x] Visual canvas
 - [x] Pages and routing
 - [x] Section library
 - [x] Global styles
-- [ ] Responsive layouts
-- [ ] SEO and publishing
+- [x] Responsive layouts
+- [x] SEO and publishing
 - [ ] Custom domains
 
 ## 04 — Mini App Builder
 - [x] Modular app shell
 - [x] Industry module catalog foundation
-- [ ] Beauty / salon modules
-- [ ] Fitness modules
-- [ ] Accounts and notifications
-- [ ] Booking and catalog
-- [ ] Telegram integration
+- [x] Beauty / salon modules
+- [x] Fitness modules
+- [x] Accounts and notifications
+- [x] Booking and catalog
+- [x] Telegram integration
 - [ ] QR entry points
 
 ## 05 — Business OS
-- [ ] CRM
-- [ ] Leads
-- [ ] Bookings
-- [ ] Products and services
+- [x] CRM
+- [x] Leads
+- [x] Bookings
+- [x] Products and services
 - [ ] Staff and calendar
-- [ ] Orders and invoices
+- [x] Orders and invoices
 
 ## 06 — SaaS
 - [ ] Plans and subscriptions
-- [ ] Usage limits
-- [ ] Billing
+- [~] Usage limits
+- [~] Billing
 - [x] Analytics
 - [x] Audit logs
 - [ ] Backups
@@ -63,8 +63,8 @@
 - [x] Authentication boundary + organization membership enforcement
 - [x] Published project runtime and preview URLs (publish/unpublish + public published endpoint)
 - [~] Custom domain records and API (SSL automation still pending)
-- [ ] Telegram Mini App runtime
-- [ ] Billing and usage enforcement
+- [x] Telegram Mini App runtime
+- [~] Billing and usage enforcement
 
 ## Product platform expansion
 - [x] Organization / tenant session foundation
@@ -75,13 +75,13 @@
 - [x] Dashboard session + billing + team hydration
 - [ ] Production external authentication provider
 - [ ] Live billing provider (Stripe or equivalent)
-- [ ] Full client portal routing and approval workflow
+- [~] Full client portal routing and approval workflow
 
 ## Current execution priority
 1. Production identity provider and session verification
 2. Database migration runner and API integration tests
 3. Builder publishing pipeline and draft/published document versions
 4. Custom domains and SSL automation
-5. Telegram Mini App runtime
+5. ~~Telegram Mini App runtime~~ — implemented
 6. CRM workflows, staff/calendar and business operations
 7. Billing provider, usage enforcement, analytics and audit logs

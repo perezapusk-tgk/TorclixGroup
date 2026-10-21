@@ -369,7 +369,13 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     }
     if(path==="/api/telegram/status"&&req.method==="GET"){
       const enabled=!!process.env.TELEGRAM_BOT_TOKEN;
-      json(res,200,{data:{enabled,configured:enabled,miniAppUrl:null,requiresProject:true}});
+      const projectId=new URL(req.url||"/","http://localhost").searchParams.get("projectId");
+      let integration=null;
+      if(projectId){
+        const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
+        integration=await getTelegramIntegration(auth.organization.id,projectId);
+      }
+      json(res,200,{data:{enabled,configured:enabled,miniAppUrl:integration?.projectId?telegramMiniAppUrl(integration.projectId):null,botUrl:integration?.botUsername?"https://t.me/"+integration.botUsername:null,botUsername:integration?.botUsername||null,requiresProject:true}});
       return;
     }
     if(path==="/api/telegram/configure"&&req.method==="POST"){

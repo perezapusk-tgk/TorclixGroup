@@ -160,6 +160,11 @@ const API_BASE=(import.meta.env.VITE_API_URL||"").replace(/\/$/,"");
 const DEMO_AUTH=import.meta.env.VITE_TORCLIX_DEMO==="true";
 const TRIAL_AUTH=import.meta.env.VITE_TORCLIX_TRIAL==="true";
 const TRIAL_KEY="tg-trial-session";
+const AUTH0_DOMAIN=String(import.meta.env.VITE_AUTH0_DOMAIN||"").trim();
+const AUTH0_CLIENT_ID=String(import.meta.env.VITE_AUTH0_CLIENT_ID||"").trim();
+const AUTH0_AUDIENCE=String(import.meta.env.VITE_AUTH0_AUDIENCE||"https://torclixgroup-api").trim();
+const AUTH0_TOKEN_KEY="tg-auth0-token";
+let auth0Token=localStorage.getItem(AUTH0_TOKEN_KEY)||"";
 const trialToken=TRIAL_AUTH?(localStorage.getItem(TRIAL_KEY)||(()=>{const value=crypto.randomUUID().replace(/-/g,"")+crypto.randomUUID().replace(/-/g,"");localStorage.setItem(TRIAL_KEY,value);return value;})()):"";
 let hydrated=false;
 let telegramStatus:{enabled:boolean;miniAppUrl:string;botUrl:string;projectBotUrl:string;botUsername:string}={enabled:false,miniAppUrl:"",botUrl:"",projectBotUrl:"",botUsername:""};
@@ -257,10 +262,36 @@ async function hydrateDocument(id:string){
   }
 }
 
+function base64Url(buffer:ArrayBuffer){return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");}
+async function sha256(value:string){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));}
+async function beginAuth0Login(){
+ if(!AUTH0_DOMAIN||!AUTH0_CLIENT_ID){notify("Auth0 ещё не настроен.");return;}
+ const verifier=base64Url(crypto.getRandomValues(new Uint8Array(32)).buffer);
+ const challenge=base64Url(await sha256(verifier));
+ sessionStorage.setItem("tg-auth0-verifier",verifier);
+ const redirect=window.location.origin+"/callback";
+ const params=new URLSearchParams({response_type:"code",client_id:AUTH0_CLIENT_ID,redirect_uri:redirect,scope:"openid profile email",audience:AUTH0_AUDIENCE,code_challenge:challenge,code_challenge_method:"S256"});
+ window.location.assign("https://"+AUTH0_DOMAIN+"/authorize?"+params.toString());
+}
+async function finishAuth0Login(){
+ if(window.location.pathname!=="/callback") return false;
+ const code=new URLSearchParams(window.location.search).get("code");
+ const verifier=sessionStorage.getItem("tg-auth0-verifier")||"";
+ if(!code||!verifier) return false;
+ try{
+  const response=await fetch("https://"+AUTH0_DOMAIN+"/oauth/token",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({grant_type:"authorization_code",client_id:AUTH0_CLIENT_ID,code,code_verifier:verifier,redirect_uri:window.location.origin+"/callback"})});
+  const payload=await response.json();
+  if(!response.ok||!payload.access_token) throw new Error(payload.error_description||payload.error||"Не удалось выполнить вход");
+  auth0Token=payload.access_token;localStorage.setItem(AUTH0_TOKEN_KEY,auth0Token);sessionStorage.removeItem("tg-auth0-verifier");
+  history.replaceState({},document.title,"/");
+  return true;
+ }catch(error){sessionStorage.removeItem("tg-auth0-verifier");history.replaceState({},document.title,"/");notify(error instanceof Error?error.message:"Ошибка входа");return false;}
+}
+function logoutAuth0(){auth0Token="";localStorage.removeItem(AUTH0_TOKEN_KEY);session=null;render();}
 async function api(path:string,options:RequestInit={}){
   if(!API_BASE) return {error:"API URL не настроен"};
   try{
-    const response=await fetch(API_BASE+path,{...options,headers:{"content-type":"application/json",...(DEMO_AUTH?{"x-torclix-user":"demo"}:{}),...(TRIAL_AUTH?{"x-torclix-trial":trialToken}:{}),...(options.headers||{})}});
+    const response=await fetch(API_BASE+path,{...options,headers:{"content-type":"application/json",...(DEMO_AUTH?{"x-torclix-user":"demo"}:{}),...(TRIAL_AUTH&&!auth0Token?{"x-torclix-trial":trialToken}:{}),...(auth0Token?{authorization:"Bearer "+auth0Token}:{}),...(options.headers||{})}});
     const payload=await response.json().catch(()=>({}));
     if(!response.ok) return {error:String(payload?.error||("API "+response.status)),status:response.status};
     return payload;
@@ -286,7 +317,7 @@ function render(){
   <nav><div class="nav-label">Workspace</div>${nav.map(([icon,label,key])=>`<button class="nav-item ${active===key&&!editorProject?"active":""}" data-nav="${key}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`).join("")}</nav>
   <div class="sidebar-bottom"><div class="workspace"><div class="avatar">PG</div><div><div class="workspace-name">${htmlEsc(studioSettings.workspaceName||session?.organization?.name||"Perezapusk Studio")}</div><div class="workspace-role">${session?.user?.name||"Studio Owner"} · ${session?.organization?.plan||"Pro"}</div></div></div></div>
  </aside>
- <main class="main"><header class="topbar"><div class="topbar-left"><button class="icon-btn mobile-menu-toggle" aria-label="Меню" data-action="mobile-menu">☰</button><div class="top-logo"><span class="top-logo-mark">T</span><span><b>TorclixGroup</b><small>Studio OS</small></span></div></div><div class="top-mode"><span class="mode-icon">▦</span><span>Studio</span><strong>Активен</strong><span class="mode-arrow">⌄</span></div><div class="top-actions"><button class="icon-btn" data-action="back" aria-label="Назад">←</button><button class="icon-btn top-search" aria-label="Поиск">⌕</button><button class="icon-btn" aria-label="Уведомления">♧</button><div class="avatar">PG</div></div></header>
+ <main class="main"><header class="topbar"><div class="topbar-left"><button class="icon-btn mobile-menu-toggle" aria-label="Меню" data-action="mobile-menu">☰</button><div class="top-logo"><span class="top-logo-mark">T</span><span><b>TorclixGroup</b><small>Studio OS</small></span></div></div><div class="top-mode"><span class="mode-icon">▦</span><span>Studio</span><strong>Активен</strong><span class="mode-arrow">⌄</span></div><div class="top-actions">${auth0Token?`<button class="secondary auth-user" data-action="logout">Выйти</button>`:`<button class="secondary auth-user" data-action="login">Войти</button>`}<button class="icon-btn" data-action="back" aria-label="Назад">←</button><button class="icon-btn top-search" aria-label="Поиск">⌕</button><button class="icon-btn" aria-label="Уведомления">♧</button><div class="avatar">PG</div></div></header>
  <section class="content">${editorProject&&project?editor(project):active==="Overview"?overview():active==="Projects"?workspace("Projects"):active==="Templates"?templateView():active==="Clients & Leads"?inboxView():active==="Analytics"?analyticsView():studioStructureView(active)||workspace(active)}</section></main></div>
  ${modal?projectModal():""}${invoiceModal?invoiceCreateModal():""}${toast?`<div class="toast">${toast}</div>`:""}`;
  bind();
@@ -577,6 +608,8 @@ function projectModal(){
 
 function notify(m:string){toast=m;render();window.setTimeout(()=>{toast="";render()},2200)}
 function bind(){
+ root.querySelectorAll<HTMLElement>("[data-action='login']").forEach(el=>el.addEventListener("click",()=>void beginAuth0Login()));
+ root.querySelectorAll<HTMLElement>("[data-action='logout']").forEach(el=>el.addEventListener("click",()=>logoutAuth0()));
  root.querySelectorAll<HTMLElement>("[data-action='mobile-menu']").forEach(el=>el.addEventListener("click",()=>{mobileMenu=!mobileMenu;render();}));
  root.querySelectorAll<HTMLElement>("[data-action='mobile-close']").forEach(el=>el.addEventListener("click",()=>{mobileMenu=false;render();}));
  root.querySelectorAll<HTMLElement>("[data-copy-link]").forEach(el=>el.addEventListener("click",async()=>{const value=el.dataset.copyLink||"";if(!value)return;try{await navigator.clipboard.writeText(value);notify("Ссылка скопирована.");}catch{notify("Не удалось скопировать ссылку.");}}));
@@ -712,6 +745,7 @@ root.querySelectorAll<HTMLElement>("[data-action='preview']").forEach(el=>el.add
 
 async function boot(){
   try{
+    await finishAuth0Login();
     applyStudioSettings();
     render();
     if(portalToken){await hydratePublicPortal();return;}

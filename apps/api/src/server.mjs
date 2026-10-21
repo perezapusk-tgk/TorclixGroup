@@ -654,4 +654,17 @@ const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
 });
 
 await initStorage();
-server.listen(port,"0.0.0.0",()=>{console.log("Torclix API listening on :"+port);if(process.env.TELEGRAM_BOT_TOKEN)console.log("Telegram bot token detected; configuration is project-scoped and must be initiated from the studio.");});
+if(process.env.TELEGRAM_BOT_TOKEN){
+  try{
+    const demoOrg="00000000-0000-4000-8000-000000000001";
+    const existing=await listTelegramIntegrations(demoOrg);
+    if(!existing?.length){
+      const demoProject=await getPublishedProject(legacyProjectIds.p1);
+      if(demoProject){
+        const result=await configureTelegramBot(demoProject.id);
+        if(result.enabled)await saveTelegramIntegration({id:newId(),organizationId:demoOrg,projectId:demoProject.id,botId:result.id,botUsername:result.username,enabled:true,webhookUrl:(process.env.PUBLIC_URL||"").replace(/\/$/,"")+"/tg/webhook"});
+      }
+    }
+  }catch(error){console.warn("Telegram auto-configuration skipped:",error?.message||error);}
+}
+server.listen(port,"0.0.0.0",()=>{console.log("Torclix API listening on :"+port);if(process.env.TELEGRAM_BOT_TOKEN)console.log("Telegram bot runtime enabled.");});

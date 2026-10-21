@@ -18,7 +18,7 @@ const seed:Project[]=[
 const templates=[["Restaurant / Noir","Website + Mini App","Меню · столики · заказы · лояльность","restaurant"],["Beauty / Atelier","Website + Mini App","Услуги · мастера · календарь · запись","beauty"],["Fitness / Forma","Mini App","Занятия · тренеры · абонементы","fitness"],["Medical / Northline","Website","Услуги · врачи · запись","medical"],["Real Estate / North","Website","Объекты · агенты · заявки","realty"],["Services / Studio","Website","Услуги · специалисты · заявки","services"],["Car Wash / Wash","Website + Mini App","Услуги · прайс · запись","wash"],["Education / Class","Website + Mini App","Курсы · занятия · запись","education"],["Retail / Store","Website + Mini App","Каталог · корзина · заказы","retail"]];
 
 let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")||[];
-let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", selectedIndustry="wash", wizardStep=1, toast="", editorTab="Design", selectedBlock:string|null=null, projectViewTab="overview", mobileMenu=false;
+let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", selectedIndustry="wash", wizardStep=1, toast="", editorTab="Design", selectedBlock:string|null=null, projectViewTab="overview", mobileMenu=false, portalToken=new URLSearchParams(location.search).get("portal")||"", portalData:any=null;
 type StudioSettings={workspaceName:string;brandName:string;language:string;font:string;accent:string;theme:string;density:string;radius:string;animations:boolean;compactNav:boolean;emailNotifications:boolean;leadNotifications:boolean;bookingNotifications:boolean};
 const defaultStudioSettings:StudioSettings={workspaceName:"Perezapusk Studio",brandName:"TorclixGroup",language:"ru",font:"Inter",accent:"#2f6bea",theme:"light",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};
 let studioSettings:StudioSettings={...defaultStudioSettings,...(JSON.parse(localStorage.getItem("tg-settings")||"null")||{})};
@@ -180,6 +180,18 @@ async function hydrateCatalog(){
  catalogItems=Array.isArray(result?.data)?result.data:[];
  if(!editorProject) render();
 }
+async function hydratePublicPortal(){
+ if(!portalToken||!API_BASE)return;
+ const result=await api("/public/client-portal/"+encodeURIComponent(portalToken));
+ portalData=result?.data||null;
+ if(portalData) render();
+}
+function publicPortalView(){
+ const p=portalData;
+ if(!p) return "<main style=\"min-height:100vh;display:grid;place-items:center;padding:24px;background:#080808;color:#fff\"><section class=\"card\" style=\"max-width:720px;width:100%;padding:32px\"><div class=\"eyebrow\">TORCLIXGROUP / CLIENT PORTAL</div><h1>Портал клиента</h1><p class=\"hero-copy\">Портал не найден или ссылка устарела.</p></section></main>";
+ const labels:any={draft:"Черновик",review:"На проверке",approved:"Одобрено",changes_requested:"Нужны правки"};
+ return "<main style=\"min-height:100vh;padding:40px 20px;background:#080808;color:#f5f5f5\"><section class=\"card\" style=\"max-width:820px;margin:0 auto;padding:32px\"><div class=\"eyebrow\">TORCLIXGROUP / CLIENT PORTAL</div><h1>"+htmlEsc(p.name)+"</h1><span class=\"badge "+(p.status==="approved"?"live":"")+"\">"+htmlEsc(labels[p.status]||p.status)+"</span><div style=\"margin:24px 0;color:#aaa;line-height:1.7;white-space:pre-wrap\">"+htmlEsc(p.note||"Проект готов к просмотру.")+"</div><a class=\"primary\" style=\"display:inline-block;text-decoration:none\" href=\""+htmlEsc(API_BASE+"/published/"+encodeURIComponent(p.id))+"\">Открыть сайт проекта</a></section></main>";
+}
 async function hydrateTeamCalendar(){
  if(!API_BASE) return;
  const [staffResult,calendarResult]=await Promise.all([api("/api/staff"),api("/api/calendar/events")]);
@@ -265,6 +277,8 @@ async function syncDocument(){
 const root=document.querySelector<HTMLDivElement>("#root")!;
 
 function render(){
+ if(portalToken){root.innerHTML=publicPortalView();return;}
+
  const project=projects.find(p=>p.id===editorProject);
  root.innerHTML=`
  <div class="app"><div class="mobile-overlay ${mobileMenu?"open":""}" data-action="mobile-close"></div><aside class="sidebar ${mobileMenu?"mobile-open":""}">
@@ -679,6 +693,7 @@ async function boot(){
   try{
     applyStudioSettings();
     render();
+    if(portalToken){await hydratePublicPortal();return;}
     await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateCatalog(),hydrateOrders(),hydrateInvoices(),hydrateTelegram(),hydrateTeamCalendar()]);
     if(!editorProject) render();
   }catch(error){

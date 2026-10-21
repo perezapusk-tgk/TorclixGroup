@@ -150,6 +150,35 @@ export async function setOrganizationPlan(organizationId,plan){
   return rows[0]?{...rows[0],source:"internal"}:null;
 }
 
+export async function updateStripeBilling(organizationId,{customerId=null,subscriptionId=null,status=null,plan=null}={}){
+  const db=await getPool();
+  if(!db) return {id:organizationId,customerId,subscriptionId,status,plan,source:"memory"};
+  const allowedStatus=new Set(["inactive","trialing","active","past_due","canceled","unpaid"]);
+  const safeStatus=status&&allowedStatus.has(status)?status:null;
+  const allowedPlan=new Set(["starter","pro","scale"]);
+  const safePlan=plan&&allowedPlan.has(plan)?plan:null;
+  const {rows}=await db.query(
+    `update organizations set
+      stripe_customer_id=coalesce($2,stripe_customer_id),
+      stripe_subscription_id=coalesce($3,stripe_subscription_id),
+      billing_status=coalesce($4,billing_status),
+      plan=coalesce($5,plan),
+      updated_at=now()
+    where id=$1::uuid
+    returning id::text as id,plan,stripe_customer_id as "customerId",stripe_subscription_id as "subscriptionId",billing_status as status`,
+    [organizationId,customerId,subscriptionId,safeStatus,safePlan]);
+  return rows[0]?{...rows[0],source:"stripe"}:null;
+}
+export async function findOrganizationByStripe({customerId=null,subscriptionId=null}={}){
+  const db=await getPool();
+  if(!db) return null;
+  const {rows}=await db.query(
+    `select id::text as id,plan,stripe_customer_id as "customerId",stripe_subscription_id as "subscriptionId",billing_status as status
+     from organizations where ($1 is not null and stripe_customer_id=$1) or ($2 is not null and stripe_subscription_id=$2) limit 1`,
+    [customerId,subscriptionId]);
+  return rows[0]||null;
+}
+
 export async function listProjects(fallback,organizationId){
   const db=await getPool();
   if(!db) return [...fallback.values()].filter(project=>!organizationId||project.organizationId===organizationId);

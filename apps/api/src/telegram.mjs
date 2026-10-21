@@ -46,7 +46,7 @@ export async function configureTelegramBot(projectId) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return {enabled:false};
   const base = String(process.env.PUBLIC_URL || process.env.API_PUBLIC_URL || "https://torclixgroup-api.onrender.com").replace(/\/$/, "");
-  const secret = process.env.TELEGRAM_WEBHOOK_SECRET || crypto.randomBytes(24).toString("hex");
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET || crypto.createHmac("sha256", token).update("TorclixGroup:telegram:webhook").digest("hex");
   const webhook = `${base}/tg/webhook`;
   const bot = await telegramApi("getMe", {}, token);
   await telegramApi("setWebhook", {

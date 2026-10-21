@@ -620,7 +620,7 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
         const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);
         if(!owned){json(res,404,{error:"Project not found"});return;}
       }
-      const hostname=String(input.hostname||"").trim().toLowerCase();
+      const hostname=String(input.hostname||"").trim().toLowerCase();if(hostname==="localhost"||hostname.endsWith(".local")||/^\d+(?:\.\d+){3}$/.test(hostname)){json(res,400,{error:"Public hostname is required"});return;}
       if(!hostname||!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(hostname)){
         json(res,400,{error:"Valid hostname is required"});return;
       }

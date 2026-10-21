@@ -159,7 +159,7 @@ const TRIAL_AUTH=import.meta.env.VITE_TORCLIX_TRIAL==="true";
 const TRIAL_KEY="tg-trial-session";
 const trialToken=TRIAL_AUTH?(localStorage.getItem(TRIAL_KEY)||(()=>{const value=crypto.randomUUID().replace(/-/g,"")+crypto.randomUUID().replace(/-/g,"");localStorage.setItem(TRIAL_KEY,value);return value;})()):"";
 let hydrated=false;
-let telegramStatus:{enabled:boolean;miniAppUrl:string}={enabled:false,miniAppUrl:""};
+let telegramStatus:{enabled:boolean;miniAppUrl:string;botUrl:string;botUsername:string}={enabled:false,miniAppUrl:"",botUrl:"",botUsername:""};
 async function hydrateInvoices(){
  if(!API_BASE)return;
  const result=await api("/api/invoices");invoices=Array.isArray(result?.data)?result.data:[];if(active==="Billing")render();
@@ -175,7 +175,7 @@ async function hydrateCatalog(){
  if(!editorProject) render();
 }
 
-async function hydrateTelegram(){try{const result=await api("/api/telegram/status");telegramStatus=result?.data||telegramStatus;}catch{}}
+async function hydrateTelegram(){try{const query=editorProject?"?projectId="+encodeURIComponent(editorProject):"";const result=await api("/api/telegram/status"+query);telegramStatus={...telegramStatus,...(result?.data||{})};}catch{}}
 
 async function hydrateSession(){
  if(!API_BASE) return;
@@ -496,8 +496,8 @@ function bind(){
    catalogModal=false;editingCatalogId=null;await hydrateCatalog();notify("Позиция сохранена.");
  }));
  root.querySelectorAll<HTMLElement>("[data-action='refresh-telegram']").forEach(el=>el.addEventListener("click",async()=>{await hydrateTelegram();render();notify(telegramStatus.enabled?"Telegram подключён.":"Telegram пока не подключён.");}));
- root.querySelectorAll<HTMLElement>("[data-action='configure-telegram']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject){notify("Сначала откройте проект.");return;}const result=await api("/api/telegram/configure",{method:"POST",body:JSON.stringify({projectId:editorProject})});if(result?.data){await hydrateTelegram();render();notify("Telegram подключён и Mini App настроен.");}else notify(result?.error||"Не удалось подключить Telegram.");}));
- root.querySelectorAll<HTMLElement>("[data-action='open-telegram-mini']").forEach(el=>el.addEventListener("click",()=>{if(telegramStatus.miniAppUrl)window.open(telegramStatus.miniAppUrl,"_blank","noopener,noreferrer");}));
+ root.querySelectorAll<HTMLElement>("[data-action='configure-telegram']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject){notify("Сначала откройте проект.");return;}const result=await api("/api/telegram/configure",{method:"POST",body:JSON.stringify({projectId:editorProject})});if(result?.data){await hydrateTelegram();render();notify(result?.data?.botUrl?`Telegram подключён: ${result.data.botUrl}`:"Telegram подключён и Mini App настроен.");}else notify(result?.error||"Не удалось подключить Telegram.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='open-telegram-mini']").forEach(el=>el.addEventListener("click",()=>{if(telegramStatus.botUrl)window.open(telegramStatus.botUrl,"_blank","noopener,noreferrer"); else if(telegramStatus.miniAppUrl)window.open(telegramStatus.miniAppUrl,"_blank","noopener,noreferrer");}));
  root.querySelectorAll<HTMLElement>("[data-settings-scroll]").forEach(el=>el.addEventListener("click",()=>document.getElementById("settings-"+el.dataset.settingsScroll)?.scrollIntoView({behavior:"smooth",block:"start"})));
  root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
  root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={language:"ru",font:"Inter",accent:"#d8ff3e",theme:"dark",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};saveSettings();render();notify("Стиль возвращён к стандартному.");}));

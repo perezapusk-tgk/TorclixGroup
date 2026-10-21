@@ -376,6 +376,9 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/projects"&&req.method==="POST"){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
       const input=await body(req);const name=String(input.name||"Untitled project");
+      const currentProjects=await listProjects(projects,auth.organization.id);
+      const plan=plans[auth.organization.plan]||plans.starter;
+      if(currentProjects.length>=plan.projects){json(res,409,{error:"PROJECT_LIMIT_REACHED",message:`Лимит проектов тарифа ${auth.organization.plan||"starter"} достигнут`,limit:plan.projects,usage:currentProjects.length});return;}
       const type=String(input.type||"website");
       if(!["website","mini_app","website_mini_app"].includes(type)){json(res,400,{error:"Unsupported project type"});return;}
       const industry=String(input.industry||"services").toLowerCase().trim().replace(/\s+/g,"_");

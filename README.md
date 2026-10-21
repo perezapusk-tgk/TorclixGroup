@@ -107,3 +107,6 @@ The Builder can open a real server-rendered project preview when the API is conf
 ## Analytics and audit log
 
 The platform records privacy-minimized public-site events (page views, clicks and conversion starts) per organization/project and exposes a 1–90 day summary through `GET /api/analytics?days=30&projectId=`. Studio administrators and owners can inspect organization audit entries through `GET /api/audit?limit=100`. Public event ingestion is rate-limited and stores referrer hostnames rather than full URLs.
+
+
+<!-- Production deployment synced with main. -->

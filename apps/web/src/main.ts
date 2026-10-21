@@ -492,7 +492,7 @@ function editor(project:Project){
  const miniTab=projectViewTab==="mini"&&miniEnabled?`<div class="project-module-view">${miniAppPanel(moduleCatalog)}</div>`:"";
  const crmTab=projectViewTab==="crm"?projectCRM(project):"";
  const settingsTab=projectViewTab==="settings"?projectSettings(project):"";
- return `<div class="editor-shell"><div class="editor-top"><div><div class="eyebrow">04 / Проект</div><h2>${project.name}</h2><div class="editor-url">${project.url} · ${project.type} · ${project.industry}</div><div class="editor-links"><button class="secondary sm" data-action="preview">Открыть сайт</button>${project.type.includes("Mini App")?'<button class="secondary sm" data-action="open-miniapp">Открыть Mini App</button>':""}</div></div><div class="editor-actions"><button class="secondary" data-action="preview">Предпросмотр</button><button class="primary" data-action="publish">Опубликовать</button></div></div>
+ return `<div class="editor-shell"><div class="editor-top"><div><div class="eyebrow">04 / Проект</div><h2>${project.name}</h2><div class="editor-url">${project.url} · ${project.type} · ${project.industry}</div><div class="editor-links"><button class="secondary sm" data-action="preview">Открыть сайт</button><button class="ghost-btn sm" data-copy-link="${htmlEsc(publicSiteUrl(project.id))}">Копировать ссылку</button>${project.type.includes("Mini App")?'<button class="secondary sm" data-action="open-miniapp">Открыть Mini App</button>':""}${project.type.includes("Mini App")?'<button class="ghost-btn sm" data-copy-link="${htmlEsc(publicMiniAppUrl(project.id))}">Ссылка Mini App</button>':""}</div></div><div class="editor-actions"><button class="secondary" data-action="preview">Предпросмотр</button><button class="primary" data-action="publish">Опубликовать</button></div></div>
  <div class="project-tabs">${tab("overview","Обзор")}${websiteEnabled?tab("builder","Сайт"):""}${miniEnabled?tab("mini","Mini App"):""}${tab("crm","Заявки и записи")}${tab("settings","Настройки")}</div>
  ${overviewTab}${builderTab}${miniTab}${crmTab}${settingsTab}</div>`;
 }
@@ -534,6 +534,7 @@ function notify(m:string){toast=m;render();window.setTimeout(()=>{toast="";rende
 function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='mobile-menu']").forEach(el=>el.addEventListener("click",()=>{mobileMenu=!mobileMenu;render();}));
  root.querySelectorAll<HTMLElement>("[data-action='mobile-close']").forEach(el=>el.addEventListener("click",()=>{mobileMenu=false;render();}));
+ root.querySelectorAll<HTMLElement>("[data-copy-link]").forEach(el=>el.addEventListener("click",async()=>{const value=el.dataset.copyLink||"";if(!value)return;try{await navigator.clipboard.writeText(value);notify("Ссылка скопирована.");}catch{notify("Не удалось скопировать ссылку.");}}));
  root.querySelectorAll<HTMLElement>("[data-setting]").forEach(el=>el.addEventListener("change",()=>{
    const key=el.dataset.setting as keyof StudioSettings;
    if(key==="workspaceName") studioSettings.workspaceName=(el as HTMLInputElement).value.trim()||"Perezapusk Studio";

@@ -7,7 +7,7 @@ import {
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
-import { billingSnapshot,changePlan,plans } from "./billing.mjs";
+import { billingSnapshot,changePlan,plans,createCheckoutSession,stripeConfigured } from "./billing.mjs";
 import { configureTelegramBot, telegramApi, telegramMiniAppUrl, verifyTelegramInitData } from "./telegram.mjs";
 import { updateOrderStatusWithStockRelease } from "./order-status.mjs";
 import { listInvoices,createInvoice,updateInvoiceStatus } from "./invoices.mjs";
@@ -158,6 +158,18 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leadRecords=await listRecords("leads",leads,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leadRecords.length})});return;}
     if(path==="/api/billing/plans"&&req.method==="GET"){json(res,200,{data:Object.entries(plans).map(([id,x])=>({id,name:id==="starter"?"Starter":id==="pro"?"Pro":"Scale",price:x.price,limits:x}))});return;}
+    if(path==="/api/billing/checkout"&&req.method==="POST"){
+      const auth=await requirePermission(req,res,"billing:write");if(!auth)return;
+      const input=await body(req);const plan=String(input.plan||"");
+      if(!plans[plan]){json(res,400,{error:"Invalid plan"});return;}
+      if(!stripeConfigured()){json(res,503,{error:"Платёжный провайдер пока не настроен",configured:false});return;}
+      const origin=String(input.origin||process.env.WEB_PUBLIC_BASE||"").replace(/\\/$/,"");
+      if(!origin){json(res,400,{error:"origin is required"});return;}
+      const result=await createCheckoutSession({organizationId:auth.organization.id,plan,successUrl:origin+"?billing=success",cancelUrl:origin+"?billing=cancelled"});
+      if(result.error){json(res,502,{error:result.error,configured:result.configured});return;}
+      await recordAudit(auth,"billing.checkout.create","organization",auth.organization.id,{plan});
+      json(res,200,{data:result});return;
+    }
     if(path==="/api/billing/plan"&&req.method==="POST"){const auth=await requirePermission(req,res,"billing:write");if(!auth)return;const input=await body(req);const result=await changePlan(auth.organization.id,String(input.plan||""));if(!result){json(res,404,{error:"Organization not found"});return;}await recordAudit(auth,"billing.plan.change","organization",auth.organization.id,{plan:result.plan});json(res,200,{data:result});return;}
     if(path.startsWith("/public/projects/")&&path.endsWith("/catalog")&&req.method==="GET"){
       const match=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);

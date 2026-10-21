@@ -172,6 +172,12 @@ const server=createServer(async(req,res)=>{
       const raw=await rawBody(req);
       if(!stripeSignatureValid(raw,req.headers["stripe-signature"],secret)){json(res,400,{error:"Invalid Stripe signature"});return;}
       let event;try{event=JSON.parse(raw);}catch{json(res,400,{error:"Invalid webhook payload"});return;}
+      const eventId=String(event?.id||"").trim();
+      if(eventId){
+        const seenKey="stripe:"+eventId;
+        if(idempotencyCache.has(seenKey)){json(res,200,{received:true,duplicate:true});return;}
+        idempotencyCache.set(seenKey,{received:true});
+      }
       const object=event?.data?.object||{};
       if(event?.type==="checkout.session.completed"){
         const organizationId=object?.metadata?.organization_id||object?.client_reference_id;
@@ -181,7 +187,7 @@ const server=createServer(async(req,res)=>{
         const organization=await findOrganizationByStripe({customerId:object.customer||null,subscriptionId:object.id||null});
         if(organization){
           const priceId=object?.items?.data?.[0]?.price?.id;
-          const plan=priceId===process.env.STRIPE_PRICE_STARTER?"starter":priceId===process.env.STRIPE_PRICE_PRO?"pro":priceId===process.env.STRIPE_PRICE_SCALE?"scale":null;
+          const plan=priceId===process.env.STRIPE_PRICE_STARTER||priceId===process.env.STRIPE_PRICE_STARTER_USD||priceId===process.env.STRIPE_PRICE_STARTER_RUB?"starter":priceId===process.env.STRIPE_PRICE_PRO||priceId===process.env.STRIPE_PRICE_PRO_USD||priceId===process.env.STRIPE_PRICE_PRO_RUB?"pro":priceId===process.env.STRIPE_PRICE_SCALE||priceId===process.env.STRIPE_PRICE_SCALE_USD||priceId===process.env.STRIPE_PRICE_SCALE_RUB?"scale":null;
           const status=event.type.endsWith("deleted")?"canceled":String(object.status||"inactive");
           await updateStripeBilling(organization.id,{customerId:object.customer||null,subscriptionId:object.id||null,status,plan});
         }

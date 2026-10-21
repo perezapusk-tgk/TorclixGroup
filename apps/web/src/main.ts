@@ -696,6 +696,7 @@ if(!name.trim()){notify("Введите название проекта.");retur
  root.querySelectorAll<HTMLElement>("[data-action='copy-project-link']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject)return;const url=API_BASE+"/published/"+encodeURIComponent(editorProject);try{await navigator.clipboard.writeText(url);notify("Ссылка проекта скопирована.");}catch{notify("Не удалось скопировать ссылку.");}}));
  root.querySelectorAll<HTMLElement>("[data-action='show-project-qr']").forEach(el=>el.addEventListener("click",()=>{const p=projects.find(x=>x.id===editorProject);if(p){modal=true;root.insertAdjacentHTML("beforeend",projectQrModal(p));bind();}}));
 root.querySelectorAll<HTMLElement>("[data-action='preview']").forEach(el=>el.addEventListener("click",()=>{if(!editorProject){notify("Сначала откройте проект.");return;}if(!API_BASE){notify("Для предпросмотра нужен VITE_API_URL.");return;}window.open(API_BASE+"/published/"+editorProject,"_blank","noopener,noreferrer");}));
+ root.querySelectorAll<HTMLElement>("[data-action='open-miniapp']").forEach(el=>el.addEventListener("click",()=>{if(!editorProject){notify("Сначала откройте проект.");return;}if(!API_BASE){notify("Для Mini App нужен VITE_API_URL.");return;}window.open(API_BASE+"/miniapp/"+encodeURIComponent(editorProject),"_blank","noopener,noreferrer");}));
  root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",async()=>{
   const p=projects.find(x=>x.id===editorProject);if(!p)return;
   el.setAttribute("disabled","true");

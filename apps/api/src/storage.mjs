@@ -176,6 +176,15 @@ export async function saveProject(project){
   return project;
 }
 
+export async function ensureClientPortalToken(projectId,organizationId){
+ const db=await getPool();
+ if(db){const existing=await db.query("select client_portal_token from projects where id=$1::uuid and organization_id=$2::uuid",[projectId,organizationId]);if(!existing.rowCount)return null;if(existing.rows[0].client_portal_token)return existing.rows[0].client_portal_token;const token=randomUUID().replace(/-/g,"")+randomUUID().replace(/-/g,"");const {rows}=await db.query("update projects set client_portal_token=$1 where id=$2::uuid and organization_id=$3::uuid returning client_portal_token",[token,projectId,organizationId]);return rows[0]?.client_portal_token||null;}
+ return null;
+}
+export async function getPublicClientPortal(token){
+ const db=await getPool();if(!db)return null;
+ const {rows}=await db.query("select id::text, name, slug, client_portal_status as status, client_portal_note as note, client_portal_updated_at as updated_at from projects where client_portal_token=$1 and status='active' limit 1",[token]);return rows[0]||null;
+}
 export async function updateClientPortal(projectId,organizationId,status,note){
   const db=await getPool();
   const allowed=new Set(["draft","review","approved","changes_requested"]);

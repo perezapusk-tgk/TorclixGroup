@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateStripeBilling,findOrganizationByStripe
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -129,6 +129,19 @@ async function requirePermission(req,res,permission){
   return auth;
 }
 
+function stripeSignatureValid(raw,header,secret){
+  if(!secret||!header)return false;
+  const parts=String(header).split(",").map(x=>x.split("="));
+  const timestamp=parts.find(x=>x[0]==="t")?.[1];
+  const signatures=parts.filter(x=>x[0]==="v1").map(x=>x[1]).filter(Boolean);
+  if(!timestamp||!signatures.length)return false;
+  const age=Math.abs(Math.floor(Date.now()/1000)-Number(timestamp));
+  if(!Number.isFinite(age)||age>300)return false;
+  const expected=crypto.createHmac("sha256",secret).update(String(timestamp)+"."+raw).digest("hex");
+  return signatures.some(value=>{try{const a=Buffer.from(value,"hex"),b=Buffer.from(expected,"hex");return a.length===b.length&&crypto.timingSafeEqual(a,b);}catch{return false;}});
+}
+async function rawBody(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>1024*1024){const error=new Error("Request body too large");error.status=413;throw error;}}return raw;}
+
 const server=createServer(async(req,res)=>{
   if(req.method==="OPTIONS"){json(res,204,{});return;}
   const {pathname:path}=new URL(req.url||"/","http://localhost");
@@ -152,6 +165,28 @@ const server=createServer(async(req,res)=>{
       const portal=await getPublicClientPortal(decodeURIComponent(publicPortal[1]));
       if(!portal){json(res,404,{error:"Портал клиента не найден"});return;}
       json(res,200,{data:portal});return;
+    }
+    if(path==="/api/billing/webhook"&&req.method==="POST"){
+      const secret=String(process.env.STRIPE_WEBHOOK_SECRET||"").trim();
+      if(!secret){json(res,503,{error:"Stripe webhook is not configured"});return;}
+      const raw=await rawBody(req);
+      if(!stripeSignatureValid(raw,req.headers["stripe-signature"],secret)){json(res,400,{error:"Invalid Stripe signature"});return;}
+      let event;try{event=JSON.parse(raw);}catch{json(res,400,{error:"Invalid webhook payload"});return;}
+      const object=event?.data?.object||{};
+      if(event?.type==="checkout.session.completed"){
+        const organizationId=object?.metadata?.organization_id||object?.client_reference_id;
+        const plan=object?.metadata?.plan;
+        if(organizationId){await updateStripeBilling(organizationId,{customerId:object.customer||null,subscriptionId:object.subscription||null,status:"active",plan});}
+      }else if(event?.type==="customer.subscription.updated"||event?.type==="customer.subscription.deleted"){
+        const organization=await findOrganizationByStripe({customerId:object.customer||null,subscriptionId:object.id||null});
+        if(organization){
+          const priceId=object?.items?.data?.[0]?.price?.id;
+          const plan=priceId===process.env.STRIPE_PRICE_STARTER?"starter":priceId===process.env.STRIPE_PRICE_PRO?"pro":priceId===process.env.STRIPE_PRICE_SCALE?"scale":null;
+          const status=event.type.endsWith("deleted")?"canceled":String(object.status||"inactive");
+          await updateStripeBilling(organization.id,{customerId:object.customer||null,subscriptionId:object.id||null,status,plan});
+        }
+      }
+      json(res,200,{received:true});return;
     }
     if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.7.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":(process.env.TORCLIX_DEV_AUTH==="true"?"development-session":"development-auth-disabled")});return;}
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}

@@ -560,7 +560,7 @@ function miniAppPanel(moduleCatalog:string[][]){
 function blockInspector(page:Page){
  const block=page.blocks.find(b=>b.id===selectedBlock);
  if(!block) return `<div class="inspector-note">Выберите блок в макете, чтобы изменить его содержимое.</div>`;
- return `<div class="selected-block"><div class="style-chip">${block.type}</div><label class="field"><span>Заголовок</span><textarea id="block-title">${block.title}</textarea></label><label class="field"><span>Текст</span><textarea id="block-body">${block.body}</textarea></label><button class="primary full" data-action="save-block">Сохранить блок</button><button class="secondary full" data-action="clear-block">Готово</button></div>`;
+ return `<div class="selected-block"><div class="style-chip">${htmlEsc(block.type)}</div><label class="field"><span>Заголовок</span><textarea id="block-title">${htmlEsc(block.title)}</textarea></label><label class="field"><span>Текст</span><textarea id="block-body">${htmlEsc(block.body)}</textarea></label><button class="primary full" data-action="save-block">Сохранить блок</button><button class="secondary full" data-action="clear-block">Готово</button></div>`;
 }
 
 function projectModal(){

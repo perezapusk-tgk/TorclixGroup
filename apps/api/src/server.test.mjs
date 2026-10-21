@@ -62,3 +62,31 @@ test("project publishing creates a public runtime in development",async()=>{
   assert.equal(legacyMini.status,200);
   assert.match(await legacyMini.text(),/Maison Noire/);
 });
+
+
+test("published project health and catalog endpoints are usable",async()=>{
+  const health=await fetch(base+"/public/projects/p1/health");
+  const healthBody=await health.json();
+  assert.equal(health.status,200);
+  assert.equal(healthBody.data.published,true);
+  assert.equal(healthBody.data.name,"Maison Noire");
+
+  const catalog=await fetch(base+"/public/projects/p1/catalog");
+  const catalogBody=await catalog.json();
+  assert.equal(catalog.status,200);
+  assert.ok(Array.isArray(catalogBody.data));
+  assert.ok(catalogBody.data.length>=1);
+});
+
+test("public analytics event endpoint accepts a valid pageview",async()=>{
+  const event=await fetch(base+"/public/projects/p1/events",{
+    method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({
+      type:"pageview",
+      sessionId:"test-session-12345678",
+      path:"/menu?utm_source=test"
+    })
+  });
+  assert.equal(event.status,202);
+});

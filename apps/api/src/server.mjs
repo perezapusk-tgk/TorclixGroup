@@ -28,6 +28,10 @@ const clients=new Map(),leads=new Map(),bookings=new Map(),catalogItems=new Map(
 const publishedProjects=new Set();
 const legacyProjectIds={p1:"00000000-0000-4000-8000-000000000101",p2:"00000000-0000-4000-8000-000000000102"};
 function resolvePublicProjectId(projectId){return legacyProjectIds[projectId]||projectId;}
+async function getPublicProject(projectId){
+  if(process.env.DATABASE_URL) return await getPublishedProject(projectId);
+  return projects.get(projectId)||await getPublishedProject(projectId);
+}
 
 
 function headers(extra={}){return {
@@ -95,13 +99,13 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leadRecords=await listRecords("leads",leads,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leadRecords.length})});return;}
     if(path.startsWith("/public/projects/")&&path.endsWith("/catalog")&&req.method==="GET"){
       const match=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);const projectId=match?.[1];
-      const project=projects.get(projectId)||await getPublishedProject(projectId);
+      const project=await getPublicProject(projectId);
       if(!project){json(res,404,{error:"Project not found"});return;}
       json(res,200,{data:await listCatalogItems(catalogItems,project.organizationId,projectId)});return;
     }
     if(path.startsWith("/public/projects/")&&path.endsWith("/orders")&&req.method==="POST"){
       const match=path.match(/^\/public\/projects\/([^/]+)\/orders$/);const projectId=match?.[1];
-      const project=projects.get(projectId)||await getPublishedProject(projectId);
+      const project=await getPublicProject(projectId);
       if(!project){json(res,404,{error:"Project not found"});return;}
       const idem=requestKey(req);const cacheKey=idem?"public-order:"+projectId+":"+idem:null;const cached=cacheKey?idempotencyCache.get(cacheKey):null;if(cached){json(res,cached.status,cached.body);return;}
       const input=await body(req);const customerName=String(input.customerName||"").trim();

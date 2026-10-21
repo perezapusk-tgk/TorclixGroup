@@ -1,6 +1,6 @@
 import { setOrganizationPlan } from "./storage.mjs";
 export const plans={starter:{price:49,projects:5,members:2,storage_gb:5,monthly_visitors:10000,leads:500},pro:{price:299,projects:50,members:10,storage_gb:100,monthly_visitors:100000,leads:10000},scale:{price:799,projects:250,members:50,storage_gb:500,monthly_visitors:1000000,leads:100000}};
-export function billingSnapshot(org,counts={}){const plan=plans[org.plan]||plans.pro;return {plan:org.plan,price:plan.price,limits:plan,usage:{projects:counts.projects||0,members:counts.members||1,storage_gb:counts.storage_gb||0,monthly_visitors:counts.monthly_visitors||0,leads:counts.leads||0}};}
+export function billingSnapshot(org,counts={}){const plan=plans[org.plan]||plans.starter;return {plan:org.plan,price:plan.price,limits:plan,usage:{projects:counts.projects||0,members:counts.members||1,storage_gb:counts.storage_gb||0,monthly_visitors:counts.monthly_visitors||0,leads:counts.leads||0}};}
 
 export async function createCheckoutSession({organizationId,plan,successUrl,cancelUrl}){
   const secret=String(process.env.STRIPE_SECRET_KEY||"").trim();

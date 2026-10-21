@@ -509,3 +509,100 @@ h1,h2,h3,.modal-title,.brand-name{font-family:Unbounded,Inter,sans-serif;font-we
 .crm360-modal{width:min(760px,100%);max-height:min(86vh,820px);overflow:auto;background:#101010;border:1px solid #2a2a2a;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55);padding:24px}
 .crm360-head{display:flex;justify-content:space-between;gap:18px}.crm360-kicker{font-size:9px;letter-spacing:.16em;color:#777;text-transform:uppercase}.crm360-head h2{margin:6px 0 4px;font-size:25px}.crm360-tg{color:var(--accent);font-size:12px}.crm360-close{border:1px solid #303030;background:#181818;color:#aaa;border-radius:10px;width:38px;height:38px;font-size:24px}.crm360-close:hover{color:#fff;background:#222}
 .crm360-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0 12px}.crm360-stats div{background:#151515;border:1px solid #242424;border-radius:12px;padding:14px}.crm360-stats b{display:block;font-size:22px}.crm360-stats span{display:block;color:#777;font-size:11px;margin-top:3px}.crm360-contact{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.crm360-contact span{padding:7px 10px;border:1px solid #292929;border-radius:999px;color:#aaa;font-size:11px}.crm360-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.crm360-grid section{border:1px solid #242424;border-radius:12px;padding:13px;background:#121212}.crm360-grid h3{margin:0 0 10px;font-size:12px}.crm360-row{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid #202020;font-size:11px;color:#aaa}.crm360-row strong{color:#eee}.crm360-empty{color:#666;font-size:11px;padding:8px 0}@media(max-width:700px){.crm360-backdrop{padding:10px}.crm360-modal{padding:18px;border-radius:13px}.crm360-grid{grid-template-columns:1fr}.crm360-stats{grid-template-columns:1fr 1fr 1fr}.crm360-head h2{font-size:21px}}
+
+
+/* TorclixGroup Studio OS — visual lock v1 */
+:root{
+  --bg:#080808;
+  --panel:#0d0d0d;
+  --panel-2:#111;
+  --line:#222;
+  --muted:#74746f;
+  --soft:#a8a8a1;
+  --white:#f5f5f0;
+  --accent:#d8ff3e;
+  --accent-ink:#0a0a0a;
+  --ui-radius:4px;
+}
+body{background:var(--bg);color:var(--white);overflow-x:hidden}
+.app{grid-template-columns:220px minmax(0,1fr);min-height:100vh}
+.sidebar{width:auto;padding:20px 12px;background:#070707;border-right:1px solid #1d1d1d}
+.brand{padding:4px 10px 26px}
+.brand-mark{width:28px;height:28px;border-radius:4px}
+.brand-name{font-size:14px;letter-spacing:-.045em}
+.nav-label{font-size:8px;letter-spacing:.2em;padding:15px 10px 8px;margin-top:4px}
+.nav-item{font-size:12px;min-height:38px;padding:9px 10px;border-radius:4px}
+.nav-item.active{background:#111;border-left:2px solid var(--accent);color:#fff}
+.main{min-width:0;background:var(--bg)}
+.topbar{height:60px;padding:0 30px;background:rgba(8,8,8,.94);border-bottom:1px solid #1d1d1d}
+.crumb{font-size:10px;color:#666}
+.content{width:100%;max-width:1240px;padding:44px 42px 90px;margin:0 auto}
+.hero{min-height:300px;align-items:flex-end;margin-bottom:34px;padding-bottom:32px;border-bottom:1px solid #202020}
+.eyebrow{font-size:9px;letter-spacing:.24em;color:var(--accent)}
+h1{font-size:clamp(48px,6.2vw,86px);line-height:.9;max-width:980px}
+.hero-copy{font-size:13px;max-width:560px;color:#85857f}
+.actions{flex-wrap:wrap}
+.primary,.secondary{border-radius:4px}
+.primary{padding:12px 18px}
+.secondary{background:#111;border-color:#2b2b2b}
+.stats{grid-template-columns:repeat(4,1fr);border-radius:0;border-color:#242424;background:transparent}
+.stat{min-height:100px;padding:20px;border-color:#242424;background:#0a0a0a}
+.stat-value{font-size:29px}
+.grid{grid-template-columns:minmax(0,1.6fr) minmax(300px,.8fr);gap:14px}
+.card{border-radius:4px;background:#0b0b0b;border-color:#242424}
+.card-head{padding:16px 18px}
+.project-row,.workspace-row{min-height:68px;padding:16px 18px}
+.quick-grid{gap:10px}
+.quick{border-radius:4px;min-height:132px;background:#0b0b0b;padding:20px}
+.quick-icon{margin-bottom:20px}
+.template-grid{gap:10px}
+.template-card{border-radius:4px;min-height:190px;padding:21px;background:#0b0b0b}
+.template-card strong{font-size:18px}
+.workspace-head h2,.editor-top h2{font-size:clamp(44px,5.6vw,76px)}
+.project-tabs{gap:2px;padding:10px 0 14px}
+.project-tab{border-radius:4px;padding:9px 12px}
+.builder{border-radius:4px;grid-template-columns:215px minmax(0,1fr) 230px}
+.canvas{padding:24px}
+.site-preview{border-radius:4px}
+.canvas-block{border-radius:4px}
+.mini-app-panel{border-radius:4px}
+.mini-module{border-radius:4px}
+.modal{border-radius:8px}
+.toast{border-radius:4px}
+@media(max-width:1050px){
+ .app{grid-template-columns:72px minmax(0,1fr)}
+ .content{padding:36px 28px 80px}
+ .grid{grid-template-columns:1fr}
+ .builder{grid-template-columns:190px minmax(0,1fr)}
+}
+@media(max-width:700px){
+ .app{grid-template-columns:1fr}
+ .sidebar{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:64px;z-index:40;border-right:0;border-top:1px solid #222;padding:6px 8px;background:rgba(7,7,7,.97);backdrop-filter:blur(16px)}
+ .brand,.sidebar-bottom,.nav-label{display:none}
+ .sidebar nav{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;height:100%}
+ .nav-item{justify-content:center;min-height:50px;padding:6px 2px;border-left:0!important;border-radius:4px}
+ .nav-item.active{background:#151515}
+ .nav-item span:not(.nav-icon){display:none}
+ .nav-icon{font-size:15px}
+ .topbar{height:56px;padding:0 16px}
+ .content{padding:28px 16px 90px}
+ .hero{min-height:270px;align-items:flex-start;flex-direction:column}
+ h1{font-size:clamp(43px,14vw,68px)}
+ .stats{grid-template-columns:1fr 1fr}
+ .stat{padding:16px}
+ .stat-value{font-size:24px}
+ .project-row{grid-template-columns:1fr auto}
+ .project-row>:not(:first-child):not(:last-child){display:none}
+ .quick-grid{grid-template-columns:1fr 1fr}
+ .builder{grid-template-columns:1fr}
+ .builder-side{border-right:0;border-bottom:1px solid var(--line)}
+ .inspector{display:none}
+ .canvas{padding:10px}
+ .site-preview{padding:10px}
+}
+@media(max-width:430px){
+ .quick-grid{grid-template-columns:1fr}
+ .stats{grid-template-columns:1fr 1fr}
+ .actions{width:100%}
+ .actions button{flex:1}
+}

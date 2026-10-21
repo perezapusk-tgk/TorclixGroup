@@ -105,6 +105,12 @@ const server=createServer(async(req,res)=>{
       const idem=requestKey(req);const cacheKey=idem?"public-order:"+projectId+":"+idem:null;const cached=cacheKey?idempotencyCache.get(cacheKey):null;if(cached){json(res,cached.status,cached.body);return;}
       const input=await body(req);const customerName=String(input.customerName||"").trim();
       if(!customerName){json(res,400,{error:"customerName is required"});return;}
+      const source=String(input.source||"website");
+      let telegramUser=null;
+      if(source==="telegram_mini_app"){
+        telegramUser=verifyTelegramInitData(String(input.initData||""),process.env.TELEGRAM_BOT_TOKEN||"");
+        if(!telegramUser){json(res,401,{error:"Telegram авторизация недействительна"});return;}
+      }
       const rawItems=Array.isArray(input.items)?input.items:[];if(!rawItems.length){json(res,400,{error:"items are required"});return;}
       const catalog=await listCatalogItems(catalogItems,project.organizationId,projectId);
       const byId=new Map(catalog.map(x=>[x.id,x]));const items=[];let total=0;let currency="EUR";
@@ -116,7 +122,7 @@ const server=createServer(async(req,res)=>{
         items.push({id:newId(),catalogItemId:item.id,name:item.name,quantity,unitPrice,total:line});
       }
       if(total>100000000){json(res,400,{error:"Order total is too large"});return;}
-      const order={id:newId(),organizationId:project.organizationId,projectId,customerName,customerEmail:input.customerEmail?String(input.customerEmail).trim():null,customerPhone:input.customerPhone?String(input.customerPhone).trim():null,status:"pending",currency,total,source:String(input.source||"website")};
+      const order={id:newId(),organizationId:project.organizationId,projectId,customerName,customerEmail:input.customerEmail?String(input.customerEmail).trim():null,customerPhone:input.customerPhone?String(input.customerPhone).trim():null,status:"pending",currency,total,source,telegramUserId:telegramUser?.id||null,telegramUsername:telegramUser?.username||null};
       let saved;
       try{saved=await saveOrder(order,items);}
       catch(error){

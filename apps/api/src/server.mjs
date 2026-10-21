@@ -117,7 +117,16 @@ const server=createServer(async(req,res)=>{
       }
       if(total>100000000){json(res,400,{error:"Order total is too large"});return;}
       const order={id:newId(),organizationId:project.organizationId,projectId,customerName,customerEmail:input.customerEmail?String(input.customerEmail).trim():null,customerPhone:input.customerPhone?String(input.customerPhone).trim():null,status:"pending",currency,total,source:String(input.source||"website")};
-      const saved=await saveOrder(order,items);if(!process.env.DATABASE_URL)orders.set(order.id,saved);
+      let saved;
+      try{saved=await saveOrder(order,items);}
+      catch(error){
+        if(error instanceof Error&&error.message==="INSUFFICIENT_STOCK"){json(res,409,{error:"Insufficient stock"});return;}
+        throw error;
+      }
+      if(!process.env.DATABASE_URL){
+        for(const item of items){const local=catalogItems.get(item.catalogItemId);if(local&&local.stock!==null){local.stock=Math.max(0,Number(local.stock)-item.quantity);catalogItems.set(local.id,local);}}
+        orders.set(order.id,saved);
+      }
       const response={data:{id:order.id,status:order.status,total:order.total,currency:order.currency}};
       if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }

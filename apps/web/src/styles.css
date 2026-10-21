@@ -1018,3 +1018,12 @@ body,.app-shell,.content,.sidebar,.topbar,.dashboard-page{font-size:13px}
 .button,.primary,.secondary,.ghost,button{font-size:11px}
 .table,.project-row,.inbox-row,.performance-row{font-size:11px}
 .workspace-head{margin-bottom:18px}
+
+/* Mobile quick-access bar is intentionally removed from the product. */
+.mobile-bottom-nav,
+.mobile-quick-access,
+.bottom-quick-access,
+.bottom-nav,
+.quick-access-bar,
+[data-mobile-nav]{display:none!important;}
+@media(max-width:700px){.content{padding-bottom:24px!important;}}

@@ -606,3 +606,95 @@ h1{font-size:clamp(48px,6.2vw,86px);line-height:.9;max-width:980px}
  .actions{width:100%}
  .actions button{flex:1}
 }
+
+
+/* TorclixGroup Studio OS — visual lock v2
+   Purpose: preserve the reference-led geometry while making every screen feel like one product.
+*/
+:root{
+  --shadow-soft:0 12px 40px rgba(0,0,0,.18);
+  --shadow-card:0 1px 0 rgba(255,255,255,.025),0 14px 45px rgba(0,0,0,.12);
+  --focus:rgba(216,255,62,.34);
+}
+html{scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased}
+button,input,select,textarea{outline:none}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  box-shadow:0 0 0 3px var(--focus);
+}
+.nav-item,.primary,.secondary,.quick,.template-card,.project-tab,.mini-module,.industry-option,.workspace-row,.project-row,.icon-btn{
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease,opacity .16s ease;
+}
+.nav-item:hover{transform:translateX(1px)}
+.nav-item.active{box-shadow:inset 3px 0 0 var(--accent)}
+.top-actions .icon-btn:hover{border-color:#444;background:#171717;color:#fff}
+.profile{padding-left:8px;border-left:1px solid #222}
+.stats{box-shadow:var(--shadow-card)}
+.stat{position:relative}
+.stat:not(:last-child)::after{content:"";position:absolute;right:0;top:20px;bottom:20px;width:1px;background:#242424}
+.stat-value{font-variant-numeric:tabular-nums}
+.card,.quick,.template-card,.mini-app-panel,.builder,.settings-card,.settings-menu{
+  box-shadow:var(--shadow-card);
+}
+.card:hover,.quick:hover,.template-card:hover{border-color:#353535}
+.card-head{min-height:54px}
+.card-title{letter-spacing:-.02em}
+.project-row:hover,.workspace-row:hover{background:#101010}
+.badge{letter-spacing:.01em}
+.section-head{border-bottom:1px solid #202020;padding-bottom:12px}
+.section-note{font-variant-numeric:tabular-nums}
+.quick{display:flex;flex-direction:column}
+.quick-name{margin-top:auto}
+.template-card{position:relative;overflow:hidden}
+.template-card::after{
+  content:"";position:absolute;right:-45px;bottom:-55px;width:150px;height:150px;border-radius:50%;
+  border:1px solid rgba(216,255,62,.10);box-shadow:0 0 0 28px rgba(216,255,62,.025),0 0 0 56px rgba(216,255,62,.018);
+  pointer-events:none;
+}
+.workspace-head{border-bottom:1px solid #202020;padding-bottom:26px}
+.workspace-head .actions{align-self:center}
+.editor-top{border-bottom:1px solid #202020;padding-bottom:22px}
+.project-tabs{scrollbar-width:thin}
+.builder{box-shadow:var(--shadow-soft)}
+.builder-side,.inspector{min-width:0}
+.canvas{scrollbar-width:thin}
+.site-preview{box-shadow:0 24px 90px rgba(0,0,0,.28)}
+.canvas-block:focus-within{outline:2px solid var(--editor-accent)}
+.primary:active,.secondary:active,.quick:active,.template-card:active{transform:translateY(0)}
+.primary[disabled],button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
+.toast{max-width:min(460px,calc(100vw - 32px));line-height:1.4}
+.settings-card,.settings-menu{box-shadow:var(--shadow-card)}
+.crm360-modal{box-shadow:0 30px 100px rgba(0,0,0,.5)}
+@media(max-width:700px){
+  .sidebar{overflow:hidden}
+  .sidebar nav{
+    display:flex!important;
+    align-items:stretch;
+    gap:4px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
+    padding:0 2px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .sidebar nav::-webkit-scrollbar{display:none}
+  .nav-item{
+    flex:0 0 76px;
+    min-width:76px;
+    width:76px;
+    justify-content:center;
+  }
+  .nav-item.active{box-shadow:inset 0 2px 0 var(--accent)}
+  .top-actions{gap:5px}
+  .profile{display:none}
+  .workspace-head .actions,.editor-actions{width:100%}
+  .workspace-head .actions button,.editor-actions button{flex:1}
+  .project-overview-grid,.grid{gap:10px}
+}
+@media(max-width:430px){
+  .sidebar{height:68px}
+  .nav-item{flex-basis:72px;min-width:72px;width:72px}
+  .content{padding-left:14px;padding-right:14px}
+  .topbar{padding-left:14px;padding-right:14px}
+  .eyebrow{font-size:8px}
+}

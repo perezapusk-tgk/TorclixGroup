@@ -219,7 +219,7 @@ async function hydrateProjects(){
     type:p.type==="website_mini_app"?"Website + Mini App":p.type==="mini_app"?"Mini App":"Website",
     status:p.status==="active"?"Live":"Draft",
     leads:0,
-    industry:String(p.industry||"Services").replace(/_/g," ").replace(/\b\w/g,m=>m.toUpperCase())
+    industry:String(p.industry||"Services").replace(/_/g," ").replace(/\b\w/g,m=>m.toUpperCase()),clientPortal:{status:p.client_portal_status||"draft",note:p.client_portal_note||"",updatedAt:p.client_portal_updated_at||null}
   }));
   const localById=new Map(projects.map(p=>[p.id,p]));
   projects=mapped.map(p=>({...localById.get(p.id),...p}));
@@ -228,6 +228,7 @@ async function hydrateProjects(){
   hydrated=true;
   if(!editorProject) render();
 }
+async function hydrateClientPortal(id:string){ const remote=await api('/api/projects/'+id+'/client-portal'); if(remote?.data){projects=projects.map((p:any)=>p.id===id?{...p,clientPortal:remote.data}:p);saveProjects();} }
 async function hydrateDocument(id:string){
   const remote=await api("/api/projects/"+id+"/document");
   if(remote?.data){
@@ -560,6 +561,7 @@ function bind(){
    saveSettings(); render();
  }));
  root.querySelectorAll<HTMLElement>("[data-action='save-project-settings']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject)return;const name=root.querySelector<HTMLInputElement>("#project-settings-name")?.value.trim();const slug=root.querySelector<HTMLInputElement>("#project-settings-slug")?.value.trim();if(!name){notify("Введите название проекта.");return;}const result=await api("/api/projects/"+editorProject,{method:"PATCH",body:JSON.stringify({name,slug})});if(result?.data){projects=projects.map((p:any)=>p.id===editorProject?{...p,...result.data}:p);await hydrateProjects();notify("Настройки проекта сохранены.");render();}else notify(result?.error||"Не удалось сохранить проект.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='save-client-portal']").forEach(el=>el.addEventListener("click",async()=>{if(!editorProject)return;const status=root.querySelector<HTMLSelectElement>("#client-portal-status")?.value||"draft";const note=root.querySelector<HTMLTextAreaElement>("#client-portal-note")?.value||"";const result=await api("/api/projects/"+editorProject+"/client-portal",{method:"PATCH",body:JSON.stringify({status,note})});if(result?.data){projects=projects.map((p:any)=>p.id===editorProject?{...p,clientPortal:result.data}:p);saveProjects();notify("Статус клиентского портала сохранён.");render();}else notify(result?.error||"Не удалось сохранить статус.");}));
  root.querySelectorAll<HTMLElement>("[data-action='invoices-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateInvoices();notify("Счета обновлены.");}));
  root.querySelectorAll<HTMLElement>("[data-action='invoice-create']").forEach(el=>el.addEventListener("click",()=>{invoiceModal=true;render();}));
  root.querySelectorAll<HTMLElement>("[data-close='invoice-modal']").forEach(el=>el.addEventListener("click",()=>{invoiceModal=false;render();}));

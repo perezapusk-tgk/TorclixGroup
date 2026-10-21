@@ -53,6 +53,7 @@ let crm: {clients:any[];leads:any[];bookings:any[]}={clients:[],leads:[],booking
 let session:any=null;
 let billing:any=null;
 let analytics:any=null;
+let audit:any[]=[];
 let catalogItems:any[]=[];
 let orders:any[]=[];
 let invoices:any[]=[];
@@ -187,8 +188,9 @@ async function hydrateSession(){
 }
 async function hydrateAnalytics(){
  if(!API_BASE) return;
- const result=await api("/api/analytics");
+ const [result,auditResult]=await Promise.all([api("/api/analytics"),api("/api/audit?limit=25")]);
  analytics=result?.data||null;
+ audit=Array.isArray(auditResult?.data)?auditResult.data:[];
  if(!editorProject) render();
 }
 async function hydrateWorkspace(){
@@ -402,6 +404,7 @@ function analyticsView(){
  <div class="project-kpis"><div class="stat"><div class="stat-label">Проекты</div><div class="stat-value">${a.projects.total}</div><small>${a.projects.live} опубликовано · ${a.projects.draft} черновиков</small></div><div class="stat"><div class="stat-label">Лиды</div><div class="stat-value">${a.leads.total}</div><small>Все источники</small></div><div class="stat"><div class="stat-label">Бронирования</div><div class="stat-value">${a.bookings.total}</div><small>Все проекты</small></div><div class="stat"><div class="stat-label">Клиенты</div><div class="stat-value">${a.clients.total}</div><small>CRM</small></div></div>
  <div class="project-overview-grid"><section class="card table-card"><div class="card-head"><div class="card-title">Лиды по статусам</div></div>${statusRows(a.leads.status)||'<div class="inspector-note">Пока нет лидов.</div>'}</section><section class="card table-card"><div class="card-head"><div class="card-title">Бронирования по статусам</div></div>${statusRows(a.bookings.status)||'<div class="inspector-note">Пока нет бронирований.</div>'}</section></div>
  <section class="card table-card"><div class="card-head"><div class="card-title">Результаты по проектам</div><div class="card-meta">${a.byProject.length}</div></div>${a.byProject.length?a.byProject.map((p:any)=>`<div class="workspace-row"><div class="project-name">${htmlEsc(p.name)}</div><div class="project-type">${htmlEsc(String(p.leads))} лидов · ${htmlEsc(String(p.bookings))} бронирований</div><span class="badge live">Проект</span></div>`).join(""):'<div class="inspector-note">Создайте первый проект, чтобы увидеть аналитику.</div>'}</section>
+ <section class="card table-card"><div class="card-head"><div class="card-title">Аудит действий</div><div class="card-meta">${audit.length}</div></div>${audit.length?audit.map((x:any)=>`<div class="workspace-row"><div class="project-name">${htmlEsc(x.action||"action")}</div><div class="project-type">${htmlEsc(x.actorEmail||x.actorId||"Система")} · ${htmlEsc(x.createdAt||"")}</div><span class="badge live">${htmlEsc(x.entityType||"")}</span></div>`).join(""):'<div class="inspector-note">Записей аудита пока нет.</div>'}</section>
  </div>`;
 }
 function crmView(title:string,items:string[][]){ const clientMode=title==="Clients"; return `<div class="eyebrow">03 / Бизнес‑операции</div><div class="workspace-head"><div><h2>${title==="Clients"?"Клиенты":title==="Leads"?"Заявки":"Бронирования"}</h2><p class="hero-copy">${clientMode?"Клиентская база студии и связанные проекты.":"Операционные данные из сайтов и Mini App TorclixGroup."}</p></div><button class="primary" data-action="crm-refresh">Обновить</button></div><section class="card table-card"><div class="card-head"><div class="card-title">${title==="Clients"?"Клиенты":title==="Leads"?"Заявки":"Бронирования"}</div><div class="card-meta">${items.length} записей</div></div>${items.length?items.map(r=>clientMode?`<button class="workspace-row" data-client-id="${htmlEsc(r[3])}" style="width:100%;text-align:left;background:transparent;border:0;color:inherit;cursor:pointer"><div class="project-name">${htmlEsc(r[0])}</div><div class="project-type">${htmlEsc(r[1])}</div><span class="badge live">${htmlEsc(r[2])}</span></button>`:`<div class="workspace-row"><div class="project-name">${r[0]}</div><div class="project-type">${r[1]}</div><span class="badge live">${r[2]}</span></div>`).join(""):`<div class="inspector-note">Пока нет записей. Подключите сайт или Mini App, чтобы начать собирать данные.</div>`}</section>`; }

@@ -262,7 +262,7 @@ async function hydrateDocument(id:string){
   }
 }
 
-function base64Url(buffer:ArrayBuffer){return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");}
+function base64Url(buffer:ArrayBuffer){return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
 async function sha256(value:string){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));}
 async function beginAuth0Login(){
  if(!AUTH0_DOMAIN||!AUTH0_CLIENT_ID){notify("Auth0 ещё не настроен.");return;}

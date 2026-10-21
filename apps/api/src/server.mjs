@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -139,6 +139,15 @@ const server=createServer(async(req,res)=>{
       if(!rateLimit(path+":"+ip,limit,60000)){json(res,429,{error:"Слишком много запросов. Попробуйте позже."});return;}
     }
     const publicPortal=path.match(/^\/public\/client-portal\/([^/]+)$/);
+    if(publicPortal&&req.method==="PATCH"){
+      const token=decodeURIComponent(publicPortal[1]);
+      if(!rateLimit("portal:"+token,12,60000)){json(res,429,{error:"Слишком много запросов. Попробуйте позже."});return;}
+      const input=await body(req); const status=String(input.status||"review");
+      if(!["review","approved","changes_requested"].includes(status)){json(res,400,{error:"Недопустимый статус портала"});return;}
+      const updated=await updatePublicClientPortal(token,status,input.note||"");
+      if(!updated){json(res,404,{error:"Портал клиента не найден"});return;}
+      json(res,200,{data:updated});return;
+    }
     if(publicPortal&&req.method==="GET"){
       const portal=await getPublicClientPortal(decodeURIComponent(publicPortal[1]));
       if(!portal){json(res,404,{error:"Портал клиента не найден"});return;}

@@ -15,7 +15,7 @@ export function checkoutCurrencyConfigured(plan,currency="EUR"){
 
 export function billingSnapshot(org,counts={}){
   const plan=plans[org.plan]||plans.starter;
-  return {plan:org.plan,price:plan.price,limits:plan,availableCurrencies:billingCurrencies(),usage:{projects:counts.projects||0,members:counts.members||1,storage_gb:counts.storage_gb||0,monthly_visitors:counts.monthly_visitors||0,leads:counts.leads||0}};
+  return {plan:org.plan,price:plan.price,limits:plan,availableCurrencies:billingCurrencies(),usage:{projects:counts.projects||0,members:counts.members||1,staff:counts.staff||0,storage_gb:counts.storage_gb||0,monthly_visitors:counts.monthly_visitors||0,leads:counts.leads||0}};
 }
 
 export async function createCheckoutSession({organizationId,plan,successUrl,cancelUrl,currency="EUR"}){

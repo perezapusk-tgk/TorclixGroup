@@ -220,7 +220,10 @@ const server=createServer(async(req,res)=>{
       const match=path.match(/^\/public\/projects\/([^/]+)\/telegram$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);const project=await getPublicProject(projectId);
       if(!project){json(res,404,{error:"Project not found"});return;}
       const integration=await getTelegramIntegration(project.organizationId,project.id);
-      const botUsername=integration?.enabled?String(integration.botUsername||"").trim():"";
+      let botUsername=integration?.enabled?String(integration.botUsername||"").trim():"";
+      if(!botUsername&&process.env.TELEGRAM_BOT_TOKEN){
+        try{const bot=await telegramApi("getMe",{},process.env.TELEGRAM_BOT_TOKEN);botUsername=String(bot?.username||"").trim();}catch{}
+      }
       json(res,200,{data:{enabled:!!botUsername,botUsername:botUsername||null,botUrl:botUsername?"https://t.me/"+botUsername:null,projectBotUrl:botUsername?"https://t.me/"+botUsername+"?start="+encodeURIComponent(project.id):null,miniAppUrl:telegramMiniAppUrl(project.id)}});return;
     }
     if(path.startsWith("/public/projects/")&&path.endsWith("/catalog")&&req.method==="GET"){

@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -326,7 +326,7 @@ const server=createServer(async(req,res)=>{
       const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
       const projectId=portal[1]; const project=projects.get(projectId)?.organizationId===auth.organization.id?projects.get(projectId):await getProject(projectId,auth.organization.id);
       if(!project){json(res,404,{error:"Project not found"});return;}
-      json(res,200,{data:await getClientPortal(projectId,auth.organization.id)});return;
+      const data=await getClientPortal(projectId,auth.organization.id);if(data&&!data.token&&process.env.DATABASE_URL){data.token=await ensureClientPortalToken(projectId,auth.organization.id);}if(data&&data.token){data.portalUrl=(process.env.API_PUBLIC_BASE||"")+"/portal/"+data.token;}json(res,200,{data});return;
     }
     if(portal&&(req.method==="PATCH"||req.method==="PUT")){
       const auth=await requirePermission(req,res,"projects:write");if(!auth)return;

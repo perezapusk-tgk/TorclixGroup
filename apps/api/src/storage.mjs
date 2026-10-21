@@ -354,10 +354,10 @@ export async function saveRecord(table,item){
     clients:[`insert into clients(id,organization_id,name,email,telegram_user_id,telegram_username) values($1::uuid,$2::uuid,$3,$4,$5::bigint,$6)
       on conflict(id) do update set name=excluded.name,email=excluded.email,telegram_user_id=excluded.telegram_user_id,telegram_username=excluded.telegram_username`,
       [item.id,item.organizationId,item.name,item.email||null,item.telegramUserId||null,item.telegramUsername||null]],
-    leads:[`insert into leads(id,organization_id,project_id,name,email,phone,source,status)
-      values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8)
-      on conflict(id) do update set status=excluded.status,name=excluded.name,email=excluded.email,phone=excluded.phone,source=excluded.source`,
-      [item.id,item.organizationId,item.projectId||null,item.name,item.email||null,item.phone||null,item.source||"website",item.status||"new"]],
+    leads:[`insert into leads(id,organization_id,project_id,name,email,phone,source,status,telegram_user_id,telegram_username)
+      values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9::bigint,$10)
+      on conflict(id) do update set status=excluded.status,name=excluded.name,email=excluded.email,phone=excluded.phone,source=excluded.source,telegram_user_id=excluded.telegram_user_id,telegram_username=excluded.telegram_username`,
+      [item.id,item.organizationId,item.projectId||null,item.name,item.email||null,item.phone||null,item.source||"website",item.status||"new",item.telegramUserId||null,item.telegramUsername||null]],
     bookings:[`insert into bookings(id,organization_id,project_id,customer_name,customer_email,customer_phone,telegram_user_id,telegram_username,start_at,service,status)
       values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7,$8,$9,$10,$11)
       on conflict(id) do update set status=excluded.status,customer_name=excluded.customer_name,

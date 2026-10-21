@@ -422,7 +422,7 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
         const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
         integration=await getTelegramIntegration(auth.organization.id,projectId);
       }
-      json(res,200,{data:{enabled,configured:enabled,miniAppUrl:integration?.projectId?telegramMiniAppUrl(integration.projectId):null,botUrl:integration?.botUsername?"https://t.me/"+integration.botUsername:null,botUsername:integration?.botUsername||null,requiresProject:true}});
+      json(res,200,{data:{enabled,configured:enabled,miniAppUrl:integration?.projectId?telegramMiniAppUrl(integration.projectId):null,botUrl:integration?.botUsername?"https://t.me/"+integration.botUsername:null,projectBotUrl:integration?.botUsername&&integration?.projectId?"https://t.me/"+integration.botUsername+"?start="+encodeURIComponent(integration.projectId):null,botUsername:integration?.botUsername||null,requiresProject:true}});
       return;
     }
     if(path==="/api/telegram/configure"&&req.method==="POST"){
@@ -458,10 +458,20 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
        if(a.length!==b.length||!crypto.timingSafeEqual(a,b)){res.writeHead(403);res.end();return;}
       const update=await body(req);
       const chatId=update?.message?.chat?.id;
-      if(chatId&&update.message?.text?.startsWith("/start")){
-        await telegramApi("sendMessage",{chat_id:chatId,text:"Добро пожаловать в TorclixGroup! Откройте мини‑приложение через кнопку меню бота, чтобы посмотреть сервис и оставить заявку."});
-      }else if(chatId&&update.message?.text==="/help"){
-        await telegramApi("sendMessage",{chat_id:chatId,text:"Используйте кнопку «Открыть мини‑приложение», чтобы открыть сервис прямо в Telegram."});
+      const textValue=String(update?.message?.text||"");
+      if(chatId&&textValue.startsWith("/start")){
+        const arg=textValue.replace(/^\/start\s*/,"").trim();
+        const requestedProjectId=arg||"";
+        const resolvedProjectId=requestedProjectId?resolvePublicProjectId(requestedProjectId):"";
+        const project=requestedProjectId?await getPublicProject(resolvedProjectId):null;
+        if(project){
+          const url=telegramMiniAppUrl(project.id);
+          await telegramApi("sendMessage",{chat_id:chatId,text:"Откройте мини‑приложение "+project.name+" прямо в Telegram.",reply_markup:{inline_keyboard:[[{text:"Открыть Mini App",web_app:{url}}]]}});
+        }else{
+          await telegramApi("sendMessage",{chat_id:chatId,text:"Добро пожаловать в TorclixGroup! Для запуска клиентского сервиса откройте ссылку проекта из Studio."});
+        }
+      }else if(chatId&&textValue==="/help"){
+        await telegramApi("sendMessage",{chat_id:chatId,text:"Используйте ссылку проекта или кнопку «Открыть Mini App», чтобы открыть сервис прямо в Telegram."});
       }
       json(res,200,{ok:true});return;
     }

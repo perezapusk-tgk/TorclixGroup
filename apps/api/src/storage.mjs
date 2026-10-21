@@ -245,6 +245,24 @@ export async function saveDocument(projectId,organizationId,document){
   return document;
 }
 
+
+export async function listStaff(fallback,organizationId){
+ const db=await getPool(); if(!db) return [...fallback.values()].filter(x=>x.organizationId===organizationId);
+ const {rows}=await db.query(`select id::text,name,role,email,phone,status,created_at as "createdAt",updated_at as "updatedAt" from staff_members where organization_id=$1::uuid order by created_at desc`,[organizationId]); return rows;
+}
+export async function saveStaff(member){
+ const db=await getPool(); if(!db) return member;
+ const {rows}=await db.query(`insert into staff_members(id,organization_id,name,role,email,phone,status) values($1::uuid,$2::uuid,$3,$4,$5,$6,$7) on conflict(id) do update set name=excluded.name,role=excluded.role,email=excluded.email,phone=excluded.phone,status=excluded.status,updated_at=now() returning id::text,name,role,email,phone,status,created_at as "createdAt",updated_at as "updatedAt"`,[member.id,member.organizationId,member.name,member.role||"staff",member.email||null,member.phone||null,member.status||"active"]); return rows[0];
+}
+export async function listCalendarEvents(fallback,organizationId,from,to){
+ const db=await getPool(); if(!db) return [...fallback.values()].filter(x=>x.organizationId===organizationId&&(!from||x.startAt>=from)&&(!to||x.startAt<=to));
+ const params=[organizationId]; let where="organization_id=$1::uuid"; if(from){params.push(from);where+=" and end_at >= $"+params.length;} if(to){params.push(to);where+=" and start_at <= $"+params.length;}
+ const {rows}=await db.query(`select id::text,project_id::text as "projectId",staff_id::text as "staffId",booking_id::text as "bookingId",title,start_at as "startAt",end_at as "endAt",status,notes,created_at as "createdAt" from calendar_events where ${where} order by start_at`,params); return rows;
+}
+export async function saveCalendarEvent(event){
+ const db=await getPool(); if(!db) return event;
+ const {rows}=await db.query(`insert into calendar_events(id,organization_id,project_id,staff_id,booking_id,title,start_at,end_at,status,notes) values($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6,$7,$8,$9,$10) on conflict(id) do update set project_id=excluded.project_id,staff_id=excluded.staff_id,booking_id=excluded.booking_id,title=excluded.title,start_at=excluded.start_at,end_at=excluded.end_at,status=excluded.status,notes=excluded.notes,updated_at=now() returning id::text,project_id::text as "projectId",staff_id::text as "staffId",booking_id::text as "bookingId",title,start_at as "startAt",end_at as "endAt",status,notes`,[event.id,event.organizationId,event.projectId||null,event.staffId||null,event.bookingId||null,event.title,event.startAt,event.endAt,event.status||"scheduled",event.notes||null]); return rows[0];
+}
 export async function listRecords(table,fallback,organizationId){
   const db=await getPool();
   if(!db) return [...fallback.values()].filter(item=>!organizationId||item.organizationId===organizationId);

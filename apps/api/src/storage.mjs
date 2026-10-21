@@ -1,4 +1,7 @@
 import { randomUUID,createHash } from "node:crypto";
+import { readdir,readFile } from "node:fs/promises";
+import { dirname,resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 let pool = null;
 let initialized = false;
@@ -27,10 +30,27 @@ export async function initStorage(){
   if(initialized) return;
   const db=await getPool();
   if(!db){ initialized=true; return; }
-  // Schema creation is migration-owned. API startup only verifies that the
-  // canonical schema is present; run `pnpm --filter @torclix/api migrate`
-  // before starting an environment backed by PostgreSQL.
-  await db.query("select 1 from organizations limit 1");
+  const migrationsDir=resolve(dirname(fileURLToPath(import.meta.url)),"../../../packages/database/migrations");
+  await db.query(`create table if not exists torclix_schema_migrations(
+    id text primary key,
+    applied_at timestamptz not null default now()
+  )`);
+  const files=(await readdir(migrationsDir)).filter(name=>/^\\d+_.+\\.sql$/.test(name)).sort();
+  for(const file of files){
+    const applied=await db.query("select 1 from torclix_schema_migrations where id=$1",[file]);
+    if(applied.rowCount) continue;
+    const sql=await readFile(resolve(migrationsDir,file),"utf8");
+    const client=await db.connect();
+    try{
+      await client.query("begin");
+      await client.query(sql);
+      await client.query("insert into torclix_schema_migrations(id) values($1)",[file]);
+      await client.query("commit");
+    }catch(error){
+      await client.query("rollback");
+      throw new Error(`Migration ${file} failed: ${error instanceof Error?error.message:String(error)}`);
+    }finally{client.release();}
+  }
   initialized=true;
 }
 

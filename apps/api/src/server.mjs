@@ -454,11 +454,17 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.name){json(res,400,{error:"name is required"});return;}
+      const source=String(input.source||"published_site");
+      let telegramUser=null;
+      if(source==="telegram_mini_app"){
+        telegramUser=verifyTelegramInitData(String(input.initData||input.tg_init||""),process.env.TELEGRAM_BOT_TOKEN||"");
+        if(!telegramUser){json(res,401,{error:"Telegram авторизация недействительна"});return;}
+      }
       const idem=requestKey(req);
        const cacheKey=idem?project.id+":lead:"+idem:null;
        const cached=cacheKey?idempotencyCache.get(cacheKey):null;
        if(cached){json(res,cached.status,cached.body);return;}
-       const lead={id:newId(),organizationId:project.organizationId,projectId:project.id,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source:String(input.source||"published_site"),status:"new",createdAt:new Date().toISOString()};
+       const lead={id:newId(),organizationId:project.organizationId,projectId:project.id,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source,status:"new",telegramUserId:telegramUser?.id,telegramUsername:telegramUser?.username,createdAt:new Date().toISOString()};
       await saveRecord("leads",lead);if(!process.env.DATABASE_URL)leads.set(lead.id,lead);
       const response={data:{id:lead.id,received:true}};if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }
@@ -514,8 +520,8 @@ const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
         listRecords("bookings",bookings,auth.organization.id)
       ]);
       const linkedProjects=projectRows.filter(p=>p.clientId===client.id);
-      const linkedLeads=leadRows.filter(x=>x.email&&client.email&&x.email.toLowerCase()===client.email.toLowerCase());
-      const linkedBookings=bookingRows.filter(x=>x.customerEmail&&client.email&&x.customerEmail.toLowerCase()===client.email.toLowerCase());
+      const linkedLeads=client.telegramUserId?leadRows.filter(x=>String(x.telegramUserId||"")===String(client.telegramUserId)):[];
+      const linkedBookings=client.telegramUserId?bookingRows.filter(x=>String(x.telegramUserId||"")===String(client.telegramUserId)):[];
       json(res,200,{data:{client,projects:linkedProjects,leads:linkedLeads,bookings:linkedBookings,summary:{projects:linkedProjects.length,leads:linkedLeads.length,bookings:linkedBookings.length}}});
       return;
     }

@@ -198,7 +198,7 @@ const server=createServer(async(req,res)=>{
       const input=await body(req);const plan=String(input.plan||"");
       if(!plans[plan]){json(res,400,{error:"Invalid plan"});return;}
       if(!stripeConfigured()){json(res,503,{error:"Платёжный провайдер пока не настроен",configured:false});return;}
-      const origin=String(input.origin||process.env.WEB_PUBLIC_BASE||"").replace(/\\/$/,"");
+      const origin=String(input.origin||process.env.WEB_PUBLIC_BASE||"").replace(/\/$/,"");
       if(!origin){json(res,400,{error:"origin is required"});return;}
       const result=await createCheckoutSession({organizationId:auth.organization.id,plan,successUrl:origin+"?billing=success",cancelUrl:origin+"?billing=cancelled"});
       if(result.error){json(res,502,{error:result.error,configured:result.configured});return;}

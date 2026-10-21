@@ -143,6 +143,13 @@ export async function getMembershipRole(userId,organizationId){
   return rows[0]?.role||null;
 }
 
+export async function setOrganizationPlan(organizationId,plan){
+  const db=await getPool();
+  if(!db) return {id:organizationId,plan,source:"memory"};
+  const {rows}=await db.query("update organizations set plan=$2,updated_at=now() where id=$1 returning id::text as id,plan",[organizationId,plan]);
+  return rows[0]?{...rows[0],source:"internal"}:null;
+}
+
 export async function listProjects(fallback,organizationId){
   const db=await getPool();
   if(!db) return [...fallback.values()].filter(project=>!organizationId||project.organizationId===organizationId);

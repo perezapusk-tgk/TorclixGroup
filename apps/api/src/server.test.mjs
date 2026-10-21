@@ -128,6 +128,13 @@ test("public analytics event endpoint accepts a valid pageview",async()=>{
   assert.equal(event.status,202);
 });
 
+test("domain creation rejects local and IP hostnames",async()=>{
+  for(const hostname of ["localhost","app.local","127.0.0.1"]){
+    const response=await fetch(base+"/api/domains",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({hostname})});
+    assert.equal(response.status,400);
+  }
+});
+
 test("calendar event rejects a project outside the demo organization",async()=>{
   const response=await fetch(base+"/api/calendar/events",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({title:"Isolation Test",startAt:"2030-01-01T12:00:00.000Z",endAt:"2030-01-01T13:00:00.000Z",projectId:"missing-foreign-project"})});
   assert.equal(response.status,404);

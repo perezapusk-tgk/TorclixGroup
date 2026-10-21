@@ -257,14 +257,15 @@ export async function saveOrder(order,items){
     await client.query("begin");
     let customerId=order.customerId||null;
     if(!customerId&&order.telegramUserId){
-      const existing=await client.query(`select id from clients where organization_id=$1::uuid and telegram_user_id=$2::bigint limit 1`,[order.organizationId,order.telegramUserId]);
-      if(existing.rowCount){
-        customerId=existing.rows[0].id;
-        await client.query(`update clients set name=$2,email=coalesce($3,email),telegram_username=coalesce($4,telegram_username) where id=$1::uuid`,[customerId,order.customerName,order.customerEmail||null,order.telegramUsername||null]);
-      }else{
-        const created=await client.query(`insert into clients(id,organization_id,name,email,telegram_user_id,telegram_username) values($1::uuid,$2::uuid,$3,$4,$5::bigint,$6) returning id`,[newId(),order.organizationId,order.customerName,order.customerEmail||null,order.telegramUserId,order.telegramUsername||null]);
-        customerId=created.rows[0].id;
-      }
+      const upserted=await client.query(`insert into clients(id,organization_id,name,email,telegram_user_id,telegram_username)
+        values($1::uuid,$2::uuid,$3,$4,$5::bigint,$6)
+        on conflict (organization_id,telegram_user_id) where telegram_user_id is not null
+        do update set name=excluded.name,
+          email=coalesce(excluded.email,clients.email),
+          telegram_username=coalesce(excluded.telegram_username,clients.telegram_username)
+        returning id`,
+        [newId(),order.organizationId,order.customerName,order.customerEmail||null,order.telegramUserId,order.telegramUsername||null]);
+      customerId=upserted.rows[0].id;
     }
     await client.query(`insert into orders(id,organization_id,project_id,customer_id,customer_name,customer_email,customer_phone,status,currency,total,source)
       values($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10::numeric,$11)`,

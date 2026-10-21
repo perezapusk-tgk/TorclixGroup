@@ -19,8 +19,8 @@ const templates=[["Restaurant / Noir","Website + Mini App","Меню · стол
 
 let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")||[];
 let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", selectedIndustry="wash", wizardStep=1, toast="", editorTab="Design", selectedBlock:string|null=null, projectViewTab="overview", mobileMenu=false;
-type StudioSettings={language:string;font:string;accent:string;theme:string;density:string;radius:string;animations:boolean;compactNav:boolean;emailNotifications:boolean;leadNotifications:boolean;bookingNotifications:boolean};
-let studioSettings:StudioSettings=JSON.parse(localStorage.getItem("tg-settings")||"null")||{language:"ru",font:"Inter",accent:"#d8ff3e",theme:"dark",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};
+type StudioSettings={workspaceName:string;brandName:string;language:string;font:string;accent:string;theme:string;density:string;radius:string;animations:boolean;compactNav:boolean;emailNotifications:boolean;leadNotifications:boolean;bookingNotifications:boolean};
+let studioSettings:StudioSettings=JSON.parse(localStorage.getItem("tg-settings")||"null")||{workspaceName:"Perezapusk Studio",brandName:"TorclixGroup",language:"ru",font:"Inter",accent:"#2f6bea",theme:"light",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};
 function htmlEsc(value:any){return String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"} as Record<string,string>)[c]||c)}
 function saveSettings(){localStorage.setItem("tg-settings",JSON.stringify(studioSettings));applyStudioSettings();}
 function applyStudioSettings(){
@@ -258,9 +258,9 @@ function render(){
  const project=projects.find(p=>p.id===editorProject);
  root.innerHTML=`
  <div class="app"><div class="mobile-overlay ${mobileMenu?"open":""}" data-action="mobile-close"></div><aside class="sidebar ${mobileMenu?"mobile-open":""}">
-  <div class="brand"><div class="brand-mark">T</div><div><div class="brand-name">TORCLIXGROUP</div><span class="brand-sub">Studio OS / 02</span></div></div>
+  <div class="brand"><div class="brand-mark">T</div><div><div class="brand-name">${htmlEsc(studioSettings.brandName||"TorclixGroup").toUpperCase()}</div><span class="brand-sub">Studio OS / 02</span></div></div>
   <nav><div class="nav-label">Workspace</div>${nav.map(([icon,label,key])=>`<button class="nav-item ${active===key&&!editorProject?"active":""}" data-nav="${key}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`).join("")}</nav>
-  <div class="sidebar-bottom"><div class="workspace"><div class="avatar">PG</div><div><div class="workspace-name">${session?.organization?.name||"Perezapusk Studio"}</div><div class="workspace-role">${session?.user?.name||"Studio Owner"} · ${session?.organization?.plan||"Pro"}</div></div></div></div>
+  <div class="sidebar-bottom"><div class="workspace"><div class="avatar">PG</div><div><div class="workspace-name">${htmlEsc(studioSettings.workspaceName||session?.organization?.name||"Perezapusk Studio")}</div><div class="workspace-role">${session?.user?.name||"Studio Owner"} · ${session?.organization?.plan||"Pro"}</div></div></div></div>
  </aside>
  <main class="main"><header class="topbar"><div class="topbar-left"><button class="icon-btn mobile-menu-toggle" aria-label="Меню" data-action="mobile-menu">☰</button><div class="top-logo"><span class="top-logo-mark">T</span><span><b>TorclixGroup</b><small>Studio OS</small></span></div></div><div class="top-mode"><span class="mode-icon">▦</span><span>Studio</span><strong>Активен</strong><span class="mode-arrow">⌄</span></div><div class="top-actions"><button class="icon-btn" data-action="back" aria-label="Назад">←</button><button class="icon-btn top-search" aria-label="Поиск">⌕</button><button class="icon-btn" aria-label="Уведомления">♧</button><div class="avatar">PG</div></div></header>
  <section class="content">${editorProject&&project?editor(project):active==="Overview"?overview():active==="Projects"?workspace("Projects"):active==="Templates"?templateView():active==="Clients & Leads"?inboxView():active==="Analytics"?analyticsView():studioStructureView(active)||workspace(active)}</section></main><nav class="mobile-bottom-nav">${[["⌂","Обзор","Overview"],["▦","Проекты","Projects"],["♙","Inbox","Clients & Leads"],["↗","Аналитика","Analytics"],["＋","Создать","__new__"]].map(([icon,label,key])=>`<button class="${active===key?"active":""}" data-mobile-nav="${key}"><span>${icon}</span><small>${label}</small></button>`).join("")}</nav></div>
@@ -336,8 +336,8 @@ function settingsView(){
   <div class="settings-content">
    <section class="settings-card" id="settings-general"><div class="settings-card-head"><div><h3>Рабочее пространство</h3><p>Основные параметры студии и бренда.</p></div><span class="settings-badge">PRO</span></div>
     <div class="settings-grid">
-      <label class="settings-field"><span>Название рабочего пространства</span><input value="${session?.organization?.name||"Perezapusk Studio"}" data-setting="workspace-name"/></label>
-      <label class="settings-field"><span>Название бренда</span><input value="TorclixGroup" data-setting="brand-name"/></label>
+      <label class="settings-field"><span>Название рабочего пространства</span><input value="${htmlEsc(studioSettings.workspaceName||session?.organization?.name||"Perezapusk Studio")}" data-setting="workspaceName"/></label>
+      <label class="settings-field"><span>Название бренда</span><input value="${htmlEsc(studioSettings.brandName||"TorclixGroup")}" data-setting="brandName"/></label>
       <label class="settings-field"><span>Язык</span><select data-setting="language"><option value="ru" selected>Русский</option></select></label>
       <label class="settings-field"><span>Шрифт</span><select data-setting="font"><option>Inter</option><option>Manrope</option><option>system-ui</option><option>Arial</option></select></label>
     </div>
@@ -535,7 +535,9 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='mobile-close']").forEach(el=>el.addEventListener("click",()=>{mobileMenu=false;render();}));
  root.querySelectorAll<HTMLElement>("[data-setting]").forEach(el=>el.addEventListener("change",()=>{
    const key=el.dataset.setting as keyof StudioSettings;
-   if(key==="language") studioSettings.language=(el as HTMLSelectElement).value;
+   if(key==="workspaceName") studioSettings.workspaceName=(el as HTMLInputElement).value.trim()||"Perezapusk Studio";
+   else if(key==="brandName") studioSettings.brandName=(el as HTMLInputElement).value.trim()||"TorclixGroup";
+   else if(key==="language") studioSettings.language=(el as HTMLSelectElement).value;
    else if(key==="font") studioSettings.font=(el as HTMLSelectElement).value;
    else if(key==="accent") studioSettings.accent=(el as HTMLInputElement).value;
    else if(key==="theme") studioSettings.theme=(el as HTMLSelectElement).value;

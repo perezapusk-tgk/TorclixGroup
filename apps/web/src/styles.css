@@ -1020,3 +1020,18 @@ select,input,textarea,.field input,.field select{background:#fff!important;color
  .mobile-bottom-nav button:last-child{background:#2f6bea;color:#fff}
  .content{padding-bottom:92px}
 }
+
+
+/* Final compact UI pass */
+@media(max-width:700px){
+ .mobile-bottom-nav{display:none!important}
+ .content{padding-bottom:24px}
+}
+body,.app-shell,.content,.sidebar,.topbar,.dashboard-page{font-size:13px}
+.dashboard-page h1{font-size:28px}.dashboard-page h2{font-size:20px}.dashboard-page h3{font-size:15px}
+.dashboard-page p,.hero-copy{font-size:11px}
+.metric-card strong{font-size:25px}.metric-card span,.metric-card small{font-size:9px}
+.nav-item{font-size:11px}.nav-icon{font-size:13px}
+.button,.primary,.secondary,.ghost,button{font-size:11px}
+.table,.project-row,.inbox-row,.performance-row{font-size:11px}
+.workspace-head{margin-bottom:18px}

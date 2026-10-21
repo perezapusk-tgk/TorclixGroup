@@ -337,12 +337,21 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:{published:false}});
       return;
     }
+    const published=path.match(/^\/published\/([^/]+)$/);
+    if(published&&req.method==="GET"){
+      const requestedProjectId=published[1];
+      const project=projects.get(requestedProjectId)||await getPublicProject(resolvePublicProjectId(requestedProjectId));
+      if(!project){html(res,404,"<h1>Опубликованный проект не найден</h1>");return;}
+      const document=await getPublishedDocument(project.id)||(isDemoProject(project.id)?defaultDocument(project.id):null);
+      if(!document){html(res,404,"<h1>Опубликованный проект ещё не опубликован</h1>");return;}
+      html(res,200,renderPreview(project,document));return;
+    }
     const miniApp=path.match(/^\/miniapp\/([^/]+)$/);
     if(miniApp&&req.method==="GET"){
       const requestedProjectId=miniApp[1];
       const projectId=resolvePublicProjectId(requestedProjectId);
       const demoProject=projects.get(requestedProjectId)||null;
-      const project=await getPublicProject(projectId);
+      const project=demoProject||await getPublicProject(projectId);
       if(!project){html(res,404,"<h1>Мини‑приложение не найдено</h1>");return;}
       const document=await getPublishedDocument(project.id) || (isDemoProject(project.id)?defaultDocument(project.id):null);
       if(!document){html(res,404,"<h1>Мини‑приложение ещё не опубликовано</h1>");return;}

@@ -2,3 +2,4 @@ export const plans={starter:{price:49,projects:5,members:2,storage_gb:5,monthly_
 export function billingSnapshot(org,counts={}){const plan=plans[org.plan]||plans.pro;return {plan:org.plan,price:plan.price,limits:plan,usage:{projects:counts.projects||0,members:counts.members||1,storage_gb:counts.storage_gb||0,monthly_visitors:counts.monthly_visitors||0,leads:counts.leads||0}};}
 
 export async function changePlan(organizationId,plan){const allowed=new Set(["starter","pro","scale"]);if(!allowed.has(plan))throw new Error("Invalid plan");const p=db();if(!p)return {plan,price:plans[plan].price,source:"memory"};const r=await p.query("update organizations set plan=$2 where id=$1 returning id,plan",[organizationId,plan]);if(!r.rowCount)return null;return {plan:r.rows[0].plan,price:plans[r.rows[0].plan]?.price||0,source:"internal"};}
+

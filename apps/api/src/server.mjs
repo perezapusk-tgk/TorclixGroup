@@ -9,6 +9,7 @@ import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
 import { billingSnapshot } from "./billing.mjs";
 import { configureTelegramBot, telegramApi, telegramMiniAppUrl, verifyTelegramInitData } from "./telegram.mjs";
+import { updateOrderStatusWithStockRelease } from "./order-status.mjs";
 
 const port=Number(process.env.PORT||4000);
 const rateBuckets=new Map();
@@ -210,8 +211,25 @@ const server=createServer(async(req,res)=>{
       const auth=await requirePermission(req,res,"billing:read");if(!auth)return;
       const input=await body(req);const status=String(input.status||"");
       if(!["pending","paid","processing","completed","cancelled","refunded"].includes(status)){json(res,400,{error:"Invalid order status"});return;}
-      const updated=await updateOrderStatus(orderId[1],auth.organization.id,status);
-      if(!updated){const local=orders.get(orderId[1]);if(!local||local.organizationId!==auth.organization.id){json(res,404,{error:"Order not found"});return;}local.status=status;json(res,200,{data:local});return;}
+      const updated=await updateOrderStatusWithStockRelease(orderId[1],auth.organization.id,status,async()=>{
+        const saved=await updateOrderStatus(orderId[1],auth.organization.id,status);
+        if(saved) return saved;
+        const local=orders.get(orderId[1]);
+        if(!local||local.organizationId!==auth.organization.id) return null;
+        const wasReleased=local.stockReleasedAt;
+        if((status==="cancelled"||status==="refunded")&&!wasReleased){
+          const items=Array.isArray(local.items)?local.items:[];
+          for(const item of items){
+            const catalog=catalogItems.get(item.catalogItemId);
+            if(catalog&&catalog.stock!==null) catalog.stock=Number(catalog.stock)+Number(item.quantity||0);
+          }
+          local.stockReleasedAt=new Date().toISOString();
+        }
+        local.status=status;
+        orders.set(local.id,local);
+        return local;
+      });
+      if(!updated){json(res,404,{error:"Order not found"});return;}
       json(res,200,{data:updated});return;
     }
 

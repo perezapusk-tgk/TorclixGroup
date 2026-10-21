@@ -57,5 +57,5 @@ export async function configureTelegramBot(projectId) {
   await telegramApi("setChatMenuButton", {
     menu_button: {type:"web_app", text:"Открыть мини‑приложение", web_app:{url:telegramMiniAppUrl(projectId)}}
   }, token);
-  return {enabled:true, id:bot.id || null, username:bot.username || null, botUrl:bot.username ? `https://t.me/${bot.username}` : null, webhook, secret};
+  return {enabled:true, id:bot.id || null, username:bot.username || null, botUrl:bot.username ? `https://t.me/${bot.username}` : null, projectBotUrl:bot.username ? `https://t.me/${bot.username}?start=${encodeURIComponent(projectId)}` : null, webhook, secret};
 }

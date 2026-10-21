@@ -1003,3 +1003,20 @@ select,input,textarea,.field input,.field select{background:#fff!important;color
 .analytics-performance{margin-bottom:14px}.analytics-bars{padding:18px 22px}
 .analytics-bar-row{display:grid;grid-template-columns:120px 1fr 40px;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid #eef0f3;font-size:11px}
 .analytics-bar-row:last-child{border-bottom:0}.analytics-bar-row>div{height:8px;background:#eef1f5;border-radius:99px;overflow:hidden}.analytics-bar-row i{display:block;height:100%;background:#2f6bea;border-radius:99px}.analytics-bar-row b{text-align:right}
+
+
+/* Mobile quick navigation */
+.mobile-bottom-nav{display:none}
+@media(max-width:700px){
+ .mobile-bottom-nav{
+  position:fixed;z-index:80;left:10px;right:10px;bottom:10px;height:64px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:5px;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(18px);
+  border:1px solid #dfe2e8;border-radius:17px;box-shadow:0 12px 36px rgba(20,28,45,.14)
+ }
+ .mobile-bottom-nav button{border:0;background:transparent;border-radius:12px;color:#7d838d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:16px}
+ .mobile-bottom-nav button small{font-size:8px;font-weight:700}
+ .mobile-bottom-nav button.active{background:#eaf1ff;color:#2f6bea}
+ .mobile-bottom-nav button:last-child{background:#2f6bea;color:#fff}
+ .content{padding-bottom:92px}
+}

@@ -77,6 +77,29 @@ test("published project health and catalog endpoints are usable",async()=>{
   assert.ok(catalogBody.data.length>=1);
 });
 
+test("published site CTA creates a public lead",async()=>{
+  const response=await fetch(base+"/public/projects/p1/leads",{
+    method:"POST",
+    headers:{"content-type":"application/json","idempotency-key":"lead-test-12345678"},
+    body:JSON.stringify({name:"Site Test",email:"site@example.com",phone:"+358000000",source:"published_site"})
+  });
+  const body=await response.json();
+  assert.equal(response.status,201);
+  assert.equal(body.data.received,true);
+});
+
+test("published site booking CTA creates a booking",async()=>{
+  const response=await fetch(base+"/public/projects/p1/bookings",{
+    method:"POST",
+    headers:{"content-type":"application/json","idempotency-key":"booking-test-12345678"},
+    body:JSON.stringify({customerName:"Booking Test",customerEmail:"booking@example.com",startAt:"2030-01-01T12:00:00.000Z",service:"Тестовая запись"})
+  });
+  const body=await response.json();
+  assert.equal(response.status,201);
+  assert.equal(body.data.received,true);
+  assert.equal(body.data.status,"pending");
+});
+
 test("public analytics event endpoint accepts a valid pageview",async()=>{
   const event=await fetch(base+"/public/projects/p1/events",{
     method:"POST",

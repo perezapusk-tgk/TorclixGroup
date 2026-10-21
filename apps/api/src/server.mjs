@@ -526,7 +526,6 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     if(publicCatalog&&req.method==="GET"){
       const requestedProjectId=publicCatalog[1];
       const resolvedProjectId=resolvePublicProjectId(requestedProjectId);
-      if(isDemoProject(requestedProjectId)){json(res,200,{data:demoCatalog(requestedProjectId)});return;}
       const project=await getPublicProject(resolvedProjectId);
       if(!project){json(res,404,{error:"Опубликованный проект не найден"});return;}
       json(res,200,{data:await listCatalogItems(catalogItems,project.organizationId,resolvedProjectId)});return;

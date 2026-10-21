@@ -230,6 +230,16 @@ export async function saveOrder(order,items){
       values($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10::numeric,$11)`,
       [order.id,order.organizationId,order.projectId,order.customerId||null,order.customerName,order.customerEmail||null,order.customerPhone||null,order.status,order.currency,order.total,order.source]);
     for(const item of items){
+      if(item.catalogItemId){
+        const stock=await client.query(`update catalog_items
+          set stock=stock-$2,updated_at=now()
+          where id=$1::uuid and stock is not null and stock >= $2
+          returning id`,[item.catalogItemId,item.quantity]);
+        if(stock.rowCount===0){
+          const unlimited=await client.query(`select id from catalog_items where id=$1::uuid and stock is null`,[item.catalogItemId]);
+          if(unlimited.rowCount===0) throw new Error("INSUFFICIENT_STOCK");
+        }
+      }
       await client.query(`insert into order_items(id,order_id,catalog_item_id,name,quantity,unit_price,total)
         values($1::uuid,$2::uuid,$3::uuid,$4,$5,$6::numeric,$7::numeric)`,
         [item.id,order.id,item.catalogItemId||null,item.name,item.quantity,item.unitPrice,item.total]);

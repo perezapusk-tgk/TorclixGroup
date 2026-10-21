@@ -38,13 +38,17 @@ function headers(extra={}){return {
   "content-type":"application/json; charset=utf-8",
   ...(process.env.CORS_ORIGIN?{"access-control-allow-origin":process.env.CORS_ORIGIN}:{}),
   "vary":"Origin",
+  "x-content-type-options":"nosniff",
+  "x-frame-options":"DENY",
+  "referrer-policy":"strict-origin-when-cross-origin",
+  ...(process.env.NODE_ENV==="production"?{"strict-transport-security":"max-age=31536000; includeSubDomains"}:{}),
   "access-control-allow-methods":"GET,POST,PUT,PATCH,OPTIONS",
   "access-control-allow-headers":"content-type,authorization,x-torclix-user,x-torclix-organization,x-torclix-trial,idempotency-key,x-telegram-bot-api-secret-token",
   ...extra
 };}
 function json(res,status,data){res.writeHead(status,headers());res.end(JSON.stringify(data));}
 function html(res,status,body){res.writeHead(status,{"content-type":"text/html; charset=utf-8"});res.end(body);}
-async function body(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>1024*1024) throw new Error("Request body too large");}return raw?JSON.parse(raw):{};}
+async function body(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>1024*1024){const error=new Error("Request body too large");error.status=413;throw error;}}if(!raw)return {};try{return JSON.parse(raw);}catch{const error=new Error("Invalid JSON body");error.status=400;throw error;}}
 function esc(value=""){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function defaultDocument(projectId){return {projectId,activePage:"home",accent:"#d8ff3e",miniApp:{modules:["home","catalog","booking","profile","notifications"],navigation:["home","catalog","booking","profile","notifications"],theme:{accent:"#d8ff3e",mode:"dark"}},pages:[{id:"home",name:"Главная",blocks:[
   {id:"b1",type:"Hero",title:"Ваш бизнес — в одном цифровом пространстве",body:"Сайт, заявки, записи и мини‑приложение Telegram управляются из одной студии TorclixGroup."},
@@ -555,7 +559,7 @@ const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
     if(path==="/api/bookings"&&req.method==="POST"){const auth=await requirePermission(req,res,"bookings:write");if(!auth)return;const input=await body(req);if(!input.startAt){json(res,400,{error:"startAt is required"});return;}const projectId=String(input.projectId||"").trim();const project=projects.get(projectId);const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);if(!owned){json(res,400,{error:"A valid projectId is required"});return;}const booking={id:newId(),organizationId:auth.organization.id,projectId,customerName:String(input.customerName||"Guest"),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);json(res,201,{data:booking});return;}
     if(path==="/api/templates"&&req.method==="GET"){json(res,200,{data:["restaurant-noir","beauty-atelier","fitness-forma","medical-northline","real-estate-north","services-studio"]});return;}
     json(res,404,{error:"Not found"});
-  }catch(error){console.error(error);json(res,500,{error:"Internal server error"});}
+  }catch(error){console.error(error);json(res,Number(error?.status)||500,{error:Number(error?.status)===400?"Invalid JSON body":Number(error?.status)===413?"Request body too large":"Internal server error"});}
 });
 
 await initStorage();

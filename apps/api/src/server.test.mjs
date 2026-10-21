@@ -124,6 +124,18 @@ test("billing endpoint exposes plan limits and live usage",async()=>{
   assert.equal(typeof body.data.usage.leads,"number");
 });
 
+test("team creation enforces the billing member limit",async()=>{
+  for(let i=0;i<2;i++){
+    const response=await fetch(base+"/api/staff",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Staff Limit "+i,role:"manager"})});
+    assert.equal(response.status,201);
+  }
+  const blocked=await fetch(base+"/api/staff",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Staff Limit blocked",role:"manager"})});
+  const body=await blocked.json();
+  assert.equal(blocked.status,409);
+  assert.equal(body.error,"STAFF_LIMIT_REACHED");
+  assert.equal(body.limit,2);
+});
+
 test("project creation enforces the starter project limit",async()=>{
   for(let i=0;i<3;i++){
     const response=await fetch(base+"/api/projects",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Limit Test "+i,type:"website",industry:"services"})});

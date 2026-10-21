@@ -11,6 +11,7 @@ import { billingSnapshot } from "./billing.mjs";
 import { configureTelegramBot, telegramApi, telegramMiniAppUrl, verifyTelegramInitData } from "./telegram.mjs";
 import { updateOrderStatusWithStockRelease } from "./order-status.mjs";
 import { listInvoices,createInvoice,updateInvoiceStatus } from "./invoices.mjs";
+import { recordEvent,analyticsSummary,recordAudit,listAudit } from "./analytics.mjs";
 
 const port=Number(process.env.PORT||4000);
 const rateBuckets=new Map();
@@ -275,6 +276,7 @@ const server=createServer(async(req,res)=>{
     }
 
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}
+    if(path==="/api/audit"&&req.method==="GET"){const auth=await requirePermission(req,res,"audit:read");if(!auth)return;const q=new URL(req.url||"/","http://localhost").searchParams;json(res,200,{data:await listAudit(auth.organization.id,q.get("limit"))});return;}
     if(path==="/api/analytics"&&req.method==="GET"){
       const auth=await requirePermission(req,res,"analytics:read");if(!auth)return;
       const projectRows=await listProjects(projects,auth.organization.id);
@@ -289,7 +291,8 @@ const server=createServer(async(req,res)=>{
         projectId:project.id,name:project.name,leads:leadRows.filter(x=>x.projectId===project.id).length,
         bookings:bookingRows.filter(x=>x.projectId===project.id).length
       }));
-      json(res,200,{data:{projects:{total:projectRows.length,live:liveProjects,draft:draftProjects},leads:{total:leadRows.length,status:leadStatus},bookings:{total:bookingRows.length,status:bookingStatus},clients:{total:clientRows.length},byProject,generatedAt:new Date().toISOString()}});
+      const traffic=await analyticsSummary(auth.organization.id,{days:30});
+      json(res,200,{data:{projects:{total:projectRows.length,live:liveProjects,draft:draftProjects},leads:{total:leadRows.length,status:leadStatus},bookings:{total:bookingRows.length,status:bookingStatus},clients:{total:clientRows.length},byProject,traffic,generatedAt:new Date().toISOString()}});
       return;
     }
 
@@ -338,6 +341,7 @@ const server=createServer(async(req,res)=>{
       if(!process.env.DATABASE_URL) projects.set(project.id,project);
       if(process.env.DATABASE_URL) await saveProject({...project,status:"active"});
       const response={data:{project:{...project,status:"active"},published:true}};
+      await recordAudit(auth,"project.publish","project",projectId,{name:project.name});
       if(idem) idempotencyCache.set(auth.user.id+":"+projectId+":"+idem,{status:200,body:response});
       json(res,200,response);
       return;
@@ -522,6 +526,15 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     }
     const preview=path.match(/^\/preview\/([^/]+)$/);
     if(preview&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;const memory=projects.get(preview[1]);const project=memory?.organizationId===auth.organization.id?memory:await getProject(preview[1],auth.organization.id);if(!project){html(res,404,"<h1>Project not found</h1>");return;}const doc=await getDocument(project.id,auth.organization.id,()=>defaultDocument(project.id));html(res,200,renderPreview(project,doc));return;}
+    const publicEvent=path.match(/^\/public\/projects\/([^/]+)\/events$/);
+    if(publicEvent&&req.method==="POST"){
+      const resolvedProjectId=resolvePublicProjectId(publicEvent[1]);
+      const project=await getPublicProject(resolvedProjectId);
+      if(!project){json(res,404,{error:"Опубликованный проект не найден"});return;}
+      const saved=await recordEvent(project.organizationId,resolvedProjectId,await body(req));
+      if(!saved){json(res,400,{error:"Invalid event"});return;}
+      json(res,202,{ok:true});return;
+    }
     const publicCatalog=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);
     if(publicCatalog&&req.method==="GET"){
       const requestedProjectId=publicCatalog[1];
@@ -617,7 +630,7 @@ const leadId=path.match(/^\/api\/leads\/([^/]+)$/);
     if(path==="/api/bookings"&&req.method==="GET"){const auth=await requirePermission(req,res,"bookings:read");if(!auth)return;json(res,200,{data:await listRecords("bookings",bookings,auth.organization.id)});return;}
     if(path==="/api/bookings"&&req.method==="POST"){const auth=await requirePermission(req,res,"bookings:write");if(!auth)return;const input=await body(req);if(!input.startAt){json(res,400,{error:"startAt is required"});return;}const projectId=String(input.projectId||"").trim();const project=projects.get(projectId);const owned=project?.organizationId===auth.organization.id||await getProject(projectId,auth.organization.id);if(!owned){json(res,400,{error:"A valid projectId is required"});return;}const booking={id:newId(),organizationId:auth.organization.id,projectId,customerName:String(input.customerName||"Guest"),customerEmail:input.customerEmail?String(input.customerEmail):undefined,startAt:String(input.startAt),service:input.service?String(input.service):undefined,status:"pending",createdAt:new Date().toISOString()};await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);json(res,201,{data:booking});return;}
     if(path==="/api/invoices"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;json(res,200,{data:await listInvoices(auth.organization.id)});return;}
-    if(path==="/api/invoices"&&req.method==="POST"){const auth=await requirePermission(req,res,"billing:write");if(!auth)return;const input=await body(req);const invoice=await createInvoice(input,auth.organization.id);json(res,201,{data:invoice});return;}
+    if(path==="/api/invoices"&&req.method==="POST"){const auth=await requirePermission(req,res,"billing:write");if(!auth)return;const input=await body(req);const invoice=await createInvoice(input,auth.organization.id);await recordAudit(auth,"invoice.create","invoice",invoice.id,{number:invoice.number,total:invoice.total});json(res,201,{data:invoice});return;}
     const invoiceId=path.match(/^\/api\/invoices\/([^/]+)$/);
     if(invoiceId&&req.method==="PATCH"){const auth=await requirePermission(req,res,"billing:write");if(!auth)return;const input=await body(req);const allowed=new Set(["draft","sent","paid","void","overdue"]);const status=String(input.status||"");if(!allowed.has(status)){json(res,400,{error:"Invalid invoice status"});return;}const invoice=await updateInvoiceStatus(invoiceId[1],auth.organization.id,status);if(!invoice){json(res,404,{error:"Invoice not found"});return;}json(res,200,{data:invoice});return;}
     if(path==="/api/templates"&&req.method==="GET"){json(res,200,{data:["restaurant-noir","beauty-atelier","fitness-forma","medical-northline","real-estate-north","services-studio"]});return;}

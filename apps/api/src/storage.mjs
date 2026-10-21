@@ -197,6 +197,18 @@ export async function updateClientPortal(projectId,organizationId,status,note){
   return rows[0]||null;
 }
 
+export async function updatePublicClientPortal(token,status,note){
+  const db=await getPool();
+  const allowed=new Set(["review","approved","changes_requested"]);
+  const nextStatus=allowed.has(status)?status:"review";
+  const nextNote=String(note||"").slice(0,4000);
+  if(!db) return null;
+  const {rows}=await db.query(`update projects set client_portal_status=$2,client_portal_note=$3,client_portal_updated_at=now(),updated_at=now()
+    where client_portal_token=$1 and status='active'
+    returning id,name,slug,client_portal_status as status,client_portal_note as note,client_portal_updated_at as "updatedAt"`,[token,nextStatus,nextNote]);
+  return rows[0]||null;
+}
+
 export async function getClientPortal(projectId,organizationId){
   const db=await getPool();
   if(!db) return {projectId,status:"draft",note:"",updatedAt:null,token:null};

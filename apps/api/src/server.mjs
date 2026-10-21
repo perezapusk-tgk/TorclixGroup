@@ -123,7 +123,7 @@ const server=createServer(async(req,res)=>{
         items.push({id:newId(),catalogItemId:item.id,name:item.name,quantity,unitPrice,total:line});
       }
       if(total>100000000){json(res,400,{error:"Order total is too large"});return;}
-      const order={id:newId(),organizationId:project.organizationId,projectId,customerName,customerEmail:input.customerEmail?String(input.customerEmail).trim():null,customerPhone:input.customerPhone?String(input.customerPhone).trim():null,status:"pending",currency,total,source,telegramUserId:telegramUser?.id||null,telegramUsername:telegramUser?.username||null};
+      const order={id:newId(),organizationId:project.organizationId,projectId,customerName,customerEmail:input.customerEmail?String(input.customerEmail).trim():null,customerPhone:input.customerPhone?String(input.customerPhone).trim():null,status:"pending",currency,total,source,telegramUserId:telegramUser?.id||null,telegramUsername:telegramUser?.username||null,items};
       let saved;
       try{saved=await saveOrder(order,items);}
       catch(error){
@@ -208,7 +208,7 @@ const server=createServer(async(req,res)=>{
     }
     const orderId=path.match(/^\/api\/orders\/([^/]+)$/);
     if(orderId&&req.method==="PATCH"){
-      const auth=await requirePermission(req,res,"billing:read");if(!auth)return;
+      const auth=await requirePermission(req,res,"orders:write");if(!auth)return;
       const input=await body(req);const status=String(input.status||"");
       if(!["pending","paid","processing","completed","cancelled","refunded"].includes(status)){json(res,400,{error:"Invalid order status"});return;}
       const updated=await updateOrderStatusWithStockRelease(orderId[1],auth.organization.id,status,async()=>{

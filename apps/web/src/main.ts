@@ -559,9 +559,14 @@ if(!name.trim()){notify("Введите название проекта.");retur
  root.querySelectorAll<HTMLElement>("[data-action='preview']").forEach(el=>el.addEventListener("click",()=>{if(!editorProject){notify("Сначала откройте проект.");return;}if(!API_BASE){notify("Для предпросмотра нужен VITE_API_URL.");return;}window.open(API_BASE+"/published/"+editorProject,"_blank","noopener,noreferrer");}));
  root.querySelectorAll<HTMLElement>("[data-action='publish']").forEach(el=>el.addEventListener("click",async()=>{
   const p=projects.find(x=>x.id===editorProject);if(!p)return;
-  const remote=await api("/api/projects/"+p.id+"/publish",{method:"POST"});
-  if(remote?.data?.published){p.status="Live";saveProjects();notify(p.name+" опубликован. Сайт доступен через «Сайты».");}
-  else notify("Публикация не выполнена. Проверьте API и авторизацию.");
+  el.setAttribute("disabled","true");
+  try{
+    const sync=await syncDocument();
+    if(sync?.error){notify("Не удалось сохранить изменения перед публикацией: "+sync.error);return;}
+    const remote=await api("/api/projects/"+p.id+"/publish",{method:"POST"});
+    if(remote?.data?.published){p.status="Live";saveProjects();notify(p.name+" опубликован. Сайт клиента обновлён.");}
+    else notify("Публикация не выполнена: "+(remote?.error||"ошибка API")+".");
+  }finally{el.removeAttribute("disabled");}
 }));
 }
 

@@ -6,9 +6,8 @@ type Page = { id:string; name:string; blocks:Block[] };
 type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string; miniApp?:{modules:string[];navigation?:string[];theme?:{accent:string;mode:"light"|"dark"}}; };
 
 const nav = [
-  ["⌂","Overview"],["▦","Projects"],["✦","Templates"],["♙","Clients & Leads"],["↗","Analytics"],["⌁","Audit"],["◌","Billing"],["▣","Client Portal"],["✦","Branding"],["▤","Invoices"],["◇","Economics"]
+  ["⌂","Обзор","Overview"],["▦","Проекты","Projects"],["✦","Шаблоны","Templates"],["♙","Клиенты и заявки","Clients & Leads"],["↗","Аналитика","Analytics"],["⌁","Аудит","Audit"],["◌","Биллинг","Billing"],["▣","Портал клиента","Client Portal"],["✦","Брендинг","Branding"],["▤","Счета","Invoices"],["◇","Экономика","Economics"]
 ] as const;
-const mobileNav = [["⌂","Overview"],["▦","Projects"],["♙","Clients & Leads"],["↗","Analytics"],["◌","Billing"],["▤","Invoices"]] as const;
 
 const seed:Project[]=[
  {id:"p1",name:"Maison Noire",url:"maisonnoire.studio",type:"Website + Mini App",status:"Live",leads:128,industry:"Restaurant"},
@@ -260,7 +259,7 @@ function render(){
  root.innerHTML=`
  <div class="app"><div class="mobile-overlay ${mobileMenu?"open":""}" data-action="mobile-close"></div><aside class="sidebar ${mobileMenu?"mobile-open":""}">
   <div class="brand"><div class="brand-mark">T</div><div><div class="brand-name">TORCLIXGROUP</div><span class="brand-sub">Studio OS / 02</span></div></div>
-  <nav><div class="nav-label">Workspace</div>${nav.map(([icon,label])=>`<button class="nav-item ${active===label&&!editorProject?"active":""}" data-nav="${label}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`).join("")}</nav>
+  <nav><div class="nav-label">Workspace</div>${nav.map(([icon,label,key])=>`<button class="nav-item ${active===key&&!editorProject?"active":""}" data-nav="${key}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`).join("")}</nav>
   <div class="sidebar-bottom"><div class="workspace"><div class="avatar">PG</div><div><div class="workspace-name">${session?.organization?.name||"Perezapusk Studio"}</div><div class="workspace-role">${session?.user?.name||"Studio Owner"} · ${session?.organization?.plan||"Pro"}</div></div></div></div>
  </aside>
  <main class="main"><header class="topbar"><div class="topbar-left"><button class="icon-btn mobile-menu-toggle" aria-label="Меню" data-action="mobile-menu">☰</button><div class="top-logo"><span class="top-logo-mark">T</span><span><b>TorclixGroup</b><small>Studio OS</small></span></div></div><div class="top-mode"><span class="mode-icon">▦</span><span>Studio</span><strong>Активен</strong><span class="mode-arrow">⌄</span></div><div class="top-actions"><button class="icon-btn" data-action="back" aria-label="Назад">←</button><button class="icon-btn top-search" aria-label="Поиск">⌕</button><button class="icon-btn" aria-label="Уведомления">♧</button><div class="avatar">PG</div></div></header>

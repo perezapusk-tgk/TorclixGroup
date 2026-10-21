@@ -23,7 +23,7 @@
 - [x] Global styles
 - [x] Responsive layouts
 - [x] SEO and publishing
-- [ ] Custom domains
+- [~] Custom domains (DNS verification implemented; SSL automation pending)
 
 ## 04 — Mini App Builder
 - [x] Modular app shell
@@ -33,14 +33,14 @@
 - [x] Accounts and notifications
 - [x] Booking and catalog
 - [x] Telegram integration
-- [ ] QR entry points
+- [x] QR entry points
 
 ## 05 — Business OS
 - [x] CRM
 - [x] Leads
 - [x] Bookings
 - [x] Products and services
-- [ ] Staff and calendar
+- [x] Staff and calendar
 - [x] Orders and invoices
 
 ## 06 — SaaS
@@ -75,7 +75,7 @@
 - [x] Dashboard session + billing + team hydration
 - [ ] Production external authentication provider
 - [ ] Live billing provider (Stripe or equivalent)
-- [~] Full client portal routing and approval workflow
+- [x] Full client portal routing and approval workflow
 
 ## Current execution priority
 1. Production identity provider and session verification

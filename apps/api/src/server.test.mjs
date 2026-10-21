@@ -77,6 +77,14 @@ test("published project health and catalog endpoints are usable",async()=>{
   assert.ok(catalogBody.data.length>=1);
 });
 
+test("public project exposes safe Telegram Mini App metadata",async()=>{
+  const response=await fetch(base+"/public/projects/p1/telegram");
+  assert.equal(response.status,200);
+  const body=await response.json();
+  assert.equal(body.data.miniAppUrl.includes("/miniapp/p1"),true);
+  assert.equal(body.data.enabled,false);
+});
+
 test("published site CTA creates a public lead",async()=>{
   const response=await fetch(base+"/public/projects/p1/leads",{
     method:"POST",

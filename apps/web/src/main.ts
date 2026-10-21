@@ -8,6 +8,7 @@ type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:strin
 const nav = [
   ["⌂","Overview"],["▦","Projects"],["✦","Templates"],["♙","Clients & Leads"],["↗","Analytics"],["⌁","Audit"],["◌","Billing"],["▣","Client Portal"],["✦","Branding"],["▤","Invoices"],["◇","Economics"]
 ] as const;
+const mobileNav = [["⌂","Overview"],["▦","Projects"],["♙","Clients & Leads"],["↗","Analytics"],["◌","Billing"],["▤","Invoices"]] as const;
 
 const seed:Project[]=[
  {id:"p1",name:"Maison Noire",url:"maisonnoire.studio",type:"Website + Mini App",status:"Live",leads:128,industry:"Restaurant"},

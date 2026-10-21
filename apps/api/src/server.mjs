@@ -317,7 +317,7 @@ const server=createServer(async(req,res)=>{
       const project={id:newId(),name,type,industry,status:"draft",organizationId:auth.organization.id,slug};
       await saveProject(project);if(!process.env.DATABASE_URL)projects.set(project.id,project);await saveDocument(project.id,project.organizationId,defaultDocument(project.id));json(res,201,{data:project});return;
     }
-    const portal=path.match(/^\\/api\\/projects\\/([^/]+)\\/client-portal$/);
+    const portal=path.match(/^\/api\/projects\/([^/]+)\/client-portal$/);
     if(portal&&req.method==="GET"){
       const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
       const projectId=portal[1]; const project=projects.get(projectId)?.organizationId===auth.organization.id?projects.get(projectId):await getProject(projectId,auth.organization.id);

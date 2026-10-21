@@ -109,7 +109,7 @@ test("published site booking CTA creates a booking",async()=>{
 });
 
 test("public order endpoint validates catalog and creates an order",async()=>{
-  const response=await fetch(base+"/public/projects/p1/orders",{method:"POST",headers:{"content-type":"application/json","idempotency-key":"order-test-12345678"},body:JSON.stringify({items:[{catalogItemId:"demo-1",quantity:1}],customerName:"Order Test",customerEmail:"order@example.com",source:"published_site"})});
+  const response=await fetch(base+"/public/projects/p1/orders",{method:"POST",headers:{"content-type":"application/json","idempotency-key":"order-test-12345678"},body:JSON.stringify({items:[{catalogItemId:"00000000-0000-4000-8000-000000001101",quantity:1}],customerName:"Order Test",customerEmail:"order@example.com",source:"published_site"})});
   const body=await response.json();
   assert.equal(response.status,201);
   assert.equal(body.data.received,true);

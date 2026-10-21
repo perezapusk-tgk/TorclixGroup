@@ -501,7 +501,7 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     if(publicCatalog&&req.method==="GET"){
       const requestedProjectId=publicCatalog[1];
       const resolvedProjectId=resolvePublicProjectId(requestedProjectId);
-      if(isDemoProject(resolvedProjectId)){json(res,200,{data:demoCatalog(resolvedProjectId)});return;}
+      if(isDemoProject(requestedProjectId)){json(res,200,{data:demoCatalog(requestedProjectId)});return;}
       const project=await getPublicProject(resolvedProjectId);
       if(!project){json(res,404,{error:"Опубликованный проект не найден"});return;}
       json(res,200,{data:await listCatalogItems(catalogItems,project.organizationId,resolvedProjectId)});return;
@@ -510,8 +510,8 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     if(publicLead&&req.method==="POST"){
       const projectId=publicLead[1];
       const resolvedProjectId=resolvePublicProjectId(projectId);
-      const project=await getPublicProject(resolvedProjectId);
-      const document=project?await getPublishedDocument(project.id):null;
+      const project=isDemoProject(projectId)?projects.get(projectId):await getPublicProject(resolvedProjectId);
+      const document=project?(await getPublishedDocument(project.id)||(isDemoProject(project.id)?defaultDocument(project.id):null)):null;
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.name){json(res,400,{error:"name is required"});return;}
@@ -533,8 +533,8 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     if(publicBooking&&req.method==="POST"){
       const requestedProjectId=publicBooking[1];
       const resolvedProjectId=resolvePublicProjectId(requestedProjectId);
-      const project=await getPublicProject(resolvedProjectId);
-      const document=project?await getPublishedDocument(project.id):null;
+      const project=isDemoProject(requestedProjectId)?projects.get(requestedProjectId):await getPublicProject(resolvedProjectId);
+      const document=project?(await getPublishedDocument(project.id)||(isDemoProject(project.id)?defaultDocument(project.id):null)):null;
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.customerName||!input.startAt){json(res,400,{error:"customerName and startAt are required"});return;}

@@ -214,6 +214,13 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:result});return;
     }
     if(path==="/api/billing/plan"&&req.method==="POST"){const auth=await requirePermission(req,res,"billing:write");if(!auth)return;const input=await body(req);let result;try{result=await changePlan(auth.organization.id,String(input.plan||""));}catch(error){json(res,400,{error:error?.message||"Invalid plan"});return;}if(!result){json(res,404,{error:"Organization not found"});return;}await recordAudit(auth,"billing.plan.change","organization",auth.organization.id,{plan:result.plan});json(res,200,{data:result});return;}
+    if(path.startsWith("/public/projects/")&&path.endsWith("/telegram")&&req.method==="GET"){
+      const match=path.match(/^\\/public\\/projects\\/([^/]+)\\/telegram$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);const project=await getPublicProject(projectId);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      const integration=await getTelegramIntegration(project.organizationId,project.id);
+      const botUsername=integration?.enabled?String(integration.botUsername||"").trim():"";
+      json(res,200,{data:{enabled:!!botUsername,botUsername:botUsername||null,botUrl:botUsername?"https://t.me/"+botUsername:null,projectBotUrl:botUsername?"https://t.me/"+botUsername+"?start="+encodeURIComponent(project.id):null,miniAppUrl:telegramMiniAppUrl(project.id)}});return;
+    }
     if(path.startsWith("/public/projects/")&&path.endsWith("/catalog")&&req.method==="GET"){
       const match=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);
       const project=await getPublicProject(projectId);

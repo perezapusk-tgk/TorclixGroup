@@ -7,7 +7,8 @@ test("production authentication rejects missing bearer token",async()=>{
   process.env.NODE_ENV="production";
   process.env.TORCLIX_TRIAL_MODE="false";
   assert.equal(await authenticateRequest({headers:{}}),null);
-  if(previousNode===undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV=previousNode;\n  if(previousTrial===undefined) delete process.env.TORCLIX_TRIAL_MODE; else process.env.TORCLIX_TRIAL_MODE=previousTrial;
+  if(previousNode===undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV=previousNode;
+  if(previousTrial===undefined) delete process.env.TORCLIX_TRIAL_MODE; else process.env.TORCLIX_TRIAL_MODE=previousTrial;
 });
 
 test("trial authentication accepts a valid opaque trial token",async()=>{

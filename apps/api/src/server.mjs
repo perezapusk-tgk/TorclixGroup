@@ -450,17 +450,6 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
       }
       json(res,200,{ok:true});return;
     }
-    const published=path.match(/^\/published\/([^/]+)$/);
-    if(published&&req.method==="GET"){
-      const requestedProjectId=published[1];
-      const projectId=resolvePublicProjectId(requestedProjectId);
-      const project=await getPublicProject(projectId);
-      if(!project){html(res,404,"<h1>Опубликованный проект не найден</h1>");return;}
-      const document=await getPublishedDocument(project.id) || (isDemoProject(project.id)?defaultDocument(project.id):null);
-      if(!document){html(res,404,"<h1>Проект не опубликован</h1>");return;}
-      html(res,200,renderPreview(project,document));
-      return;
-    }
     const host=(req.headers.host||"").split(":")[0].toLowerCase();
     if(host&&host!=="localhost"&&host!=="127.0.0.1"&&!host.endsWith(".localhost")&&!host.endsWith(".local")){
       const domain=await findDomain(host);

@@ -90,3 +90,16 @@ test("public analytics event endpoint accepts a valid pageview",async()=>{
   });
   assert.equal(event.status,202);
 });
+
+
+test("project creation enforces the starter project limit",async()=>{
+  for(let i=0;i<5;i++){
+    const response=await fetch(base+"/api/projects",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Limit Test "+i,type:"website",industry:"services"})});
+    assert.equal(response.status,201);
+  }
+  const blocked=await fetch(base+"/api/projects",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Limit Test blocked",type:"website",industry:"services"})});
+  const body=await blocked.json();
+  assert.equal(blocked.status,409);
+  assert.equal(body.error,"PROJECT_LIMIT_REACHED");
+  assert.equal(body.limit,5);
+});

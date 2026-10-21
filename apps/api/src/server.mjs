@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -316,6 +316,22 @@ const server=createServer(async(req,res)=>{
       const slug=String(input.slug||name).toLowerCase().trim().replace(/[^a-z0-9-]+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"")||"untitled";
       const project={id:newId(),name,type,industry,status:"draft",organizationId:auth.organization.id,slug};
       await saveProject(project);if(!process.env.DATABASE_URL)projects.set(project.id,project);await saveDocument(project.id,project.organizationId,defaultDocument(project.id));json(res,201,{data:project});return;
+    }
+    const portal=path.match(/^\\/api\\/projects\\/([^/]+)\\/client-portal$/);
+    if(portal&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"projects:read");if(!auth)return;
+      const projectId=portal[1]; const project=projects.get(projectId)?.organizationId===auth.organization.id?projects.get(projectId):await getProject(projectId,auth.organization.id);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      json(res,200,{data:await getClientPortal(projectId,auth.organization.id)});return;
+    }
+    if(portal&&(req.method==="PATCH"||req.method==="PUT")){
+      const auth=await requirePermission(req,res,"projects:write");if(!auth)return;
+      const projectId=portal[1]; const project=projects.get(projectId)?.organizationId===auth.organization.id?projects.get(projectId):await getProject(projectId,auth.organization.id);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      const input=await body(req); const data=await updateClientPortal(projectId,auth.organization.id,String(input.status||"draft"),String(input.note||""));
+      if(!process.env.DATABASE_URL&&projects.has(projectId)){projects.set(projectId,{...project,clientPortalStatus:data.status,clientPortalNote:data.note,clientPortalUpdatedAt:data.updatedAt});}
+      await recordAudit(auth,"client_portal.update","project",projectId,{status:data.status});
+      json(res,200,{data});return;
     }
     const pm=path.match(/^\/api\/projects\/([^/]+)$/);
     if(pm&&(req.method==="PATCH"||req.method==="PUT")){

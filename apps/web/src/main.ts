@@ -55,6 +55,7 @@ let billing:any=null;
 let analytics:any=null;
 let catalogItems:any[]=[];
 let orders:any[]=[];
+let invoices:any[]=[];
 let catalogModal=false;
 let editingCatalogId:string|null=null;
 let team:any[]=[];
@@ -159,6 +160,10 @@ const TRIAL_KEY="tg-trial-session";
 const trialToken=TRIAL_AUTH?(localStorage.getItem(TRIAL_KEY)||(()=>{const value=crypto.randomUUID().replace(/-/g,"")+crypto.randomUUID().replace(/-/g,"");localStorage.setItem(TRIAL_KEY,value);return value;})()):"";
 let hydrated=false;
 let telegramStatus:{enabled:boolean;miniAppUrl:string}={enabled:false,miniAppUrl:""};
+async function hydrateInvoices(){
+ if(!API_BASE)return;
+ const result=await api("/api/invoices");invoices=Array.isArray(result?.data)?result.data:[];if(active==="Billing")render();
+}
 async function hydrateOrders(){
  if(!API_BASE)return;
  const result=await api("/api/orders");orders=Array.isArray(result?.data)?result.data:[];if(active==="Orders")render();
@@ -338,6 +343,7 @@ function settingsView(){
  </div>`;
 }
  if(section==="Analytics") return analyticsView();
+ if(section==="Billing") return invoicesView();
  if(section==="Templates") return templateView();
  if(section==="Settings") return settingsView();
  if(section==="Clients") return crmView("Clients",crm.clients.map(x=>[x.name,x.email||"Нет email",x.projectIds?.length?x.projectIds.length+" проекта":"Без проектов",x.id]));
@@ -469,6 +475,8 @@ function bind(){
    else if(key==="animations"||key==="compactNav"||key==="emailNotifications"||key==="leadNotifications"||key==="bookingNotifications") studioSettings[key]=(el as HTMLInputElement).checked;
    saveSettings(); render();
  }));
+ root.querySelectorAll<HTMLElement>("[data-action='invoices-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateInvoices();notify("Счета обновлены.");}));
+ root.querySelectorAll<HTMLSelectElement>("[data-invoice-status]").forEach(el=>el.addEventListener("change",async()=>{const result=await api("/api/invoices/"+el.dataset.invoiceStatus,{method:"PATCH",body:JSON.stringify({status:el.value})});if(result?.data){await hydrateInvoices();notify("Статус счёта обновлён.");}else notify(result?.error||"Не удалось обновить счёт.");}));
  root.querySelectorAll<HTMLElement>("[data-action='orders-refresh']").forEach(el=>el.addEventListener("click",async()=>{await hydrateOrders();notify("Заказы обновлены.");}));
  root.querySelectorAll<HTMLSelectElement>("[data-order-status]").forEach(el=>el.addEventListener("change",async()=>{const result=await api("/api/orders/"+el.dataset.orderStatus,{method:"PATCH",body:JSON.stringify({status:el.value})});if(result?.data){await hydrateOrders();notify("Статус заказа обновлён.");}else notify(result?.error||"Не удалось обновить заказ.");}));
  root.querySelectorAll<HTMLElement>("[data-action='catalog-new']").forEach(el=>el.addEventListener("click",()=>{editingCatalogId=null;catalogModal=true;render();}));
@@ -494,7 +502,7 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
  root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={language:"ru",font:"Inter",accent:"#d8ff3e",theme:"dark",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};saveSettings();render();notify("Стиль возвращён к стандартному.");}));
 
- root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();if(active==="Catalog") await hydrateCatalog();if(active==="Orders") await hydrateOrders();render()}));
+ root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Leads","Bookings"].includes(active)) await hydrateCRM();if(active==="Catalog") await hydrateCatalog();if(active==="Orders") await hydrateOrders();if(active==="Billing") await hydrateInvoices();render()}));
  root.querySelectorAll<HTMLElement>("[data-nav-direct]").forEach(el=>el.addEventListener("click",()=>{active=el.dataset.navDirect||"Overview";editorProject=null;render()}));
  root.querySelectorAll<HTMLElement>("[data-action='back']").forEach(el=>el.addEventListener("click",()=>{editorProject=null;active="Projects";render()}));
  root.querySelectorAll<HTMLElement>("[data-action='new-project']").forEach(el=>el.addEventListener("click",()=>{modal=true;wizardStep=1;selectedType="Website + Mini App";selectedIndustry="wash";render()}));
@@ -557,7 +565,7 @@ async function boot(){
   try{
     applyStudioSettings();
     render();
-    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateCatalog(),hydrateOrders(),hydrateTelegram()]);
+    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateCatalog(),hydrateOrders(),hydrateInvoices(),hydrateTelegram()]);
     if(!editorProject) render();
   }catch(error){
     console.error("TorclixGroup boot error",error);
@@ -565,7 +573,11 @@ async function boot(){
   }
 }
 
-void boot();function ordersView(){
+void boot();function invoicesView(){
+ const rows=invoices.map(x=>`<div class="workspace-row"><div class="project-name">${htmlEsc(x.number)}</div><div class="project-type">${htmlEsc(x.clientId||"Клиент")} · ${htmlEsc(x.projectId||"Проект")}</div><span class="badge ${x.status==="paid"?"live":""}">${htmlEsc(x.status)} · ${htmlEsc(x.total)} ${htmlEsc(x.currency)}</span><select data-invoice-status="${htmlEsc(x.id)}"><option value="draft" ${x.status==="draft"?"selected":""}>Черновик</option><option value="sent" ${x.status==="sent"?"selected":""}>Отправлен</option><option value="paid" ${x.status==="paid"?"selected":""}>Оплачен</option><option value="overdue" ${x.status==="overdue"?"selected":""}>Просрочен</option><option value="void" ${x.status==="void"?"selected":""}>Аннулирован</option></select></div>`).join("");
+ return `<div class="eyebrow">04 / Billing</div><div class="workspace-head"><div><h2>Счета</h2><p class="hero-copy">Счета студии и клиентских проектов. Оплата отмечается только после подтверждения провайдером.</p></div><button class="secondary" data-action="invoices-refresh">Обновить</button></div><section class="card table-card"><div class="card-head"><div class="card-title">Счета</div><div class="card-meta">${invoices.length}</div></div>${rows||'<div class="inspector-note">Счетов пока нет.</div>'}</section>`;
+}
+function ordersView(){
  const statusLabel=(s:string)=>({pending:"Ожидает",paid:"Оплачен",processing:"В работе",completed:"Завершён",cancelled:"Отменён",refunded:"Возврат"}[s]||s);
  const rows=orders.map(o=>`<div class="workspace-row"><div class="project-name">#${htmlEsc(String(o.id).slice(0,8))}</div><div class="project-type">${htmlEsc(o.customerName||"Клиент")} · ${htmlEsc(projects.find(p=>p.id===o.projectId)?.name||"Проект")}</div><span class="badge ${o.status==="paid"||o.status==="completed"?"live":""}">${htmlEsc(statusLabel(o.status))} · ${htmlEsc(o.total)} ${htmlEsc(o.currency)}</span><select class="order-status" data-order-status="${htmlEsc(o.id)}">${["pending","paid","processing","completed","cancelled","refunded"].map(s=>`<option value="${s}"${o.status===s?" selected":""}>${statusLabel(s)}</option>`).join("")}</select></div>`).join("");
  return `<div class="eyebrow">04 / Business OS</div><div class="workspace-head"><div><h2>Заказы</h2><p class="hero-copy">Заказы из сайтов и Mini Apps. Следующий слой — подключение реального провайдера оплаты.</p></div><button class="secondary" data-action="orders-refresh">Обновить</button></div><section class="card table-card"><div class="card-head"><div class="card-title">Заказы</div><div class="card-meta">${orders.length}</div></div>${rows||'<div class="inspector-note">Заказов пока нет.</div>'}</section></div>`;

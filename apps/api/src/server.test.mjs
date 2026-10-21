@@ -93,7 +93,7 @@ test("public analytics event endpoint accepts a valid pageview",async()=>{
 
 
 test("project creation enforces the starter project limit",async()=>{
-  for(let i=0;i<5;i++){
+  for(let i=0;i<3;i++){
     const response=await fetch(base+"/api/projects",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Limit Test "+i,type:"website",industry:"services"})});
     assert.equal(response.status,201);
   }

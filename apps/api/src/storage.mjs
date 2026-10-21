@@ -199,8 +199,8 @@ export async function updateClientPortal(projectId,organizationId,status,note){
 
 export async function getClientPortal(projectId,organizationId){
   const db=await getPool();
-  if(!db) return {projectId,status:"draft",note:"",updatedAt:null};
-  const {rows}=await db.query(`select id,client_portal_status as status,client_portal_note as note,client_portal_updated_at as "updatedAt"
+  if(!db) return {projectId,status:"draft",note:"",updatedAt:null,token:null};
+  const {rows}=await db.query(`select id,client_portal_status as status,client_portal_note as note,client_portal_updated_at as "updatedAt",client_portal_token as token
     from projects where id=$1::uuid and organization_id=$2::uuid limit 1`,[projectId,organizationId]);
   return rows[0]||null;
 }

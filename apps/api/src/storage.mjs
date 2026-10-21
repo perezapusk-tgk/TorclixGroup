@@ -143,6 +143,14 @@ export async function getMembershipRole(userId,organizationId){
   return rows[0]?.role||null;
 }
 
+export async function getOrganizationById(organizationId){
+  if(organizationId==="org_demo" && !process.env.DATABASE_URL) return {id:"org_demo",name:"Torclix Demo",slug:"torclix-demo",plan:"pro"};
+  const db=await getPool();
+  if(!db) return null;
+  const {rows}=await db.query("select id::text,name,slug,plan from organizations where id=$1::uuid limit 1",[organizationId]);
+  return rows[0]||null;
+}
+
 export async function setOrganizationPlan(organizationId,plan){
   const db=await getPool();
   if(!db) return {id:organizationId,plan,source:"memory"};

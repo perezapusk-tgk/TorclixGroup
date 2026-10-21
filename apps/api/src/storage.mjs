@@ -176,6 +176,26 @@ export async function saveProject(project){
   return project;
 }
 
+export async function updateClientPortal(projectId,organizationId,status,note){
+  const db=await getPool();
+  const allowed=new Set(["draft","review","approved","changes_requested"]);
+  const nextStatus=allowed.has(status)?status:"draft";
+  const nextNote=String(note||"").slice(0,4000);
+  if(!db) return {projectId,status:nextStatus,note:nextNote,updatedAt:new Date().toISOString()};
+  const {rows}=await db.query(`update projects set client_portal_status=$3,client_portal_note=$4,client_portal_updated_at=now(),updated_at=now()
+    where id=$1::uuid and organization_id=$2::uuid
+    returning id,client_portal_status as status,client_portal_note as note,client_portal_updated_at as "updatedAt"`,[projectId,organizationId,nextStatus,nextNote]);
+  return rows[0]||null;
+}
+
+export async function getClientPortal(projectId,organizationId){
+  const db=await getPool();
+  if(!db) return {projectId,status:"draft",note:"",updatedAt:null};
+  const {rows}=await db.query(`select id,client_portal_status as status,client_portal_note as note,client_portal_updated_at as "updatedAt"
+    from projects where id=$1::uuid and organization_id=$2::uuid limit 1`,[projectId,organizationId]);
+  return rows[0]||null;
+}
+
 export async function getPublishedDocument(projectId){
   const db=await getPool();
   if(!db) return memoryPublishedDocuments.get(projectId)||null;

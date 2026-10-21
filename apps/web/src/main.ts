@@ -1,6 +1,6 @@
 import "./styles.css";
 
-type Project = { id:string; name:string; url:string; type:string; status:"Live"|"Draft"; leads:number; industry:string };
+type Project = { id:string; name:string; slug?:string; url:string; type:string; status:"Live"|"Draft"; leads:number; industry:string };
 type Block = { id:string; type:string; title:string; body:string };
 type Page = { id:string; name:string; blocks:Block[] };
 type SiteDoc = { projectId:string; pages:Page[]; activePage:string; accent:string; miniApp?:{modules:string[];navigation?:string[];theme?:{accent:string;mode:"light"|"dark"}}; };

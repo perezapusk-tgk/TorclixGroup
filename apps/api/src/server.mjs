@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -286,6 +286,10 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:updated});return;
     }
 
+    if(path==="/api/staff"&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;json(res,200,{data:await listStaff(new Map(),auth.organization.id)});return;}
+    if(path==="/api/staff"&&req.method==="POST"){const auth=await requirePermission(req,res,"projects:write");if(!auth)return;const input=await body(req);const member={id:newId(),organizationId:auth.organization.id,name:String(input.name||"Сотрудник"),role:String(input.role||"staff"),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,status:"active"};const saved=await saveStaff(member);await recordAudit(auth,"staff.create","staff",member.id,{name:member.name});json(res,201,{data:saved||member});return;}
+    if(path==="/api/calendar/events"&&req.method==="GET"){const auth=await requirePermission(req,res,"bookings:read");if(!auth)return;const q=new URL(req.url||"/","http://localhost").searchParams;json(res,200,{data:await listCalendarEvents(new Map(),auth.organization.id,q.get("from"),q.get("to"))});return;}
+    if(path==="/api/calendar/events"&&req.method==="POST"){const auth=await requirePermission(req,res,"bookings:write");if(!auth)return;const input=await body(req);if(!input.title||!input.startAt||!input.endAt){json(res,400,{error:"title, startAt and endAt are required"});return;}const event={id:newId(),organizationId:auth.organization.id,projectId:input.projectId||null,staffId:input.staffId||null,bookingId:input.bookingId||null,title:String(input.title),startAt:String(input.startAt),endAt:String(input.endAt),status:String(input.status||"scheduled"),notes:input.notes?String(input.notes):undefined};const saved=await saveCalendarEvent(event);await recordAudit(auth,"calendar.create","calendar_event",event.id,{title:event.title});json(res,201,{data:saved||event});return;}
     if(path==="/api/projects"&&req.method==="GET"){const auth=await requirePermission(req,res,"projects:read");if(!auth)return;json(res,200,{data:await listProjects(projects,auth.organization.id)});return;}
     if(path==="/api/audit"&&req.method==="GET"){const auth=await requirePermission(req,res,"audit:read");if(!auth)return;const q=new URL(req.url||"/","http://localhost").searchParams;json(res,200,{data:await listAudit(auth.organization.id,q.get("limit"))});return;}
     if(path==="/api/analytics"&&req.method==="GET"){

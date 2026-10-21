@@ -39,6 +39,14 @@ services:
         sync: false
       - key: AUTH_JWKS_URL
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRICE_STARTER
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+      - key: STRIPE_PRICE_SCALE
+        sync: false
 
   - type: web
     name: torclixgroup-web

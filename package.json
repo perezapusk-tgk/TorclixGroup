@@ -8,7 +8,7 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "test": "node --test packages/access/src/index.test.mjs packages/auth/src/index.test.mjs apps/api/src/server.test.mjs apps/api/src/analytics.test.mjs"
+    "test": "node --test packages/access/src/index.test.mjs packages/auth/src/index.test.mjs apps/api/src/server.test.mjs apps/api/src/analytics.test.mjs apps/api/src/billing.test.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.2"

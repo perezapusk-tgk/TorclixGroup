@@ -7,7 +7,7 @@ import {
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
-import { billingSnapshot } from "./billing.mjs";
+import { billingSnapshot,changePlan,plans } from "./billing.mjs";
 import { configureTelegramBot, telegramApi, telegramMiniAppUrl, verifyTelegramInitData } from "./telegram.mjs";
 import { updateOrderStatusWithStockRelease } from "./order-status.mjs";
 import { listInvoices,createInvoice,updateInvoiceStatus } from "./invoices.mjs";
@@ -67,6 +67,9 @@ function json(res,status,data){res.writeHead(status,headers());res.end(JSON.stri
 function html(res,status,body){res.writeHead(status,{"content-type":"text/html; charset=utf-8"});res.end(body);}
 async function body(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>1024*1024){const error=new Error("Request body too large");error.status=413;throw error;}}if(!raw)return {};try{return JSON.parse(raw);}catch{const error=new Error("Invalid JSON body");error.status=400;throw error;}}
 function esc(value=""){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function notifyTelegramUser(userId,text){if(!process.env.TELEGRAM_BOT_TOKEN||!userId)return;try{await telegramApi("sendMessage",{chat_id:userId,text});}catch(error){console.warn("Telegram notification failed",error?.message||error);}}
+async function notifyTelegramAdmin(text){const chatId=String(process.env.TELEGRAM_ADMIN_CHAT_ID||"").trim();if(!chatId||!process.env.TELEGRAM_BOT_TOKEN)return;try{await telegramApi("sendMessage",{chat_id:chatId,text});}catch(error){console.warn("Telegram admin notification failed",error?.message||error);}}
+
 function defaultDocument(projectId){return {projectId,activePage:"home",accent:"#d8ff3e",miniApp:{modules:["home","catalog","booking","profile","notifications"],navigation:["home","catalog","booking","profile","notifications"],theme:{accent:"#d8ff3e",mode:"dark"}},pages:[{id:"home",name:"Главная",blocks:[
   {id:"b1",type:"Hero",title:"Ваш бизнес — в одном цифровом пространстве",body:"Сайт, заявки, записи и мини‑приложение Telegram управляются из одной студии TorclixGroup."},
   {id:"b2",type:"Features",title:"Всё необходимое вашим клиентам",body:"Услуги, каталог, бронирование, заявки и клиентский путь — в одном удобном интерфейсе."},
@@ -139,6 +142,8 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leadRecords=await listRecords("leads",leads,auth.organization.id);json(res,200,{data:billingSnapshot(auth.organization,{projects:p.length,members:(await listTeamMembers(auth.organization.id)).length,leads:leadRecords.length})});return;}
+    if(path==="/api/billing/plans"&&req.method==="GET"){json(res,200,{data:Object.entries(plans).map(([id,x])=>({id,name:id==="starter"?"Starter":id==="pro"?"Pro":"Scale",price:x.price,limits:x}))});return;}
+    if(path==="/api/billing/plan"&&req.method==="POST"){const auth=await requirePermission(req,res,"billing:write");if(!auth)return;const input=await body(req);const result=await changePlan(auth.organization.id,String(input.plan||""));if(!result){json(res,404,{error:"Organization not found"});return;}await recordAudit(auth,"billing.plan.change","organization",auth.organization.id,{plan:result.plan});json(res,200,{data:result});return;}
     if(path.startsWith("/public/projects/")&&path.endsWith("/catalog")&&req.method==="GET"){
       const match=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);
       const project=await getPublicProject(projectId);
@@ -180,6 +185,8 @@ const server=createServer(async(req,res)=>{
         for(const item of items){const local=catalogItems.get(item.catalogItemId);if(local&&local.stock!==null){local.stock=Math.max(0,Number(local.stock)-item.quantity);catalogItems.set(local.id,local);}}
         orders.set(order.id,saved);
       }
+      if(telegramUser?.id)await notifyTelegramUser(telegramUser.id,"Заказ принят: "+project.name+". Сумма "+order.total.toFixed(2)+" "+order.currency+".");
+      await notifyTelegramAdmin("Новый заказ · "+project.name+"\n"+order.customerName+" · "+order.total.toFixed(2)+" "+order.currency);
       const response={data:{id:order.id,status:order.status,total:order.total,currency:order.currency}};
       if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }
@@ -568,6 +575,8 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
        if(cached){json(res,cached.status,cached.body);return;}
        const lead={id:newId(),organizationId:project.organizationId,projectId:project.id,name:String(input.name),email:input.email?String(input.email):undefined,phone:input.phone?String(input.phone):undefined,source,status:"new",telegramUserId:telegramUser?.id,telegramUsername:telegramUser?.username,createdAt:new Date().toISOString()};
       await saveRecord("leads",lead);if(!process.env.DATABASE_URL)leads.set(lead.id,lead);
+      if(telegramUser?.id)await notifyTelegramUser(telegramUser.id,"Заявка принята: "+project.name+". Мы получили ваше обращение.");
+      await notifyTelegramAdmin("Новая заявка · "+project.name+"\n"+lead.name+(lead.phone?" · "+lead.phone:""));
       const response={data:{id:lead.id,received:true}};if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }
     const publicBooking=path.match(/^\/public\/projects\/([^/]+)\/bookings$/);
@@ -585,6 +594,8 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
       const parsedStart=new Date(String(input.startAt));if(Number.isNaN(parsedStart.getTime())){json(res,400,{error:"Invalid startAt"});return;}
       const booking={id:newId(),organizationId:project.organizationId,projectId:project.id,customerName:String(input.customerName),customerEmail:input.customerEmail?String(input.customerEmail):undefined,customerPhone:input.customerPhone?String(input.customerPhone):undefined,startAt:parsedStart.toISOString(),service:input.service?String(input.service):undefined,telegramUserId:tgUser?.id,telegramUsername:tgUser?.username,status:"pending",createdAt:new Date().toISOString()};
       await saveRecord("bookings",booking);if(!process.env.DATABASE_URL)bookings.set(booking.id,booking);
+      if(tgUser?.id)await notifyTelegramUser(tgUser.id,"Бронирование принято: "+project.name+". Дата: "+parsedStart.toLocaleString("ru-RU")+"." );
+      await notifyTelegramAdmin("Новое бронирование · "+project.name+"\n"+booking.customerName+" · "+parsedStart.toLocaleString("ru-RU"));
       const response={data:{id:booking.id,received:true,status:booking.status}};if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }
         if(path==="/api/telegram/me"&&req.method==="POST"){

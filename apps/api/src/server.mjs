@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateStripeBilling,findOrganizationByStripe
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateStripeBilling,findOrganizationByStripe,getOrganizationSettings,updateOrganizationSettings
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -203,6 +203,33 @@ const server=createServer(async(req,res)=>{
     }
     if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.7.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":(process.env.TORCLIX_DEV_AUTH==="true"?"development-session":"development-auth-disabled")});return;}
     if(path==="/api/session"&&req.method==="GET"){const auth=await requireSession(req,res);if(!auth)return;json(res,200,{data:{user:auth.user,organization:auth.organization,organizations:auth.organizations}});return;}
+    if(path==="/api/settings"&&req.method==="GET"){
+      const auth=await requirePermission(req,res,"settings:read");if(!auth)return;
+      json(res,200,{data:await getOrganizationSettings(auth.organization.id)});return;
+    }
+    if(path==="/api/settings"&&(req.method==="PATCH"||req.method==="PUT")){
+      const auth=await requirePermission(req,res,"settings:write");if(!auth)return;
+      const input=await body(req);
+      const allowed=["workspaceName","brandName","language","font","currency","accent","theme","density","radius","animations","compactNav","emailNotifications","leadNotifications","bookingNotifications"];
+      const current=await getOrganizationSettings(auth.organization.id);
+      const next={...current};
+      for(const key of allowed){
+        if(Object.prototype.hasOwnProperty.call(input,key)) next[key]=input[key];
+      }
+      next.workspaceName=String(next.workspaceName||"Perezapusk Studio").slice(0,120);
+      next.brandName=String(next.brandName||"TorclixGroup").slice(0,120);
+      next.language=["ru","en"].includes(String(next.language))?String(next.language):"ru";
+      next.font=["Inter","Manrope","system-ui","Arial"].includes(String(next.font))?String(next.font):"Inter";
+      next.currency=["EUR","USD","RUB"].includes(String(next.currency))?String(next.currency):"EUR";
+      next.accent=/^#[0-9a-fA-F]{6}$/.test(String(next.accent))?String(next.accent):"#2f6bea";
+      next.theme=["light","dark"].includes(String(next.theme))?String(next.theme):"light";
+      next.density=["comfortable","compact"].includes(String(next.density))?String(next.density):"comfortable";
+      next.radius=["small","medium","large"].includes(String(next.radius))?String(next.radius):"medium";
+      for(const key of ["animations","compactNav","emailNotifications","leadNotifications","bookingNotifications"]) next[key]=Boolean(next[key]);
+      const saved=await updateOrganizationSettings(auth.organization.id,next);
+      await recordAudit(auth,"settings.update","organization",auth.organization.id,{keys:Object.keys(input).filter(key=>allowed.includes(key))});
+      json(res,200,{data:saved});return;
+    }
     if(path==="/api/team"&&req.method==="GET"){const auth=await requirePermission(req,res,"team:read");if(!auth)return;json(res,200,{data:await listTeamMembers(auth.organization.id)});return;}
     if(path==="/api/billing"&&req.method==="GET"){const auth=await requirePermission(req,res,"billing:read");if(!auth)return;const p=await listProjects(projects,auth.organization.id);const leadRecords=await listRecords("leads",leads,auth.organization.id);const teamMembers=await listTeamMembers(auth.organization.id);const staffMembers=await listStaff(new Map(),auth.organization.id);json(res,200,{data:{...billingSnapshot(auth.organization,{projects:p.length,members:teamMembers.length,staff:staffMembers.filter(x=>x.status!=="inactive").length,leads:leadRecords.length})}});return;}
     if(path==="/api/billing/plans"&&req.method==="GET"){json(res,200,{data:Object.entries(plans).map(([id,x])=>({id,name:id==="starter"?"Starter":id==="pro"?"Pro":"Scale",price:x.price,limits:x}))});return;}

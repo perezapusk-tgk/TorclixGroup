@@ -116,6 +116,16 @@ test("published site booking CTA creates a booking",async()=>{
   assert.equal(response.status,201);
   assert.equal(body.data.received,true);
   assert.equal(body.data.status,"pending");
+
+  const replay=await fetch(base+"/public/projects/p1/bookings",{
+    method:"POST",
+    headers:{"content-type":"application/json","idempotency-key":"booking-test-12345678"},
+    body:JSON.stringify({customerName:"Booking Test",customerEmail:"booking@example.com",startAt:"2030-01-01T12:00:00.000Z",service:"Тестовая запись"})
+  });
+  const replayBody=await replay.json();
+  assert.equal(replay.status,201);
+  assert.equal(replayBody.data.received,true);
+  assert.equal(replayBody.data.id,body.data.id);
 });
 
 test("public order endpoint validates catalog and creates an order",async()=>{
@@ -123,6 +133,16 @@ test("public order endpoint validates catalog and creates an order",async()=>{
   const body=await response.json();
   assert.equal(response.status,201);
   assert.equal(body.data.received,true);
+
+  const replay=await fetch(base+"/public/projects/p1/orders",{
+    method:"POST",
+    headers:{"content-type":"application/json","idempotency-key":"order-test-12345678"},
+    body:JSON.stringify({items:[{catalogItemId:"00000000-0000-4000-8000-000000001101",quantity:1}],customerName:"Order Test",customerEmail:"order@example.com",source:"published_site"})
+  });
+  const replayBody=await replay.json();
+  assert.equal(replay.status,201);
+  assert.equal(replayBody.data.received,true);
+  assert.equal(replayBody.data.id,body.data.id);
 });
 
 test("public analytics event endpoint accepts a valid pageview",async()=>{

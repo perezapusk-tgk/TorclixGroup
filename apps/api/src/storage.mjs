@@ -7,6 +7,7 @@ let pool = null;
 let initialized = false;
 let databaseUnavailable = false;
 const memoryPublishedDocuments = new Map();
+const memoryOrganizationSettings = new Map();
 
 async function getPool(){
   if(pool || databaseUnavailable || !process.env.DATABASE_URL) return pool;
@@ -149,6 +150,23 @@ export async function getOrganizationById(organizationId){
   if(!db) return null;
   const {rows}=await db.query("select id::text,name,slug,plan from organizations where id=$1::uuid limit 1",[organizationId]);
   return rows[0]||null;
+}
+
+export async function getOrganizationSettings(organizationId){
+  const db=await getPool();
+  if(!db) return memoryOrganizationSettings.get(organizationId)||{};
+  const {rows}=await db.query("select settings from organizations where id=$1::uuid limit 1",[organizationId]);
+  return rows[0]?.settings||{};
+}
+export async function updateOrganizationSettings(organizationId,settings){
+  const safe=settings&&typeof settings==="object"&&!Array.isArray(settings)?settings:{};
+  const db=await getPool();
+  if(!db){memoryOrganizationSettings.set(organizationId,safe);return safe;}
+  const {rows}=await db.query(
+    "update organizations set settings=$2::jsonb where id=$1::uuid returning settings",
+    [organizationId,JSON.stringify(safe)]
+  );
+  return rows[0]?.settings||safe;
 }
 
 export async function setOrganizationPlan(organizationId,plan){

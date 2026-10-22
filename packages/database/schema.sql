@@ -8,7 +8,8 @@ create table if not exists organizations (
   name text not null,
   slug text not null unique,
   plan text not null default 'starter',
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  settings jsonb not null default '{}'::jsonb
 );
 
 create table if not exists users (

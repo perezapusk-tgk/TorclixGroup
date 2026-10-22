@@ -52,6 +52,14 @@ test("Stripe webhook accepts a signed event and deduplicates replay",async()=>{
   assert.equal(replayBody.duplicate,true);
 });
 
+test("public runtime sends security headers",async()=>{
+  const response=await fetch(base+"/published/p1");
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get("x-content-type-options"),"nosniff");
+  assert.equal(response.headers.get("x-frame-options"),"DENY");
+  assert.match(response.headers.get("content-security-policy")||"",/script-src/);
+});
+
 test("health endpoint exposes development runtime",async()=>{
   const response=await fetch(base+"/health");
   const body=await response.json();

@@ -62,7 +62,7 @@ Object.assign(uiEn,{
   "Открыть сайт клиента":"Open client site","Публикация":"Publishing","Проект опубликован и доступен клиентам.":"Project is published and available to clients.",
   "Проект ещё не опубликован.":"The project is not published yet.","Опубликовать изменения":"Publish changes","Опубликовать проект":"Publish project",
   "Заявки и записи":"Leads & bookings","Данные этого проекта из CRM TorclixGroup.":"Data for this project from TorclixGroup CRM.",
-  "Лиды":"Leads","Бронирования":"Bookings","Пока нет заявок.":"No leads yet.","Пока нет бронирований.":"No bookings yet.",
+  "Лиды":"Leads","Пока нет заявок.":"No leads yet.","Пока нет бронирований.":"No bookings yet.",
   "QR-код проекта":"Project QR code","Откройте клиентский сайт с телефона.":"Open the client site from your phone.","Скопировать ссылку":"Copy link",
   "Настройки проекта":"Project settings","Изменения сохраняются в проекте студии.":"Changes are saved to the studio project.",
   "Название проекта":"Project name","Slug / адрес":"Slug / address","Изменения":"Changes","Тип":"Type","Отрасль":"Industry","Проект ID":"Project ID",

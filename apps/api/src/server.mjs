@@ -115,14 +115,19 @@ renderCart();loadCatalog();
 </script></body></html>`;
 }
 async function session(req){
-  const identity=await authenticateRequest(req);
-  if(!identity)return null;
-  const user=await getSessionUser(identity.subject,identity.email,identity.name);if(!user)return null;
-  const organizations=await listOrganizationsForUser(user.id);if(!organizations.length)return null;
-  const requested=req.headers["x-torclix-organization"];
-  const organization=organizations.find(o=>o.id===requested)||organizations[0];
-  const role=await getMembershipRole(user.id,organization.id)||organization.role||"viewer";
-  return {user:{...user,role},organization,organizations};
+  try{
+    const identity=await authenticateRequest(req);
+    if(!identity)return null;
+    const user=await getSessionUser(identity.subject,identity.email,identity.name);if(!user)return null;
+    const organizations=await listOrganizationsForUser(user.id);if(!organizations.length)return null;
+    const requested=req.headers["x-torclix-organization"];
+    const organization=organizations.find(o=>o.id===requested)||organizations[0];
+    const role=await getMembershipRole(user.id,organization.id)||organization.role||"viewer";
+    return {user:{...user,role},organization,organizations};
+  }catch(error){
+    console.warn("Authentication failed",error?.message||error);
+    return null;
+  }
 }
 async function requireSession(req,res){const auth=await session(req);if(!auth){json(res,401,{error:"Authentication required"});return null;}return auth;}
 async function requirePermission(req,res,permission){

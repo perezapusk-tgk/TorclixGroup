@@ -16,6 +16,6 @@ test("trial authentication accepts a valid opaque trial token",async()=>{
   process.env.TORCLIX_TRIAL_MODE="true";
   const result=await authenticateRequest({headers:{"x-torclix-trial":"abcdefghijklmnopqrstuvwxyz123456"}});
   assert.equal(result?.source,"trial");
-  assert.match(result?.subject||"","^trial:");
+  assert.match(result?.subject||"",/^trial:/);
   process.env.TORCLIX_TRIAL_MODE=previous;
 });

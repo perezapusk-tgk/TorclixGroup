@@ -179,6 +179,25 @@ test("public order endpoint validates catalog and creates an order",async()=>{
   assert.equal(replayBody.data.id,body.data.id);
 });
 
+test("public analytics event endpoint rate-limits abusive clients",async()=>{
+  for(let i=0;i<120;i++){
+    const response=await fetch(base+"/public/projects/p1/events",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-forwarded-for":"198.51.100.77"},
+      body:JSON.stringify({type:"pageview",sessionId:"rate-test-"+i,path:"/"})
+    });
+    assert.notEqual(response.status,500);
+  }
+  const blocked=await fetch(base+"/public/projects/p1/events",{
+    method:"POST",
+    headers:{"content-type":"application/json","x-forwarded-for":"198.51.100.77"},
+    body:JSON.stringify({type:"pageview",sessionId:"rate-test-blocked",path:"/"})
+  });
+  assert.equal(blocked.status,429);
+  const body=await blocked.json();
+  assert.equal(body.error,"RATE_LIMITED");
+});
+
 test("public analytics event endpoint accepts a valid pageview",async()=>{
   const event=await fetch(base+"/public/projects/p1/events",{
     method:"POST",

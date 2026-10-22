@@ -302,6 +302,13 @@ async function api(path:string,options:RequestInit={}){
   try{
     const response=await fetch(API_BASE+path,{...options,headers:{"content-type":"application/json",...(DEMO_AUTH?{"x-torclix-user":"demo"}:{}),...(TRIAL_AUTH&&!auth0Token?{"x-torclix-trial":trialToken}:{}),...(auth0Token?{authorization:"Bearer "+auth0Token}:{}),...(options.headers||{})}});
     const payload=await response.json().catch(()=>({}));
+    if(response.status===401&&auth0Token){
+      auth0Token="";
+      localStorage.removeItem(AUTH0_TOKEN_KEY);
+      session=null;
+      if(!portalToken) notify("Сессия истекла. Войдите снова.");
+      return {error:String(payload?.error||"Сессия истекла"),status:401,authExpired:true};
+    }
     if(!response.ok) return {error:String(payload?.error||("API "+response.status)),status:response.status};
     return payload;
   }catch(error){ return {error:error instanceof Error?error.message:"Ошибка соединения с API"}; }

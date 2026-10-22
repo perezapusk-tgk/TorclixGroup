@@ -129,6 +129,17 @@ test("published site CTA creates a public lead",async()=>{
   assert.equal(replayBody.data.id,body.data.id);
 });
 
+test("Mini App rejects forged Telegram initData on booking",async()=>{
+  const response=await fetch(base+"/public/projects/p1/bookings",{
+    method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({customerName:"Telegram Forgery",startAt:"2030-01-01T12:00:00.000Z",service:"Forgery test",tg_init:"auth_date=9999999999&user=%7B%22id%22%3A123%7D&hash=0000000000000000000000000000000000000000000000000000000000000000"})
+  });
+  const body=await response.json();
+  assert.equal(response.status,401);
+  assert.equal(body.error,"Telegram авторизация недействительна");
+});
+
 test("published site booking CTA creates a booking",async()=>{
   const response=await fetch(base+"/public/projects/p1/bookings",{
     method:"POST",

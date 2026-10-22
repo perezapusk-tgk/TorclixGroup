@@ -46,10 +46,10 @@ Production data is PostgreSQL-backed. Local tests can run without `DATABASE_URL`
 
 ## Automated checks
 
-Run:
+GitHub Actions runs the complete verification pipeline on pushes to `main`/feature branches and pull requests:
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 pnpm test
 pnpm build
 pnpm lint
@@ -89,7 +89,6 @@ Required API variables for paid billing:
 3. Decide the final multi-client Telegram bot architecture.
 4. Add automated custom-domain SSL/DNS provisioning.
 5. Add production backup/restore policy for the hosted PostgreSQL instance.
-6. Improve error surfacing for asynchronous settings saves.
-7. Perform a final mobile/API security regression pass before release.
+6. Perform a final mobile/API security regression pass before release.
 
 Design work is intentionally deferred until these technical checks are complete.

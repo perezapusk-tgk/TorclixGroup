@@ -15,7 +15,7 @@ export function checkoutCurrencyConfigured(plan,currency="EUR"){
 
 export function billingSnapshot(org,counts={}){
   const plan=plans[org.plan]||plans.starter;
-  return {plan:org.plan,price:plan.price,limits:plan,availableCurrencies:billingCurrencies(),usage:{projects:counts.projects||0,members:counts.members||1,staff:counts.staff||0,storage_gb:counts.storage_gb||0,monthly_visitors:counts.monthly_visitors||0,leads:counts.leads||0}};
+  return {plan:plans[org.plan]?org.plan:"starter",price:plan.price,limits:plan,availableCurrencies:billingCurrencies(),usage:{projects:counts.projects||0,members:counts.members||1,staff:counts.staff||0,storage_gb:counts.storage_gb||0,monthly_visitors:counts.monthly_visitors||0,leads:counts.leads||0}};
 }
 
 export async function createCheckoutSession({organizationId,plan,successUrl,cancelUrl,currency="EUR"}){
@@ -31,7 +31,8 @@ export async function createCheckoutSession({organizationId,plan,successUrl,canc
 }
 
 export function stripeConfigured(){
-  return !!(process.env.STRIPE_SECRET_KEY&&process.env.STRIPE_PRICE_STARTER&&process.env.STRIPE_PRICE_PRO&&process.env.STRIPE_PRICE_SCALE);
+  const secret=String(process.env.STRIPE_SECRET_KEY||"").trim();
+  return !!(secret && billingCurrencies().some(currency=>checkoutCurrencyConfigured("starter",currency)&&checkoutCurrencyConfigured("pro",currency)&&checkoutCurrencyConfigured("scale",currency)));
 }
 
 export async function changePlan(organizationId,plan){

@@ -23,7 +23,11 @@ type StudioSettings={workspaceName:string;brandName:string;language:string;font:
 const defaultStudioSettings:StudioSettings={workspaceName:"Perezapusk Studio",brandName:"TorclixGroup",language:"ru",font:"Inter",currency:"EUR",accent:"#2f6bea",theme:"light",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};
 let studioSettings:StudioSettings={...defaultStudioSettings,...(JSON.parse(localStorage.getItem("tg-settings")||"null")||{})};
 function htmlEsc(value:any){return String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"} as Record<string,string>)[c]||c)}
-function saveSettings(){localStorage.setItem("tg-settings",JSON.stringify(studioSettings));applyStudioSettings();}
+function saveSettings(){
+  localStorage.setItem("tg-settings",JSON.stringify(studioSettings));
+  applyStudioSettings();
+  if(API_BASE) void api("/api/settings",{method:"PATCH",body:JSON.stringify(studioSettings)});
+}
 function applyStudioSettings(){
  document.documentElement.style.setProperty("--brand-accent",studioSettings.accent);
  document.documentElement.style.setProperty("--ui-font",studioSettings.font);
@@ -211,6 +215,22 @@ async function hydrateSession(){
  if(!API_BASE) return;
  const remote=await api("/api/session");
  if(remote?.data){session=remote.data; render();}
+}
+async function hydrateStudioSettings(){
+ if(!API_BASE) return;
+ const remote=await api("/api/settings");
+ if(remote?.data&&typeof remote.data==="object"){
+   const keys=Object.keys(remote.data);
+   if(keys.length){
+     studioSettings={...defaultStudioSettings,...remote.data};
+     localStorage.setItem("tg-settings",JSON.stringify(studioSettings));
+     applyStudioSettings();
+     render();
+   }else{
+     const local=JSON.parse(localStorage.getItem("tg-settings")||"null");
+     if(local&&typeof local==="object"&&Object.keys(local).length) await api("/api/settings",{method:"PATCH",body:JSON.stringify({...defaultStudioSettings,...local})});
+   }
+ }
 }
 async function hydrateAnalytics(){
  if(!API_BASE) return;
@@ -409,8 +429,8 @@ function settingsView(){
     <div class="settings-grid">
       <label class="settings-field"><span>Название рабочего пространства</span><input value="${htmlEsc(studioSettings.workspaceName||session?.organization?.name||"Perezapusk Studio")}" data-setting="workspaceName"/></label>
       <label class="settings-field"><span>Название бренда</span><input value="${htmlEsc(studioSettings.brandName||"TorclixGroup")}" data-setting="brandName"/></label>
-      <label class="settings-field"><span>Язык</span><select data-setting="language"><option value="ru">Русский</option><option value="en">English</option></select></label>
-      <label class="settings-field"><span>Валюта оплаты</span><select data-setting="currency"><option value="EUR">€ EUR</option><option value="USD">$ USD</option><option value="RUB">₽ RUB</option></select></label><label class="settings-field"><span>Шрифт</span><select data-setting="font"><option>Inter</option><option>Manrope</option><option>system-ui</option><option>Arial</option></select></label>
+      <label class="settings-field"><span>Язык</span><select data-setting="language"><option value="ru" ${s.language==="ru"?"selected":""}>Русский</option><option value="en" ${s.language==="en"?"selected":""}>English</option></select></label>
+      <label class="settings-field"><span>Валюта оплаты</span><select data-setting="currency"><option value="EUR" ${s.currency==="EUR"?"selected":""}>€ EUR</option><option value="USD" ${s.currency==="USD"?"selected":""}>$ USD</option><option value="RUB" ${s.currency==="RUB"?"selected":""}>₽ RUB</option></select></label><label class="settings-field"><span>Шрифт</span><select data-setting="font"><option>Inter</option><option>Manrope</option><option>system-ui</option><option>Arial</option></select></label>
     </div>
    </section>
    <section class="settings-card" id="settings-appearance"><div class="settings-card-head"><div><h3>Внешний вид</h3><p>Соберите визуальный стиль студии за несколько секунд.</p></div></div>
@@ -683,7 +703,8 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
  root.querySelectorAll<HTMLElement>("[data-billing-plan]").forEach(el=>el.addEventListener("click",async()=>{const plan=el.dataset.billingPlan||"";const r=await api("/api/billing/plan",{method:"POST",body:JSON.stringify({plan})});if(r?.data){await hydrateWorkspace();notify("Тариф изменён на "+plan+".");}else notify(r?.error||"Не удалось изменить тариф.");}));
   root.querySelectorAll<HTMLElement>("[data-action='billing-checkout']").forEach(el=>el.addEventListener("click",async()=>{const plan=el.dataset.plan||billing?.plan||"pro";const currency=el.dataset.currency||studioSettings.currency||"EUR";const result=await api("/api/billing/checkout",{method:"POST",body:JSON.stringify({plan,currency,origin:location.origin})});if(result?.data?.url){window.location.href=result.data.url;}else notify(result?.error||"Платёжный провайдер не настроен.");}));
- root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={...defaultStudioSettings};saveSettings();render();notify("Стиль возвращён к стандартному.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={...defaultStudioSettings};saveSettings();render();notify("Настройки возвращены к стандартным.");}));
 
  root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Clients & Leads","Leads","Bookings"].includes(active)) await hydrateCRM();
 if(active==="Clients & Leads") await hydrateOrders();if(active==="Catalog") await hydrateCatalog();if(active==="Orders") await hydrateOrders();if(["Billing","Invoices"].includes(active)) await hydrateInvoices();if(["Analytics","Audit"].includes(active)) await hydrateAnalytics();if(active==="Команда и календарь") await hydrateTeamCalendar();render()}));
@@ -765,7 +786,7 @@ async function boot(){
     applyStudioSettings();
     render();
     if(portalToken){await hydratePublicPortal();return;}
-    await Promise.allSettled([hydrateSession(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateCatalog(),hydrateOrders(),hydrateInvoices(),hydrateTelegram(),hydrateTeamCalendar()]);
+    await Promise.allSettled([hydrateSession(),hydrateStudioSettings(),hydrateProjects(),hydrateWorkspace(),hydrateCRM(),hydrateAnalytics(),hydrateCatalog(),hydrateOrders(),hydrateInvoices(),hydrateTelegram(),hydrateTeamCalendar()]);
     if(!editorProject) render();
   }catch(error){
     console.error("TorclixGroup boot error",error);

@@ -54,6 +54,56 @@ const uiEn:Record<string,string>=Object.fromEntries([
   ["Публикация клиентского мини‑приложения и подключение бота.","Publish the client Mini App and connect the bot."],["Статус бота","Bot status"],["Открыть в Telegram","Open in Telegram"],["Ссылка клиента","Client link"],["Подключить Telegram","Connect Telegram"],["Проверить подключение","Check connection"],
   ["Digital infrastructure","Digital infrastructure"],["Создавайте сайты и Telegram Mini Apps для клиентов быстрее. Управляйте проектами, контентом, лидами и публикацией из одной студии.","Create websites and Telegram Mini Apps for clients faster. Manage projects, content, leads and publishing from one studio."]
 ]);
+
+// Extended RU -> EN coverage for dynamic Studio screens and actions.
+Object.assign(uiEn,{
+  "Статус":"Status","Опубликован":"Published","Черновик":"Draft","Заявки":"Leads","Бронирования":"Bookings","Страницы":"Pages",
+  "Быстрый запуск":"Quick launch","Редактировать сайт":"Edit website","Настроить Mini App":"Configure Mini App","Открыть заявки":"Open leads",
+  "Открыть сайт клиента":"Open client site","Публикация":"Publishing","Проект опубликован и доступен клиентам.":"Project is published and available to clients.",
+  "Проект ещё не опубликован.":"The project is not published yet.","Опубликовать изменения":"Publish changes","Опубликовать проект":"Publish project",
+  "Заявки и записи":"Leads & bookings","Данные этого проекта из CRM TorclixGroup.":"Data for this project from TorclixGroup CRM.",
+  "Лиды":"Leads","Бронирования":"Bookings","Пока нет заявок.":"No leads yet.","Пока нет бронирований.":"No bookings yet.",
+  "QR-код проекта":"Project QR code","Откройте клиентский сайт с телефона.":"Open the client site from your phone.","Скопировать ссылку":"Copy link",
+  "Настройки проекта":"Project settings","Изменения сохраняются в проекте студии.":"Changes are saved to the studio project.",
+  "Название проекта":"Project name","Slug / адрес":"Slug / address","Изменения":"Changes","Тип":"Type","Отрасль":"Industry","Проект ID":"Project ID",
+  "Сохранить изменения":"Save changes","Публикация и домен":"Publishing & domain","После сохранения можно сразу открыть клиентский сайт.":"After saving, you can open the client site immediately.",
+  "QR-код":"QR code","Конструктор Mini App":"Mini App builder","модулей · Telegram ready":"modules · Telegram ready",
+  "Настройки сохраняются в документ проекта и используются опубликованным Mini App.":"Settings are saved to the project document and used by the published Mini App.",
+  "Сохранить блок":"Save block","Готово":"Done","Выберите блок в макете, чтобы изменить его содержимое.":"Select a block in the canvas to edit its content.",
+  "Заголовок":"Title","Текст":"Text","Новая история клиента начинается здесь.":"A new client story starts here.",
+  "Секция":"Section","добавлена.":"added.","Новая страница":"New page","Начните собирать страницу для клиента.":"Start building a page for the client.",
+  "Выберите формат":"Choose a project type","Выберите отрасль":"Choose an industry","Назовите проект":"Name your project",
+  "Готово к созданию":"Ready to create","Отрасль:":"Industry:","Отмена":"Cancel","Назад":"Back","Продолжить →":"Continue →","Создать проект →":"Create project →",
+  "Ресторан и кафе":"Restaurant & cafe","Красота":"Beauty","Фитнес и спорт":"Fitness & sports","Медицина":"Medical","Недвижимость":"Real estate",
+  "Услуги":"Services","Автомойка":"Car wash","Обучение":"Education","Магазин":"Retail","Другое":"Other",
+  "Меню, столики, доставка":"Menu, tables, delivery","Салоны, мастера, запись":"Salons, specialists, booking","Занятия, тренеры, абонементы":"Classes, trainers, memberships",
+  "Клиники, врачи, запись":"Clinics, doctors, booking","Объекты, агенты, заявки":"Properties, agents, leads","Сервисы, специалисты, заявки":"Services, specialists, leads",
+  "Услуги, запись, прайс":"Services, booking, pricing","Курсы, занятия, преподаватели":"Courses, classes, instructors","Каталог, корзина, заказы":"Catalog, cart, orders",
+  "Другое":"Other","Сохранить настройки":"Save settings","Настройки проекта сохранены.":"Project settings saved.","Не удалось сохранить проект.":"Could not save the project.",
+  "Ссылка скопирована.":"Link copied.","Не удалось скопировать ссылку.":"Could not copy the link.","Обновить":"Refresh","Данные обновлены.":"Data updated.",
+  "Аналитика обновлена.":"Analytics refreshed.","Счета обновлены.":"Invoices refreshed.","Календарь обновлён.":"Calendar refreshed.","Сотрудник добавлен.":"Staff member added.",
+  "Событие добавлено.":"Event added.","Проверьте дату и время события.":"Check the event date and time.","Не удалось создать событие.":"Could not create the event.",
+  "Домен добавлен.":"Domain added.","DNS подтверждён. SSL будет подключён следующим этапом.":"DNS verified. SSL will be connected in the next step.",
+  "Проверка не выполнена.":"Verification failed.","TXT-значение скопировано.":"TXT value copied.","Не удалось скопировать TXT.":"Could not copy TXT.",
+  "Проект создан. Опубликуйте его из проекта.":"Project created. Publish it from the project.","создан и опубликован. Сайт уже доступен клиенту.":"created and published. The client site is already available.",
+  "Mini App опубликован. Можно открыть его по ссылке.":"Mini App published. You can open it using the link.",
+  "Не удалось опубликовать Mini App":"Could not publish the Mini App","Не удалось сохранить Mini App":"Could not save the Mini App",
+  "Не удалось получить ссылку портала.":"Could not get the portal link.","Ссылка портала скопирована.":"Portal link copied.",
+  "Не удалось обновить заявку.":"Could not update the lead.","Статус заявки обновлён.":"Lead status updated.",
+  "Не удалось обновить бронирование.":"Could not update the booking.","Статус бронирования обновлён.":"Booking status updated.",
+  "Не удалось открыть клиента.":"Could not open the client.","Не удалось открыть проект.":"Could not open the project.",
+  "Счета студии и клиентских проектов. Оплата отмечается только после подтверждения провайдером.":"Studio and client project invoices. Payment is marked only after provider confirmation.",
+  "Счета":"Invoices","Счетов пока нет.":"No invoices yet.","Новый счёт":"New invoice","Создайте счёт для клиента.":"Create an invoice for a client.",
+  "Номер":"Number","Сумма":"Amount","Срок оплаты":"Due date","Примечание":"Note","Услуга или комментарий":"Service or note","Создать счёт":"Create invoice",
+  "Оплатить":"Pay","Тариф и оплата":"Plan & billing","В месяц":"Per month","Проекты":"Projects","Валюта оплаты":"Billing currency",
+  "Оплата":"Payment","Выберите тариф и перейдите к безопасной оплате. Платёж откроется в Stripe Checkout.":"Choose a plan and continue to secure payment. Payment will open in Stripe Checkout.",
+  "Открыть Checkout":"Open Checkout","Экономика":"Economics","Фактические суммы из счетов и заказов.":"Actual amounts from invoices and orders.",
+  "Оплачено":"Paid","Заказы":"Orders","Комиссии, налоги и внешние платежные провайдеры не считаются до их подключения.":"Fees, taxes and external payment providers are excluded until connected.",
+  "Брендинг":"Branding","White-label настройки студии: имя, цвет и интерфейс.":"White-label studio settings: name, color and interface.",
+  "Сохранить":"Save","Система шаблонов":"Template system","Конструктор проекта":"Project builder","Предпросмотр":"Preview","Опубликовать":"Publish",
+  "Сайт":"Website","Mini App":"Mini App","Обзор":"Overview","Настройки":"Settings","Открыть Telegram":"Open Telegram","Копировать ссылку":"Copy link"
+});
+
 function localizeUI(){
  const dict=studioSettings.language==="en"?uiEn:uiRu;
  const walk=(node:Node)=>{

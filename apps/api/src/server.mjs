@@ -40,7 +40,7 @@ async function getPublicProject(projectId){
 function isDemoProject(projectId){return !!projects.get(projectId)&&projects.get(projectId).organizationId==="org_demo";}
 function demoCatalog(projectId){
   if(projectId==="p1") return [
-    {id:"demo-p1-1",projectId,name:"Авторский завтрак",description:"Яйцо, авокадо, тост и кофе",price:14.9,currency:"RUB",status:"active",stock:null,itemType:"service"},
+    {id:"00000000-0000-4000-8000-000000001101",projectId,name:"Авторский завтрак",description:"Яйцо, авокадо, тост и кофе",price:14.9,currency:"RUB",status:"active",stock:null,itemType:"service"},
     {id:"demo-p1-2",projectId,name:"Паста трюфель",description:"Домашняя паста с пармезаном",price:19.5,currency:"RUB",status:"active",stock:null,itemType:"product"},
     {id:"demo-p1-3",projectId,name:"Дегустационный сет",description:"Выбор шефа на двоих",price:32,currency:"RUB",status:"active",stock:null,itemType:"product"}
   ];

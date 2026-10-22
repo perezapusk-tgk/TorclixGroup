@@ -275,7 +275,16 @@ async function beginAuth0Login(){
 }
 async function finishAuth0Login(){
  if(window.location.pathname!=="/callback") return false;
- const code=new URLSearchParams(window.location.search).get("code");
+ const query=new URLSearchParams(window.location.search);
+ const authError=query.get("error");
+ const authErrorDescription=query.get("error_description");
+ if(authError){
+  sessionStorage.removeItem("tg-auth0-verifier");
+  history.replaceState({},document.title,"/");
+  notify(authErrorDescription||authError||"Ошибка входа через Auth0");
+  return false;
+ }
+ const code=query.get("code");
  const verifier=sessionStorage.getItem("tg-auth0-verifier")||"";
  if(!code||!verifier) return false;
  try{

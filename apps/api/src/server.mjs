@@ -693,6 +693,10 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
     const publicEvent=path.match(/^\/public\/projects\/([^/]+)\/events$/);
     if(publicEvent&&req.method==="POST"){
       const resolvedProjectId=resolvePublicProjectId(publicEvent[1]);
+      const clientIp=String(req.headers["x-forwarded-for"]||req.socket.remoteAddress||"unknown").split(",")[0].trim();
+      if(!rateLimit("event:"+resolvedProjectId+":"+clientIp,120,60000)){
+        json(res,429,{error:"RATE_LIMITED",message:"Слишком много запросов, попробуйте позже"});return;
+      }
       const project=await getPublicProject(resolvedProjectId);
       if(!project){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const saved=await recordEvent(project.organizationId,resolvedProjectId,await body(req));

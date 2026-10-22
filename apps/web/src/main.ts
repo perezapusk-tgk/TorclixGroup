@@ -20,7 +20,7 @@ const templates=[["Restaurant / Noir","Website + Mini App","Меню · стол
 let projects:Project[] = JSON.parse(localStorage.getItem("tg-projects")||"null")||[];
 let active="Overview", editorProject:string|null=null, modal=false, selectedType="Website + Mini App", selectedIndustry="wash", wizardStep=1, toast="", editorTab="Design", selectedBlock:string|null=null, projectViewTab="overview", mobileMenu=false, portalToken=new URLSearchParams(location.search).get("portal")||"", portalData:any=null;
 type StudioSettings={workspaceName:string;brandName:string;language:string;font:string;currency:string;accent:string;theme:string;density:string;radius:string;animations:boolean;compactNav:boolean;emailNotifications:boolean;leadNotifications:boolean;bookingNotifications:boolean};
-const defaultStudioSettings:StudioSettings={workspaceName:"Perezapusk Studio",brandName:"TorclixGroup",language:"ru",font:"Inter",currency:"EUR",accent:"#2f6bea",theme:"light",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};
+const defaultStudioSettings:StudioSettings={workspaceName:"Perezapusk Studio",brandName:"TorclixGroup",language:"ru",font:"Inter",currency:"RUB",accent:"#2f6bea",theme:"light",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};
 let studioSettings:StudioSettings={...defaultStudioSettings,...(JSON.parse(localStorage.getItem("tg-settings")||"null")||{})};
 function htmlEsc(value:any){return String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"} as Record<string,string>)[c]||c)}
 async function saveSettings(){

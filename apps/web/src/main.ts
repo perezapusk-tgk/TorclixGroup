@@ -68,18 +68,6 @@ function localizeUI(){
  root.querySelectorAll<HTMLElement>("[placeholder]").forEach(el=>{const v=el.getAttribute("placeholder")||"";if(dict[v])el.setAttribute("placeholder",dict[v]);});
  root.querySelectorAll<HTMLElement>("[title]").forEach(el=>{const v=el.getAttribute("title")||"";if(dict[v])el.setAttribute("title",dict[v]);});
 }
- const walk=(node:Node)=>{
-   node.childNodes.forEach(child=>{
-     if(child.nodeType===Node.TEXT_NODE){
-       const raw=child.textContent?.trim()||"";
-       if(uiRu[raw]) child.textContent=child.textContent!.replace(raw,uiRu[raw]);
-     } else if(child.nodeType===Node.ELEMENT_NODE) walk(child);
-   });
- };
- walk(root);
- root.querySelectorAll<HTMLElement>("[placeholder]").forEach(el=>{const v=el.getAttribute("placeholder")||"";if(uiRu[v])el.setAttribute("placeholder",uiRu[v]);});
- root.querySelectorAll<HTMLElement>("[title]").forEach(el=>{const v=el.getAttribute("title")||"";if(uiRu[v])el.setAttribute("title",uiRu[v]);});
-}
 let miniModules:string[]=["home","catalog","booking","profile","notifications"];
 let crm: {clients:any[];leads:any[];bookings:any[]}={clients:[],leads:[],bookings:[]};
 let session:any=null;

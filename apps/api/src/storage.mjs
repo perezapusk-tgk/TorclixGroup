@@ -195,6 +195,15 @@ export async function updateStripeBilling(organizationId,{customerId=null,subscr
     [organizationId,customerId,subscriptionId,safeStatus,safePlan]);
   return rows[0]?{...rows[0],source:"stripe"}:null;
 }
+export async function claimStripeWebhookEvent(eventId){
+  const id=String(eventId||"").trim();
+  if(!id)return true;
+  const db=await getPool();
+  if(!db)return false;
+  const result=await db.query("insert into stripe_webhook_events(event_id) values($1) on conflict(event_id) do nothing",[id]);
+  return result.rowCount===1;
+}
+
 export async function findOrganizationByStripe({customerId=null,subscriptionId=null}={}){
   const db=await getPool();
   if(!db) return null;

@@ -38,14 +38,14 @@ async function getPublicProject(projectId){
 function isDemoProject(projectId){return !!projects.get(projectId)&&projects.get(projectId).organizationId==="org_demo";}
 function demoCatalog(projectId){
   if(projectId==="p1") return [
-    {id:"demo-p1-1",projectId,name:"Авторский завтрак",description:"Яйцо, авокадо, тост и кофе",price:14.9,currency:"EUR",status:"active",stock:null,itemType:"service"},
-    {id:"demo-p1-2",projectId,name:"Паста трюфель",description:"Домашняя паста с пармезаном",price:19.5,currency:"EUR",status:"active",stock:null,itemType:"product"},
-    {id:"demo-p1-3",projectId,name:"Дегустационный сет",description:"Выбор шефа на двоих",price:32,currency:"EUR",status:"active",stock:null,itemType:"product"}
+    {id:"demo-p1-1",projectId,name:"Авторский завтрак",description:"Яйцо, авокадо, тост и кофе",price:14.9,currency:"RUB",status:"active",stock:null,itemType:"service"},
+    {id:"demo-p1-2",projectId,name:"Паста трюфель",description:"Домашняя паста с пармезаном",price:19.5,currency:"RUB",status:"active",stock:null,itemType:"product"},
+    {id:"demo-p1-3",projectId,name:"Дегустационный сет",description:"Выбор шефа на двоих",price:32,currency:"RUB",status:"active",stock:null,itemType:"product"}
   ];
   if(projectId==="p2") return [
-    {id:"demo-p2-1",projectId,name:"Пробная тренировка",description:"Знакомство с тренером — 45 минут",price:0,currency:"EUR",status:"active",stock:null,itemType:"service"},
-    {id:"demo-p2-2",projectId,name:"Персональная тренировка",description:"Индивидуальная программа",price:35,currency:"EUR",status:"active",stock:null,itemType:"service"},
-    {id:"demo-p2-3",projectId,name:"Месячный абонемент",description:"Безлимитный доступ к залу",price:79,currency:"EUR",status:"active",stock:null,itemType:"service"}
+    {id:"demo-p2-1",projectId,name:"Пробная тренировка",description:"Знакомство с тренером — 45 минут",price:0,currency:"RUB",status:"active",stock:null,itemType:"service"},
+    {id:"demo-p2-2",projectId,name:"Персональная тренировка",description:"Индивидуальная программа",price:35,currency:"RUB",status:"active",stock:null,itemType:"service"},
+    {id:"demo-p2-3",projectId,name:"Месячный абонемент",description:"Безлимитный доступ к залу",price:79,currency:"RUB",status:"active",stock:null,itemType:"service"}
   ];
   return [];
 }

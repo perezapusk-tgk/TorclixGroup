@@ -23,10 +23,16 @@ type StudioSettings={workspaceName:string;brandName:string;language:string;font:
 const defaultStudioSettings:StudioSettings={workspaceName:"Perezapusk Studio",brandName:"TorclixGroup",language:"ru",font:"Inter",currency:"EUR",accent:"#2f6bea",theme:"light",density:"comfortable",radius:"medium",animations:true,compactNav:false,emailNotifications:true,leadNotifications:true,bookingNotifications:true};
 let studioSettings:StudioSettings={...defaultStudioSettings,...(JSON.parse(localStorage.getItem("tg-settings")||"null")||{})};
 function htmlEsc(value:any){return String(value??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"} as Record<string,string>)[c]||c)}
-function saveSettings(){
+async function saveSettings(){
   localStorage.setItem("tg-settings",JSON.stringify(studioSettings));
   applyStudioSettings();
-  if(API_BASE) void api("/api/settings",{method:"PATCH",body:JSON.stringify(studioSettings)});
+  if(!API_BASE) return true;
+  const result=await api("/api/settings",{method:"PATCH",body:JSON.stringify(studioSettings)});
+  if(result?.error){
+    notify("Не удалось сохранить настройки: "+String(result.error));
+    return false;
+  }
+  return true;
 }
 function applyStudioSettings(){
  document.documentElement.style.setProperty("--brand-accent",studioSettings.accent);
@@ -765,10 +771,10 @@ function bind(){
  root.querySelectorAll<HTMLElement>("[data-action='open-telegram-project']").forEach(el=>el.addEventListener("click",()=>{if(telegramStatus.projectBotUrl)window.open(telegramStatus.projectBotUrl,"_blank","noopener,noreferrer");}));
  root.querySelectorAll<HTMLElement>("[data-action='open-telegram']").forEach(async el=>{const projectId=editorProject;if(!projectId)return;try{const result=await api("/api/telegram/status?projectId="+encodeURIComponent(projectId));const data=result?.data||{};if(data.projectBotUrl)window.open(data.projectBotUrl,"_blank","noopener,noreferrer");else if(data.miniAppUrl)window.open(data.miniAppUrl,"_blank","noopener,noreferrer");else notify("Telegram для этого проекта ещё не настроен.");}catch{notify("Не удалось открыть Telegram.");}});
  root.querySelectorAll<HTMLElement>("[data-settings-scroll]").forEach(el=>el.addEventListener("click",()=>document.getElementById("settings-"+el.dataset.settingsScroll)?.scrollIntoView({behavior:"smooth",block:"start"})));
- root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",async()=>{const saved=await saveSettings();if(saved)notify("Настройки сохранены.");}));
  root.querySelectorAll<HTMLElement>("[data-billing-plan]").forEach(el=>el.addEventListener("click",async()=>{const plan=el.dataset.billingPlan||"";const r=await api("/api/billing/plan",{method:"POST",body:JSON.stringify({plan})});if(r?.data){await hydrateWorkspace();notify("Тариф изменён на "+plan+".");}else notify(r?.error||"Не удалось изменить тариф.");}));
   root.querySelectorAll<HTMLElement>("[data-action='billing-checkout']").forEach(el=>el.addEventListener("click",async()=>{const plan=el.dataset.plan||billing?.plan||"pro";const currency=el.dataset.currency||studioSettings.currency||"EUR";const result=await api("/api/billing/checkout",{method:"POST",body:JSON.stringify({plan,currency,origin:location.origin})});if(result?.data?.url){window.location.href=result.data.url;}else notify(result?.error||"Платёжный провайдер не настроен.");}));
- root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",()=>{saveSettings();notify("Настройки сохранены.");}));
+ root.querySelectorAll<HTMLElement>("[data-action='save-settings']").forEach(el=>el.addEventListener("click",async()=>{const saved=await saveSettings();if(saved)notify("Настройки сохранены.");}));
  root.querySelectorAll<HTMLElement>("[data-action='reset-settings']").forEach(el=>el.addEventListener("click",()=>{studioSettings={...defaultStudioSettings};saveSettings();render();notify("Настройки возвращены к стандартным.");}));
 
  root.querySelectorAll<HTMLElement>("[data-nav]").forEach(el=>el.addEventListener("click",async()=>{active=el.dataset.nav||"Overview";editorProject=null;if(["Clients","Clients & Leads","Leads","Bookings"].includes(active)) await hydrateCRM();

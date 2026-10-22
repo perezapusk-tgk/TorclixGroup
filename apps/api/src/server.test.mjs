@@ -94,6 +94,16 @@ test("published site CTA creates a public lead",async()=>{
   const body=await response.json();
   assert.equal(response.status,201);
   assert.equal(body.data.received,true);
+
+  const replay=await fetch(base+"/public/projects/p1/leads",{
+    method:"POST",
+    headers:{"content-type":"application/json","idempotency-key":"lead-test-12345678"},
+    body:JSON.stringify({name:"Site Test",email:"site@example.com",phone:"+358000000",source:"published_site"})
+  });
+  const replayBody=await replay.json();
+  assert.equal(replay.status,201);
+  assert.equal(replayBody.data.received,true);
+  assert.equal(replayBody.data.id,body.data.id);
 });
 
 test("published site booking CTA creates a booking",async()=>{

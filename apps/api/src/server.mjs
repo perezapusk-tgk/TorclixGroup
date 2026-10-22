@@ -64,7 +64,7 @@ function headers(extra={}){return {
   ...extra
 };}
 function json(res,status,data){res.writeHead(status,headers());res.end(JSON.stringify(data));}
-function html(res,status,body){res.writeHead(status,{"content-type":"text/html; charset=utf-8"});res.end(body);}
+function html(res,status,body){res.writeHead(status,{"content-type":"text/html; charset=utf-8","x-content-type-options":"nosniff","x-frame-options":"DENY","referrer-policy":"strict-origin-when-cross-origin","content-security-policy":"default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; connect-src 'self' https://api.telegram.org; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"});res.end(body);}
 async function body(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>1024*1024){const error=new Error("Request body too large");error.status=413;throw error;}}if(!raw)return {};try{return JSON.parse(raw);}catch{const error=new Error("Invalid JSON body");error.status=400;throw error;}}
 function esc(value=""){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 async function notifyTelegramUser(userId,text){if(!process.env.TELEGRAM_BOT_TOKEN||!userId)return;try{await telegramApi("sendMessage",{chat_id:userId,text});}catch(error){console.warn("Telegram notification failed",error?.message||error);}}
@@ -95,7 +95,7 @@ function renderPreview(project,doc){
 <section class="request" id="request"><div class="section-index">Связаться</div><h2>Оставить заявку</h2><div class="request-grid"><input id="requestName" class="field" placeholder="Ваше имя"><input id="requestPhone" class="field" placeholder="Телефон"><input id="requestEmail" class="field" placeholder="Email"><textarea id="requestMessage" class="field" placeholder="Что вас интересует?" rows="4"></textarea><input id="requestWhen" class="field" type="datetime-local"><button id="requestSubmit" class="primary">Отправить заявку</button><div id="requestStatus" class="status"></div></div></section>
 </main><footer class="foot">Создано и опубликовано в TorclixGroup · ${esc(project.name)}</footer><div id="toast" class="toast"></div>
 <script>
-const projectId="${projectId}";const cart=new Map();const catalogEl=document.getElementById("catalog");const cartEl=document.getElementById("cart");
+const projectId=${JSON.stringify(String(project.id))};const cart=new Map();const catalogEl=document.getElementById("catalog");const cartEl=document.getElementById("cart");
 async function hydrateTelegramLink(){try{const r=await fetch("/public/projects/"+encodeURIComponent(projectId)+"/telegram");const j=await r.json();const link=document.getElementById("telegramLink");if(r.ok&&j.data?.enabled&&j.data?.projectBotUrl){link.href=j.data.projectBotUrl;link.hidden=false}}catch{}}
 void hydrateTelegramLink();
 const escClient=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]||c));const money=(n,c)=>Number(n||0).toFixed(2)+" "+(c||"EUR");

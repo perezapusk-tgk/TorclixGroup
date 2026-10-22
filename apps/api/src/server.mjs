@@ -31,9 +31,11 @@ const publishedProjects=new Set();
 const legacyProjectIds={p1:"00000000-0000-4000-8000-000000000101",p2:"00000000-0000-4000-8000-000000000102"};
 function resolvePublicProjectId(projectId){return legacyProjectIds[projectId]||projectId;}
 async function getPublicProject(projectId){
-  if(process.env.DATABASE_URL) return await getPublishedProject(projectId);
-  const demo=projects.get(projectId);
-  return demo||await getPublishedProject(projectId);
+  const requested=String(projectId||"");
+  const demoId=projects.has(requested)?requested:Object.entries(legacyProjectIds).find(([,legacy])=>legacy===requested)?.[0];
+  const demo=demoId?projects.get(demoId):null;
+  if(demo) return demo;
+  return await getPublishedProject(requested);
 }
 function isDemoProject(projectId){return !!projects.get(projectId)&&projects.get(projectId).organizationId==="org_demo";}
 function demoCatalog(projectId){
@@ -265,7 +267,7 @@ const server=createServer(async(req,res)=>{
       const match=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);
       const project=await getPublicProject(projectId);
       if(!project){json(res,404,{error:"Project not found"});return;}
-      json(res,200,{data:await listCatalogItems(catalogItems,project.organizationId,projectId)});return;
+      const items=await listCatalogItems(catalogItems,project.organizationId,projectId);\n      json(res,200,{data:items.length?items:(isDemoProject(project.id)?demoCatalog(project.id):[])});return;
     }
     if(path.startsWith("/public/projects/")&&path.endsWith("/orders")&&req.method==="POST"){
       const match=path.match(/^\/public\/projects\/([^/]+)\/orders$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);
@@ -281,8 +283,8 @@ const server=createServer(async(req,res)=>{
         if(!telegramUser){json(res,401,{error:"Telegram авторизация недействительна"});return;}
       }
       const rawItems=Array.isArray(input.items)?input.items:[];if(!rawItems.length){json(res,400,{error:"items are required"});return;}
-      const catalog=await listCatalogItems(catalogItems,project.organizationId,projectId);
-      const byId=new Map(catalog.map(x=>[x.id,x]));const items=[];let total=0;let currency="EUR";
+      const catalogRows=await listCatalogItems(catalogItems,project.organizationId,projectId);\n      const catalog=catalogRows.length?catalogRows:(isDemoProject(project.id)?demoCatalog(project.id):[]);
+      const byId=new Map(catalog.map(x=>[x.id,x]));const items=[];let total=0;let currency="RUB";
       for(const raw of rawItems){
         const item=byId.get(String(raw.catalogItemId||""));const quantity=Math.floor(Number(raw.quantity||1));
         if(!item||item.status!=="active"||!Number.isFinite(quantity)||quantity<1||quantity>99){json(res,400,{error:"Invalid order item"});return;}
@@ -709,14 +711,14 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
       const resolvedProjectId=resolvePublicProjectId(requestedProjectId);
       const project=await getPublicProject(resolvedProjectId);
       if(!project){json(res,404,{error:"Опубликованный проект не найден"});return;}
-      json(res,200,{data:await listCatalogItems(catalogItems,project.organizationId,resolvedProjectId)});return;
+      const items=await listCatalogItems(catalogItems,project.organizationId,resolvedProjectId);\n      json(res,200,{data:items.length?items:(isDemoProject(project.id)?demoCatalog(project.id):[])});return;
     }
     const publicLead=path.match(/^\/public\/projects\/([^/]+)\/leads$/);
     if(publicLead&&req.method==="POST"){
       const projectId=publicLead[1];
       const resolvedProjectId=resolvePublicProjectId(projectId);
       const project=await getPublicProject(resolvedProjectId);
-      const document=project?(await getPublishedDocument(project.id)||(!process.env.DATABASE_URL&&isDemoProject(project.id)?defaultDocument(project.id):null)):null;
+      const document=project?(await getPublishedDocument(project.id)||(isDemoProject(project.id)?defaultDocument(project.id):null)):null;
       if(!project||!document){json(res,404,{error:"Опубликованный проект не найден"});return;}
       const input=await body(req);
       if(!input.name){json(res,400,{error:"name is required"});return;}

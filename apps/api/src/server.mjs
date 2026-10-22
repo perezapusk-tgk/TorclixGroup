@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateStripeBilling,findOrganizationByStripe,getOrganizationSettings,updateOrganizationSettings
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateStripeBilling,findOrganizationByStripe,getOrganizationSettings,updateOrganizationSettings,claimStripeWebhookEvent
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -181,16 +181,20 @@ const server=createServer(async(req,res)=>{
       let event;try{event=JSON.parse(raw);}catch{json(res,400,{error:"Invalid webhook payload"});return;}
       const eventId=String(event?.id||"").trim();
       if(eventId){
-        const seenKey="stripe:"+eventId;
-        if(idempotencyCache.has(seenKey)){json(res,200,{received:true,duplicate:true});return;}
-        idempotencyCache.set(seenKey,{received:true});
+        const claimed=await claimStripeWebhookEvent(eventId);
+        if(!claimed){
+          const seenKey="stripe:"+eventId;
+          if(idempotencyCache.has(seenKey)){json(res,200,{received:true,duplicate:true});return;}
+          if(process.env.DATABASE_URL){json(res,200,{received:true,duplicate:true});return;}
+          idempotencyCache.set(seenKey,{received:true});
+        }
       }
       const object=event?.data?.object||{};
       if(event?.type==="checkout.session.completed"){
         const organizationId=object?.metadata?.organization_id||object?.client_reference_id;
         const plan=object?.metadata?.plan;
         if(organizationId){await updateStripeBilling(organizationId,{customerId:object.customer||null,subscriptionId:object.subscription||null,status:"active",plan});}
-      }else if(event?.type==="customer.subscription.updated"||event?.type==="customer.subscription.deleted"){
+      }else if(event?.type==="customer.subscription.created"||event?.type==="customer.subscription.updated"||event?.type==="customer.subscription.deleted"){
         const organization=await findOrganizationByStripe({customerId:object.customer||null,subscriptionId:object.id||null});
         if(organization){
           const priceId=object?.items?.data?.[0]?.price?.id;

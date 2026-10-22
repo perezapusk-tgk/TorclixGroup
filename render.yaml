@@ -66,6 +66,12 @@ services:
         value: "false"
       - key: VITE_TORCLIX_TRIAL
         value: "true"
+      - key: VITE_AUTH0_DOMAIN
+        value: dev-5p5papfgff5e8qgh.us.auth0.com
+      - key: VITE_AUTH0_CLIENT_ID
+        value: ZUvvjMqVYH9x8GrkScKXajcJah7KKnB9
+      - key: VITE_AUTH0_AUDIENCE
+        value: https://torclixgroup-api
 
 databases:
   - name: torclixgroup-db

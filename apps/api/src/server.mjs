@@ -267,7 +267,8 @@ const server=createServer(async(req,res)=>{
       const match=path.match(/^\/public\/projects\/([^/]+)\/catalog$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);
       const project=await getPublicProject(projectId);
       if(!project){json(res,404,{error:"Project not found"});return;}
-      const items=await listCatalogItems(catalogItems,project.organizationId,projectId);\n      json(res,200,{data:items.length?items:(isDemoProject(project.id)?demoCatalog(project.id):[])});return;
+      const items=await listCatalogItems(catalogItems,project.organizationId,projectId);
+      json(res,200,{data:items.length?items:(isDemoProject(project.id)?demoCatalog(project.id):[])});return;
     }
     if(path.startsWith("/public/projects/")&&path.endsWith("/orders")&&req.method==="POST"){
       const match=path.match(/^\/public\/projects\/([^/]+)\/orders$/);const requestedProjectId=match?.[1];const projectId=resolvePublicProjectId(requestedProjectId);
@@ -283,7 +284,8 @@ const server=createServer(async(req,res)=>{
         if(!telegramUser){json(res,401,{error:"Telegram авторизация недействительна"});return;}
       }
       const rawItems=Array.isArray(input.items)?input.items:[];if(!rawItems.length){json(res,400,{error:"items are required"});return;}
-      const catalogRows=await listCatalogItems(catalogItems,project.organizationId,projectId);\n      const catalog=catalogRows.length?catalogRows:(isDemoProject(project.id)?demoCatalog(project.id):[]);
+      const catalogRows=await listCatalogItems(catalogItems,project.organizationId,projectId);
+      const catalog=catalogRows.length?catalogRows:(isDemoProject(project.id)?demoCatalog(project.id):[]);
       const byId=new Map(catalog.map(x=>[x.id,x]));const items=[];let total=0;let currency="RUB";
       for(const raw of rawItems){
         const item=byId.get(String(raw.catalogItemId||""));const quantity=Math.floor(Number(raw.quantity||1));
@@ -711,7 +713,8 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
       const resolvedProjectId=resolvePublicProjectId(requestedProjectId);
       const project=await getPublicProject(resolvedProjectId);
       if(!project){json(res,404,{error:"Опубликованный проект не найден"});return;}
-      const items=await listCatalogItems(catalogItems,project.organizationId,resolvedProjectId);\n      json(res,200,{data:items.length?items:(isDemoProject(project.id)?demoCatalog(project.id):[])});return;
+      const items=await listCatalogItems(catalogItems,project.organizationId,resolvedProjectId);
+      json(res,200,{data:items.length?items:(isDemoProject(project.id)?demoCatalog(project.id):[])});return;
     }
     const publicLead=path.match(/^\/public\/projects\/([^/]+)\/leads$/);
     if(publicLead&&req.method==="POST"){

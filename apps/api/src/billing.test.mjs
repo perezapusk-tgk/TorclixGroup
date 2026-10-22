@@ -27,3 +27,9 @@ test("billing snapshot exposes configured checkout currencies",()=>{
 test("unknown currency is not advertised",()=>{
   assert.equal(billingCurrencies().includes("GBP"),false);
 });
+
+test("billing snapshot falls back to starter for an unknown plan",()=>{
+  const snapshot=billingSnapshot({plan:"unknown"},{});
+  assert.equal(snapshot.plan,"starter");
+  assert.equal(snapshot.limits.projects,5);
+});

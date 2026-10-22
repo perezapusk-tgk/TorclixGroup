@@ -47,6 +47,18 @@ services:
         sync: false
       - key: STRIPE_PRICE_SCALE
         sync: false
+      - key: STRIPE_PRICE_STARTER_USD
+        sync: false
+      - key: STRIPE_PRICE_PRO_USD
+        sync: false
+      - key: STRIPE_PRICE_SCALE_USD
+        sync: false
+      - key: STRIPE_PRICE_STARTER_RUB
+        sync: false
+      - key: STRIPE_PRICE_PRO_RUB
+        sync: false
+      - key: STRIPE_PRICE_SCALE_RUB
+        sync: false
 
   - type: web
     name: torclixgroup-web

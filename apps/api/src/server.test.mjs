@@ -246,7 +246,9 @@ test("team creation enforces the configured billing member limit",async()=>{
   const billing=await fetch(base+"/api/billing");
   const billingBody=await billing.json();
   const limit=Number(billingBody.data.limits.members);
-  const initial=Number(billingBody.data.usage.members);
+  const staffResponse=await fetch(base+"/api/staff");
+  const staffBody=await staffResponse.json();
+  const initial=Array.isArray(staffBody.data)?staffBody.data.filter(x=>x.status!=="inactive").length:0;
   for(let i=initial;i<limit;i++){
     const response=await fetch(base+"/api/staff",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Staff Limit "+i,role:"manager"})});
     assert.equal(response.status,201);

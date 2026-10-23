@@ -101,7 +101,7 @@ Object.assign(uiEn,{
   "Счета":"Invoices","Счетов пока нет.":"No invoices yet.","Новый счёт":"New invoice","Создайте счёт для клиента.":"Create an invoice for a client.",
   "Номер":"Number","Сумма":"Amount","Срок оплаты":"Due date","Примечание":"Note","Услуга или комментарий":"Service or note","Создать счёт":"Create invoice",
   "Оплатить":"Pay","Тариф и оплата":"Plan & billing","В месяц":"Per month","Проекты":"Projects","Валюта оплаты":"Billing currency",
-  "Оплата":"Payment","Выберите тариф и перейдите к безопасной оплате. Платёж откроется в Stripe Checkout.":"Choose a plan and continue to secure payment. Payment will open in Stripe Checkout.",
+  "Оплата":"Payment","Выберите тариф и перейдите к безопасной оплате. Платёж откроется в безопасной форме ЮKassa.":"Choose a plan and continue to secure payment. Payment will open in YooKassa.",
   "Открыть Checkout":"Open Checkout","Экономика":"Economics","Фактические суммы из счетов и заказов.":"Actual amounts from invoices and orders.",
   "Оплачено":"Paid","Заказы":"Orders","Комиссии, налоги и внешние платежные провайдеры не считаются до их подключения.":"Fees, taxes and external payment providers are excluded until connected.",
   "Брендинг":"Branding","White-label настройки студии: имя, цвет и интерфейс.":"White-label studio settings: name, color and interface.",

@@ -12,9 +12,9 @@ test("database migrations are lexicographically ordered",()=>{
   assert.ok(migrationFiles.length>0);
 });
 
-test("Stripe webhook event migration defines an idempotency primary key",async()=>{
-  const sql=await readFile(path.join(dir,"023_stripe_webhook_events.sql"),"utf8");
-  assert.match(sql,/stripe_webhook_events/);
+test("YooKassa webhook migration defines an idempotency primary key",async()=>{
+  const sql=await readFile(path.join(dir,"024_yookassa_billing.sql"),"utf8");
+  assert.match(sql,/yookassa_webhook_events/);
   assert.match(sql,/event_id\s+text\s+primary\s+key/i);
   assert.match(sql,/received_at\s+timestamptz/i);
 });

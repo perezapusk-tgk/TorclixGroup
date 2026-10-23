@@ -29,6 +29,8 @@ services:
         value: https://torclixgroup-web.onrender.com
       - key: PUBLIC_URL
         value: https://torclixgroup-api.onrender.com
+      - key: API_PUBLIC_BASE
+        value: https://torclixgroup-api.onrender.com
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET

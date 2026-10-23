@@ -3,11 +3,11 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateStripeBilling,findOrganizationByStripe,getOrganizationSettings,updateOrganizationSettings,claimStripeWebhookEvent
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateBilling,findOrganizationByBilling,getOrganizationSettings,updateOrganizationSettings,claimBillingWebhookEvent
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
-import { billingSnapshot,changePlan,plans,createCheckoutSession,stripeConfigured,billingCurrencies,checkoutCurrencyConfigured } from "./billing.mjs";
+import { billingSnapshot,changePlan,plans,createCheckoutSession,yookassaConfigured,billingCurrencies,checkoutCurrencyConfigured } from "./billing.mjs";
 import { configureTelegramBot, telegramApi, telegramMiniAppUrl, verifyTelegramInitData } from "./telegram.mjs";
 import { updateOrderStatusWithStockRelease } from "./order-status.mjs";
 import { listInvoices,createInvoice,updateInvoiceStatus } from "./invoices.mjs";
@@ -100,13 +100,13 @@ function renderPreview(project,doc){
 const projectId=${JSON.stringify(String(project.id))};const cart=new Map();const catalogEl=document.getElementById("catalog");const cartEl=document.getElementById("cart");
 async function hydrateTelegramLink(){try{const r=await fetch("/public/projects/"+encodeURIComponent(projectId)+"/telegram");const j=await r.json();const link=document.getElementById("telegramLink");if(r.ok&&j.data?.enabled&&j.data?.projectBotUrl){link.href=j.data.projectBotUrl;link.hidden=false}}catch{}}
 void hydrateTelegramLink();
-const escClient=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]||c));const money=(n,c)=>Number(n||0).toFixed(2)+" "+(c||"EUR");
+const escClient=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]||c));const money=(n,c)=>Number(n||0).toFixed(2)+" "+(c||"RUB");
 function toast(t){const el=document.getElementById("toast");el.textContent=t;el.classList.add("open");setTimeout(()=>el.classList.remove("open"),2800)}
 const analyticsSession=(()=>{try{const k="tg-analytics-session";let v=localStorage.getItem(k);if(!v){v=crypto.randomUUID();localStorage.setItem(k,v)}return v}catch{return "anon-"+Date.now().toString(36)}})();
 async function track(type,path=location.pathname,extra={}){try{await fetch("/public/projects/"+encodeURIComponent(projectId)+"/events",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({type,sessionId:analyticsSession,path,referrer:document.referrer||"",...extra}),keepalive:true})}catch{}}
 void track("pageview");
 document.addEventListener("click",e=>{const b=e.target.closest("button,a");if(!b)return;const label=(b.textContent||"").trim().slice(0,120);if(label)void track("click",location.pathname,{metadata:{label}})},{passive:true});
-function renderCart(){const rows=[...cart.values()];document.getElementById("cartItems").innerHTML=rows.length?rows.map(x=>"<div class='cart-row'><span>"+escClient(x.name)+" × "+x.quantity+"</span><strong>"+money(x.price*x.quantity,x.currency)+"</strong></div>").join(""):"<div class='muted'>Корзина пуста</div>";document.getElementById("cartTotal").textContent=rows.reduce((s,x)=>s+x.price*x.quantity,0).toFixed(2);document.getElementById("cartCurrency").textContent=rows[0]?.currency||"EUR";cartEl.classList.toggle("open",rows.length>0)}
+function renderCart(){const rows=[...cart.values()];document.getElementById("cartItems").innerHTML=rows.length?rows.map(x=>"<div class='cart-row'><span>"+escClient(x.name)+" × "+x.quantity+"</span><strong>"+money(x.price*x.quantity,x.currency)+"</strong></div>").join(""):"<div class='muted'>Корзина пуста</div>";document.getElementById("cartTotal").textContent=rows.reduce((s,x)=>s+x.price*x.quantity,0).toFixed(2);document.getElementById("cartCurrency").textContent=rows[0]?.currency||"RUB";cartEl.classList.toggle("open",rows.length>0)}
 function add(item){if(!item)return;const x=cart.get(item.id)||{...item,quantity:0};x.quantity=Math.min(x.quantity+1,99);cart.set(item.id,x);renderCart();toast("Добавлено в корзину")}
 async function loadCatalog(){try{const r=await fetch("/public/projects/"+projectId+"/catalog");const j=await r.json();if(!r.ok)throw new Error(j.error||"catalog");const items=(j.data||[]).filter(x=>x.status==="active");catalogEl.innerHTML=items.length?items.map(x=>"<article class='item'><h3>"+escClient(x.name)+"</h3><div class='muted'>"+escClient(x.description||"")+"</div><div class='price'>"+money(x.price,x.currency)+"</div><button class='primary' data-add='"+escClient(x.id)+"'>Добавить</button></article>").join(""):"<div class='muted'>Каталог пока пуст.</div>";catalogEl.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>add(items.find(x=>x.id===b.dataset.add)))}catch{catalogEl.innerHTML="<div class='muted'>Каталог временно недоступен.</div>"}}
 document.querySelectorAll("[data-action='request']").forEach(b=>b.onclick=()=>{document.getElementById("request").scrollIntoView({behavior:"smooth"});document.getElementById("requestName").focus()});
@@ -137,17 +137,6 @@ async function requirePermission(req,res,permission){
   return auth;
 }
 
-function stripeSignatureValid(raw,header,secret){
-  if(!secret||!header)return false;
-  const parts=String(header).split(",").map(x=>x.split("="));
-  const timestamp=parts.find(x=>x[0]==="t")?.[1];
-  const signatures=parts.filter(x=>x[0]==="v1").map(x=>x[1]).filter(Boolean);
-  if(!timestamp||!signatures.length)return false;
-  const age=Math.abs(Math.floor(Date.now()/1000)-Number(timestamp));
-  if(!Number.isFinite(age)||age>300)return false;
-  const expected=crypto.createHmac("sha256",secret).update(String(timestamp)+"."+raw).digest("hex");
-  return signatures.some(value=>{try{const a=Buffer.from(value,"hex"),b=Buffer.from(expected,"hex");return a.length===b.length&&crypto.timingSafeEqual(a,b);}catch{return false;}});
-}
 async function rawBody(req){let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>1024*1024){const error=new Error("Request body too large");error.status=413;throw error;}}return raw;}
 
 const server=createServer(async(req,res)=>{
@@ -183,7 +172,7 @@ const server=createServer(async(req,res)=>{
       const eventType=String(event?.event||"").trim();
       if(!eventId){json(res,400,{error:"Webhook payment id is required"});return;}
       const seenKey="yookassa:"+eventId+":"+eventType;
-      if(idempotencyCache.has(seenKey)){json(res,200,{received:true,duplicate:true});return;}
+      if(!(await claimBillingWebhookEvent(seenKey))){json(res,200,{received:true,duplicate:true});return;}
       let payment;
       try{
         const response=await fetch("https://api.yookassa.ru/v3/payments/"+encodeURIComponent(eventId),{
@@ -200,9 +189,9 @@ const server=createServer(async(req,res)=>{
       const organizationId=String(metadata.organization_id||"").trim();
       const plan=String(metadata.plan||"").trim();
       if(eventType==="payment.succeeded"&&status==="succeeded"&&organizationId){
-        await updateStripeBilling(organizationId,{customerId:null,subscriptionId:eventId,status:"active",plan});
+        await updateBilling(organizationId,{customerId:null,subscriptionId:eventId,status:"active",plan});
       }else if(eventType==="payment.canceled"&&organizationId){
-        await updateStripeBilling(organizationId,{customerId:null,subscriptionId:eventId,status:"canceled",plan});
+        await updateBilling(organizationId,{customerId:null,subscriptionId:eventId,status:"canceled",plan});
       }
       idempotencyCache.set(seenKey,{received:true});
       json(res,200,{received:true});return;
@@ -226,7 +215,7 @@ const server=createServer(async(req,res)=>{
       next.brandName=String(next.brandName||"TorclixGroup").slice(0,120);
       next.language=["ru","en"].includes(String(next.language))?String(next.language):"ru";
       next.font=["Inter","Manrope","system-ui","Arial"].includes(String(next.font))?String(next.font):"Inter";
-      next.currency=["EUR","USD","RUB"].includes(String(next.currency))?String(next.currency):"EUR";
+      next.currency=["RUB","USD"].includes(String(next.currency))?String(next.currency):"RUB";
       next.accent=/^#[0-9a-fA-F]{6}$/.test(String(next.accent))?String(next.accent):"#2f6bea";
       next.theme=["light","dark"].includes(String(next.theme))?String(next.theme):"light";
       next.density=["comfortable","compact"].includes(String(next.density))?String(next.density):"comfortable";
@@ -241,11 +230,11 @@ const server=createServer(async(req,res)=>{
     if(path==="/api/billing/plans"&&req.method==="GET"){json(res,200,{data:Object.entries(plans).map(([id,x])=>({id,name:id==="starter"?"Starter":id==="pro"?"Pro":"Scale",price:x.price,limits:x}))});return;}
     if(path==="/api/billing/checkout"&&req.method==="POST"){
       const auth=await requirePermission(req,res,"billing:write");if(!auth)return;
-      const input=await body(req);const plan=String(input.plan||"");const currency=String(input.currency||"EUR").toUpperCase();
+      const input=await body(req);const plan=String(input.plan||"");const currency=String(input.currency||"RUB").toUpperCase();
       if(!plans[plan]){json(res,400,{error:"Invalid plan"});return;}
-      if(!stripeConfigured()){json(res,503,{error:"Платёжный провайдер пока не настроен",configured:false});return;}
+      if(!yookassaConfigured()){json(res,503,{error:"ЮKassa пока не настроена",configured:false});return;}
       if(!billingCurrencies().includes(currency)){json(res,400,{error:"Неподдерживаемая валюта",availableCurrencies:billingCurrencies()});return;}
-      if(!checkoutCurrencyConfigured(plan,currency)){json(res,503,{error:"Для выбранного тарифа и валюты Stripe Price не настроен",currency,plan});return;}
+      if(!checkoutCurrencyConfigured(plan,currency)){json(res,503,{error:"Для выбранного тарифа и валюты ЮKassa не настроена сумма",currency,plan});return;}
       const origin=String(input.origin||process.env.WEB_PUBLIC_BASE||"").replace(/\/$/,"");
       if(!origin){json(res,400,{error:"origin is required"});return;}
       const result=await createCheckoutSession({organizationId:auth.organization.id,plan,currency,successUrl:origin+"?billing=success",cancelUrl:origin+"?billing=cancelled"});
@@ -338,7 +327,7 @@ const server=createServer(async(req,res)=>{
         itemType:["product","service"].includes(String(input.itemType))?String(input.itemType):"service",
         description:input.description?String(input.description):"",
         price:Number.isFinite(Number(input.price))?Math.max(0,Number(input.price)):0,
-        currency:String(input.currency||"EUR").toUpperCase().slice(0,3),
+        currency:String(input.currency||"RUB").toUpperCase().slice(0,3),
         category:input.category?String(input.category):null,
         status:["active","draft","archived"].includes(String(input.status))?String(input.status):"active",
         stock:input.stock===null||input.stock===undefined||input.stock===""?null:Math.max(0,Math.floor(Number(input.stock))),
@@ -550,7 +539,7 @@ const server=createServer(async(req,res)=>{
 <nav class="tg-nav">${moduleNav}</nav><section>${blocks}</section>${moduleCards}${hasShop?`<section id="module-catalog" class="tg-module"><div class="eyebrow">Каталог</div><h3>Каталог услуг и товаров</h3><div id="tgCatalog"><p>Загружаем каталог…</p></div><div id="tgCart" style="display:none;margin-top:16px"><strong>Корзина</strong><div id="tgCartItems"></div><p>Итого: <b id="tgCartTotal">0.00 EUR</b></p><input id="tgOrderName" placeholder="Ваше имя" style="width:100%;padding:12px;box-sizing:border-box"><button class="tg-action" id="tgOrder">Оформить заказ</button><div class="status" id="tgOrderStatus"></div></div></section>`:""}<section class="request" id="request"><strong>Оставить заявку</strong><input id="name" placeholder="Ваше имя"><input id="phone" placeholder="Телефон"><input id="when" type="datetime-local"><button class="tg-action submit" id="submit">Отправить заявку</button><div class="status" id="status"></div></section>
 <div class="foot">Работает внутри Telegram · TorclixGroup</div>
 </main><script>
-const tg=window.Telegram?.WebApp;const initData=tg?.initData||"";const tgCart=new Map();const tgProjectId=location.pathname.split("/").pop();const tgMoney=(n,c)=>Number(n||0).toFixed(2)+" "+(c||"EUR");function tgRenderCart(){const rows=[...tgCart.values()];const box=document.getElementById("tgCart");if(!box)return;box.style.display=rows.length?"block":"none";document.getElementById("tgCartItems").innerHTML=rows.map(x=>"<div>"+String(x.name).replace(/[&<>"]/g,"")+" × "+x.quantity+" — "+tgMoney(x.price*x.quantity,x.currency)+"</div>").join("");document.getElementById("tgCartTotal").textContent=tgMoney(rows.reduce((s,x)=>s+x.price*x.quantity,0),rows[0]?.currency);};async function tgLoadCatalog(){if(!document.getElementById("tgCatalog"))return;try{const r=await fetch("/public/projects/"+tgProjectId+"/catalog");const j=await r.json();const items=(j.data||[]).filter(x=>x.status==="active");document.getElementById("tgCatalog").innerHTML=items.length?items.map(x=>"<div class='tg-module'><h4>"+String(x.name).replace(/[&<>"]/g,"")+"</h4><p>"+String(x.description||"").replace(/[&<>"]/g,"")+"</p><b>"+tgMoney(x.price,x.currency)+"</b><button class='tg-action' data-tg-add='"+x.id+"'>Добавить</button></div>").join(""):"<p>Каталог пока пуст.</p>";document.querySelectorAll("[data-tg-add]").forEach(b=>b.onclick=()=>{const item=items.find(x=>x.id===b.dataset.tgAdd);if(item){const old=tgCart.get(item.id)||{...item,quantity:0};old.quantity++;tgCart.set(item.id,old);tgRenderCart();tg?.HapticFeedback?.impactOccurred("light");}});}catch{document.getElementById("tgCatalog").innerHTML="<p>Каталог временно недоступен.</p>";}};if(tg){tg.ready();tg.expand();tg.enableClosingConfirmation?.();document.documentElement.style.setProperty("--bg",tg.themeParams?.bg_color||"#0b0d0e");document.documentElement.style.setProperty("--text",tg.themeParams?.text_color||"#f5f7f2");document.documentElement.style.setProperty("--muted",tg.themeParams?.hint_color||"#9da39e");const u=tg.initDataUnsafe?.user;if(u)document.getElementById("tgUser").textContent=(u.first_name||"")+" "+(u.last_name||"");tg.BackButton?.onClick(()=>{document.getElementById("request").classList.remove("open");tg.BackButton.hide();});}
+const tg=window.Telegram?.WebApp;const initData=tg?.initData||"";const tgCart=new Map();const tgProjectId=location.pathname.split("/").pop();const tgMoney=(n,c)=>Number(n||0).toFixed(2)+" "+(c||"RUB");function tgRenderCart(){const rows=[...tgCart.values()];const box=document.getElementById("tgCart");if(!box)return;box.style.display=rows.length?"block":"none";document.getElementById("tgCartItems").innerHTML=rows.map(x=>"<div>"+String(x.name).replace(/[&<>"]/g,"")+" × "+x.quantity+" — "+tgMoney(x.price*x.quantity,x.currency)+"</div>").join("");document.getElementById("tgCartTotal").textContent=tgMoney(rows.reduce((s,x)=>s+x.price*x.quantity,0),rows[0]?.currency);};async function tgLoadCatalog(){if(!document.getElementById("tgCatalog"))return;try{const r=await fetch("/public/projects/"+tgProjectId+"/catalog");const j=await r.json();const items=(j.data||[]).filter(x=>x.status==="active");document.getElementById("tgCatalog").innerHTML=items.length?items.map(x=>"<div class='tg-module'><h4>"+String(x.name).replace(/[&<>"]/g,"")+"</h4><p>"+String(x.description||"").replace(/[&<>"]/g,"")+"</p><b>"+tgMoney(x.price,x.currency)+"</b><button class='tg-action' data-tg-add='"+x.id+"'>Добавить</button></div>").join(""):"<p>Каталог пока пуст.</p>";document.querySelectorAll("[data-tg-add]").forEach(b=>b.onclick=()=>{const item=items.find(x=>x.id===b.dataset.tgAdd);if(item){const old=tgCart.get(item.id)||{...item,quantity:0};old.quantity++;tgCart.set(item.id,old);tgRenderCart();tg?.HapticFeedback?.impactOccurred("light");}});}catch{document.getElementById("tgCatalog").innerHTML="<p>Каталог временно недоступен.</p>";}};if(tg){tg.ready();tg.expand();tg.enableClosingConfirmation?.();document.documentElement.style.setProperty("--bg",tg.themeParams?.bg_color||"#0b0d0e");document.documentElement.style.setProperty("--text",tg.themeParams?.text_color||"#f5f7f2");document.documentElement.style.setProperty("--muted",tg.themeParams?.hint_color||"#9da39e");const u=tg.initDataUnsafe?.user;if(u)document.getElementById("tgUser").textContent=(u.first_name||"")+" "+(u.last_name||"");tg.BackButton?.onClick(()=>{document.getElementById("request").classList.remove("open");tg.BackButton.hide();});}
 document.querySelectorAll("[data-target]").forEach(b=>b.addEventListener("click",()=>{const target=b.dataset.target;const el=document.getElementById(target);if(!el)return;if(target==="request"){el.classList.add("open");tg?.BackButton?.show();document.getElementById("name")?.focus();}else{el.scrollIntoView({behavior:"smooth",block:"start"});}tg?.HapticFeedback?.impactOccurred("light");}));
 const bookingButton=document.getElementById("tgBookingSubmit");bookingButton?.addEventListener("click",async()=>{const status=document.getElementById("tgBookingStatus");const name=document.getElementById("tgBookingName").value.trim();const phone=document.getElementById("tgBookingPhone").value.trim();const when=document.getElementById("tgBookingWhen").value;if(!name||!when){status.textContent="Укажите имя и дату.";return;}status.textContent="Отправляем…";try{const r=await fetch("/public/projects/"+tgProjectId+"/bookings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({customerName:name,customerPhone:phone,startAt:new Date(when).toISOString(),service:"Бронирование Mini App",tg_init:initData})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Не удалось отправить");status.textContent="Бронирование принято.";tg?.HapticFeedback?.notificationOccurred("success");}catch(e){status.textContent=e.message||"Не удалось отправить";tg?.HapticFeedback?.notificationOccurred("error");}});
 const profileText=document.getElementById("tgProfileText");if(profileText&&tg?.initDataUnsafe?.user){const u=tg.initDataUnsafe.user;profileText.textContent="Вы вошли как "+(u.first_name||"пользователь")+(u.username?" · @"+u.username:"")+".";}

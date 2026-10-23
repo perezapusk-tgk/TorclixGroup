@@ -58,14 +58,15 @@ TorclixGroup is a multi-tenant platform concept for studios that create and oper
 
 The target is not a generic website builder. TorclixGroup is intended to become the infrastructure layer a studio uses to run dozens or hundreds of client projects.
 
-Next infrastructure layers:
-1. SSL automation for verified custom domains
-2. Telegram Mini App runtime
-3. CRM workflows, staff and calendar operations
-4. Billing provider and usage enforcement
-5. Analytics and audit logs
-6. Full client portal routing and approvals
-7. White-label controls
+Current product layers:
+1. Studio workspace and project management
+2. Website publishing and public runtime
+3. Telegram Mini App runtime and Telegram integration
+4. CRM leads, clients, bookings, staff and calendar
+5. Catalog, orders, analytics and audit log
+6. Client portal and approvals
+7. YooKassa billing with RUB/USD pricing configuration
+8. White-label and advanced custom-domain automation
 
 ## Development
 
@@ -102,6 +103,19 @@ Set `VITE_API_URL` in the web app to point at the API. The API exposes:
 - `GET /preview/:id`
 
 The Builder can open a real server-rendered project preview when the API is configured.
+
+### YooKassa billing
+Billing uses YooKassa. The checkout API creates redirect payments on the server and the webhook verifies the payment status through the YooKassa API before applying the organization plan. YooKassa recommends confirming webhook authenticity by checking the current object status; HTTP notifications are configured in the YooKassa merchant cabinet. citeturn0search0turn0search4
+
+Required production variables:
+- `YOOKASSA_SHOP_ID`
+- `YOOKASSA_SECRET_KEY`
+- optional `YOOKASSA_PRICE_USD_STARTER`, `YOOKASSA_PRICE_USD_PRO`, `YOOKASSA_PRICE_USD_SCALE`
+
+Webhook endpoint:
+`POST /api/billing/webhook`
+
+Configure that HTTPS endpoint in YooKassa under **Интеграция → HTTP-уведомления** and enable `payment.succeeded` and `payment.canceled`. citeturn0search1
 
 
 ## Analytics and audit log

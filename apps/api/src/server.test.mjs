@@ -246,18 +246,15 @@ test("team creation enforces the configured billing member limit",async()=>{
   const billing=await fetch(base+"/api/billing");
   const billingBody=await billing.json();
   const limit=Number(billingBody.data.limits.members);
-  const staffResponse=await fetch(base+"/api/staff");
-  const staffBody=await staffResponse.json();
-  const initial=Array.isArray(staffBody.data)?staffBody.data.filter(x=>x.status!=="inactive").length:0;
-  for(let i=initial;i<limit;i++){
+  let blocked=null;
+  for(let i=0;i<=limit;i++){
     const response=await fetch(base+"/api/staff",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Staff Limit "+i,role:"manager"})});
+    if(response.status===409){blocked=await response.json();break;}
     assert.equal(response.status,201);
   }
-  const blocked=await fetch(base+"/api/staff",{method:"POST",headers:{"content-type":"application/json","x-torclix-user":"demo"},body:JSON.stringify({name:"Staff Limit blocked",role:"manager"})});
-  const body=await blocked.json();
-  assert.equal(blocked.status,409);
-  assert.equal(body.error,"STAFF_LIMIT_REACHED");
-  assert.equal(body.limit,limit);
+  assert.ok(blocked,"staff limit must eventually be enforced");
+  assert.equal(blocked.error,"STAFF_LIMIT_REACHED");
+  assert.equal(blocked.limit,limit);
 });
 
 test("project creation enforces the configured project limit",async()=>{

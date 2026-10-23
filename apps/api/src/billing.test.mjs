@@ -1,33 +1,31 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { billingCurrencies, billingSnapshot, checkoutCurrencyConfigured, priceEnvKey } from "./billing.mjs";
+import { billingCurrencies,billingSnapshot,checkoutCurrencyConfigured,priceEnvKey } from "./billing.mjs";
 
-test("billing price keys use base EUR and currency-specific Stripe prices",()=>{
-  assert.equal(priceEnvKey("pro","EUR"),"STRIPE_PRICE_PRO");
-  assert.equal(priceEnvKey("pro","USD"),"STRIPE_PRICE_PRO_USD");
-  assert.equal(priceEnvKey("starter","RUB"),"STRIPE_PRICE_STARTER_RUB");
+test("billing price keys use YooKassa currency-specific configuration",()=>{
+  assert.equal(priceEnvKey("pro","RUB"),"YOOKASSA_PRICE_RUB_PRO");
+  assert.equal(priceEnvKey("pro","USD"),"YOOKASSA_PRICE_USD_PRO");
+  assert.equal(checkoutCurrencyConfigured("starter","RUB"),true);
 });
 
 test("billing snapshot exposes configured checkout currencies",()=>{
-  const previous=process.env.STRIPE_PRICE_PRO_USD;
-  process.env.STRIPE_PRICE_PRO_USD="price_test_usd";
+  const previous=process.env.YOOKASSA_PRICE_USD_PRO;
+  process.env.YOOKASSA_PRICE_USD_PRO="2990";
   try{
     const snapshot=billingSnapshot({plan:"pro"},{projects:4,leads:12});
-    assert.ok(snapshot.availableCurrencies.includes("EUR"));
+    assert.equal(snapshot.provider,"yookassa");
+    assert.ok(snapshot.availableCurrencies.includes("RUB"));
     assert.ok(snapshot.availableCurrencies.includes("USD"));
+    assert.equal(snapshot.currency,"RUB");
     assert.equal(snapshot.usage.projects,4);
     assert.equal(snapshot.usage.leads,12);
     assert.equal(checkoutCurrencyConfigured("pro","USD"),true);
   }finally{
-    if(previous===undefined) delete process.env.STRIPE_PRICE_PRO_USD;
-    else process.env.STRIPE_PRICE_PRO_USD=previous;
+    if(previous===undefined)delete process.env.YOOKASSA_PRICE_USD_PRO;else process.env.YOOKASSA_PRICE_USD_PRO=previous;
   }
 });
 
-test("unknown currency is not advertised",()=>{
-  assert.equal(billingCurrencies().includes("GBP"),false);
-});
-
+test("unknown currency is not advertised",()=>assert.equal(billingCurrencies().includes("GBP"),false));
 test("billing snapshot falls back to starter for an unknown plan",()=>{
   const snapshot=billingSnapshot({plan:"unknown"},{});
   assert.equal(snapshot.plan,"starter");

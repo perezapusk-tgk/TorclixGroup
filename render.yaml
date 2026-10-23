@@ -51,7 +51,6 @@ services:
         sync: false
       - key: YOOKASSA_PRICE_USD_SCALE
         sync: false
-        sync: false
 
   - type: web
     name: torclixgroup-web

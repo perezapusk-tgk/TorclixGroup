@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import crypto from "node:crypto";
 
 const port=4317;
 const base="http://127.0.0.1:"+port;
@@ -38,8 +37,6 @@ test("YooKassa webhook rejects requests when credentials are not configured",asy
 });
 
 test("YooKassa webhook rejects malformed events",async()=>{
-  const childEnv=process.env;
-  void childEnv;
   const response=await fetch(base+"/api/billing/webhook",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({type:"notification",event:"payment.succeeded",object:{}})});
   assert.equal(response.status,503);
 });

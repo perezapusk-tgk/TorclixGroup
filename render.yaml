@@ -41,25 +41,16 @@ services:
         sync: false
       - key: AUTH_JWKS_URL
         sync: false
-      - key: STRIPE_SECRET_KEY
+      - key: YOOKASSA_SHOP_ID
         sync: false
-      - key: STRIPE_PRICE_STARTER
+      - key: YOOKASSA_SECRET_KEY
         sync: false
-      - key: STRIPE_PRICE_PRO
+      - key: YOOKASSA_PRICE_USD_STARTER
         sync: false
-      - key: STRIPE_PRICE_SCALE
+      - key: YOOKASSA_PRICE_USD_PRO
         sync: false
-      - key: STRIPE_PRICE_STARTER_USD
+      - key: YOOKASSA_PRICE_USD_SCALE
         sync: false
-      - key: STRIPE_PRICE_PRO_USD
-        sync: false
-      - key: STRIPE_PRICE_SCALE_USD
-        sync: false
-      - key: STRIPE_PRICE_STARTER_RUB
-        sync: false
-      - key: STRIPE_PRICE_PRO_RUB
-        sync: false
-      - key: STRIPE_PRICE_SCALE_RUB
         sync: false
 
   - type: web

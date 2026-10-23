@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { setOrganizationPlan } from "./storage.mjs";
 
 export const plans={
@@ -27,13 +28,12 @@ export async function createCheckoutSession({organizationId,plan,successUrl,canc
   const amount=Number(process.env[priceEnvKey(plan,normalizedCurrency)]||plans[plan]?.price);
   if(!shopId||!secret)return {configured:false,error:"ЮKassa не настроена: добавьте YOOKASSA_SHOP_ID и YOOKASSA_SECRET_KEY",currency:normalizedCurrency};
   if(!plans[plan]||!Number.isFinite(amount)||amount<=0)return {configured:false,error:"Для выбранного тарифа не задана корректная сумма",currency:normalizedCurrency};
-  const response=await fetch("https://api.yookassa.ru/v3/payments",{method:"POST",headers:{authorization:"Basic "+Buffer.from(shopId+":"+secret).toString("base64"),"content-type":"application/json","Idempotence-Key":"tg-"+Date.now()+"-"+Math.random().toString(36).slice(2)},body:JSON.stringify({amount:{value:amount.toFixed(2),currency:normalizedCurrency},capture:true,confirmation:{type:"redirect",return_url:successUrl||cancelUrl||""},description:"TorclixGroup · тариф "+plan,metadata:{organization_id:organizationId,plan,currency:normalizedCurrency}})});
+  const response=await fetch("https://api.yookassa.ru/v3/payments",{method:"POST",headers:{authorization:"Basic "+Buffer.from(shopId+":"+secret).toString("base64"),"content-type":"application/json","Idempotence-Key":"tg-"+crypto.randomUUID()},body:JSON.stringify({amount:{value:amount.toFixed(2),currency:normalizedCurrency},capture:true,confirmation:{type:"redirect",return_url:successUrl||cancelUrl||""},description:"TorclixGroup · тариф "+plan,metadata:{organization_id:organizationId,plan,currency:normalizedCurrency}})});
   const data=await response.json();
   if(!response.ok)return {configured:true,error:data?.description||data?.type||"Ошибка ЮKassa",currency:normalizedCurrency};
   return {configured:true,id:data.id,url:data?.confirmation?.confirmation_url||null,status:data.status,currency:normalizedCurrency};
 }
 export function yookassaConfigured(){return !!String(process.env.YOOKASSA_SHOP_ID||"").trim()&&!!String(process.env.YOOKASSA_SECRET_KEY||"").trim();}
-export const stripeConfigured=yookassaConfigured;
 export async function changePlan(organizationId,plan){
   if(!plans[plan])throw new Error("Invalid plan");
   const result=await setOrganizationPlan(organizationId,plan);

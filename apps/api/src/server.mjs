@@ -154,7 +154,7 @@ const server=createServer(async(req,res)=>{
   if(req.method==="OPTIONS"){json(res,204,{});return;}
   const {pathname:path}=new URL(req.url||"/","http://localhost");
   try{
-    if(req.method==="POST" && (path.startsWith("/public/projects/")||path==="/tg/webhook")){
+    if(req.method==="POST" && (path.startsWith("/public/projects/")&&!path.includes("/events") || path==="/tg/webhook")){
       const ip=String(req.headers["x-forwarded-for"]||req.socket.remoteAddress||"unknown").split(",")[0].trim();
       const limit=path==="/tg/webhook"?120:20;
       if(!rateLimit(path+":"+ip,limit,60000)){json(res,429,{error:"Слишком много запросов. Попробуйте позже."});return;}
@@ -308,7 +308,7 @@ const server=createServer(async(req,res)=>{
       }
       if(telegramUser?.id)await notifyTelegramUser(telegramUser.id,"Заказ принят: "+project.name+". Сумма "+order.total.toFixed(2)+" "+order.currency+".");
       await notifyTelegramAdmin("Новый заказ · "+project.name+"\n"+order.customerName+" · "+order.total.toFixed(2)+" "+order.currency);
-      const response={data:{id:order.id,status:order.status,total:order.total,currency:order.currency}};
+      const response={data:{received:true,id:order.id,status:order.status,total:order.total,currency:order.currency}};
       if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }
 

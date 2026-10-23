@@ -176,7 +176,7 @@ export async function setOrganizationPlan(organizationId,plan){
   return rows[0]?{...rows[0],source:"internal"}:null;
 }
 
-export async function updateStripeBilling(organizationId,{customerId=null,subscriptionId=null,status=null,plan=null}={}){
+export async function updateBilling(organizationId,{customerId=null,subscriptionId=null,status=null,plan=null}={}){
   const db=await getPool();
   if(!db) return {id:organizationId,customerId,subscriptionId,status,plan,source:"memory"};
   const allowedStatus=new Set(["inactive","trialing","active","past_due","canceled","unpaid"]);
@@ -185,26 +185,26 @@ export async function updateStripeBilling(organizationId,{customerId=null,subscr
   const safePlan=plan&&allowedPlan.has(plan)?plan:null;
   const {rows}=await db.query(
     `update organizations set
-      stripe_customer_id=coalesce($2,stripe_customer_id),
-      stripe_subscription_id=coalesce($3,stripe_subscription_id),
+      yookassa_customer_id=coalesce($2,stripe_customer_id),
+      yookassa_payment_id=coalesce($3,stripe_subscription_id),
       billing_status=coalesce($4,billing_status),
       plan=coalesce($5,plan),
       updated_at=now()
     where id=$1::uuid
     returning id::text as id,plan,stripe_customer_id as "customerId",stripe_subscription_id as "subscriptionId",billing_status as status`,
     [organizationId,customerId,subscriptionId,safeStatus,safePlan]);
-  return rows[0]?{...rows[0],source:"stripe"}:null;
+  return rows[0]?{...rows[0],source:"yookassa"}:null;
 }
-export async function claimStripeWebhookEvent(eventId){
+export async function claimBillingWebhookEvent(eventId){
   const id=String(eventId||"").trim();
   if(!id)return true;
   const db=await getPool();
   if(!db)return false;
-  const result=await db.query("insert into stripe_webhook_events(event_id) values($1) on conflict(event_id) do nothing",[id]);
+  const result=await db.query("insert into yookassa_webhook_events(event_id) values($1) on conflict(event_id) do nothing",[id]);
   return result.rowCount===1;
 }
 
-export async function findOrganizationByStripe({customerId=null,subscriptionId=null}={}){
+export async function findOrganizationByBilling({customerId=null,subscriptionId=null}={}){
   const db=await getPool();
   if(!db) return null;
   const {rows}=await db.query(

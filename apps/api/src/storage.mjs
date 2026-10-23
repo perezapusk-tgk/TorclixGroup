@@ -8,6 +8,7 @@ let initialized = false;
 let databaseUnavailable = false;
 const memoryPublishedDocuments = new Map();
 const memoryOrganizationSettings = new Map();
+const memoryBillingWebhookEvents = new Set();
 
 async function getPool(){
   if(pool || databaseUnavailable || !process.env.DATABASE_URL) return pool;
@@ -199,7 +200,7 @@ export async function claimBillingWebhookEvent(eventId){
   const id=String(eventId||"").trim();
   if(!id)return true;
   const db=await getPool();
-  if(!db)return false;
+  if(!db){ if(memoryBillingWebhookEvents.has(id)) return false; memoryBillingWebhookEvents.add(id); return true; }
   const result=await db.query("insert into yookassa_webhook_events(event_id) values($1) on conflict(event_id) do nothing",[id]);
   return result.rowCount===1;
 }

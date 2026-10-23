@@ -105,7 +105,7 @@ Set `VITE_API_URL` in the web app to point at the API. The API exposes:
 The Builder can open a real server-rendered project preview when the API is configured.
 
 ### YooKassa billing
-Billing uses YooKassa. The checkout API creates redirect payments on the server and the webhook verifies the payment status through the YooKassa API before applying the organization plan. YooKassa recommends confirming webhook authenticity by checking the current object status; HTTP notifications are configured in the YooKassa merchant cabinet. citeturn0search0turn0search4
+Billing uses YooKassa. The checkout API creates redirect payments on the server and the webhook verifies the payment status through the YooKassa API before applying the organization plan. YooKassa recommends confirming webhook authenticity by checking the current object status; HTTP notifications are configured in the YooKassa merchant cabinet.
 
 Required production variables:
 - `YOOKASSA_SHOP_ID`
@@ -115,7 +115,7 @@ Required production variables:
 Webhook endpoint:
 `POST /api/billing/webhook`
 
-Configure that HTTPS endpoint in YooKassa under **Интеграция → HTTP-уведомления** and enable `payment.succeeded` and `payment.canceled`. citeturn0search1
+Configure that HTTPS endpoint in YooKassa under **Интеграция → HTTP-уведомления** and enable `payment.succeeded` and `payment.canceled`.
 
 
 ## Analytics and audit log

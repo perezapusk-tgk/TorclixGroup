@@ -175,35 +175,36 @@ const server=createServer(async(req,res)=>{
       json(res,200,{data:portal});return;
     }
     if(path==="/api/billing/webhook"&&req.method==="POST"){
-      const secret=String(process.env.STRIPE_WEBHOOK_SECRET||"").trim();
-      if(!secret){json(res,503,{error:"Stripe webhook is not configured"});return;}
-      const raw=await rawBody(req);
-      if(!stripeSignatureValid(raw,req.headers["stripe-signature"],secret)){json(res,400,{error:"Invalid Stripe signature"});return;}
-      let event;try{event=JSON.parse(raw);}catch{json(res,400,{error:"Invalid webhook payload"});return;}
-      const eventId=String(event?.id||"").trim();
-      if(eventId){
-        const claimed=await claimStripeWebhookEvent(eventId);
-        if(!claimed){
-          const seenKey="stripe:"+eventId;
-          if(idempotencyCache.has(seenKey)){json(res,200,{received:true,duplicate:true});return;}
-          if(process.env.DATABASE_URL){json(res,200,{received:true,duplicate:true});return;}
-          idempotencyCache.set(seenKey,{received:true});
-        }
+      const shopId=String(process.env.YOOKASSA_SHOP_ID||"").trim();
+      const secret=String(process.env.YOOKASSA_SECRET_KEY||"").trim();
+      if(!shopId||!secret){json(res,503,{error:"ЮKassa webhook is not configured"});return;}
+      let event;try{event=await body(req);}catch{json(res,400,{error:"Invalid webhook payload"});return;}
+      const eventId=String(event?.object?.id||event?.id||"").trim();
+      const eventType=String(event?.event||"").trim();
+      if(!eventId){json(res,400,{error:"Webhook payment id is required"});return;}
+      const seenKey="yookassa:"+eventId+":"+eventType;
+      if(idempotencyCache.has(seenKey)){json(res,200,{received:true,duplicate:true});return;}
+      let payment;
+      try{
+        const response=await fetch("https://api.yookassa.ru/v3/payments/"+encodeURIComponent(eventId),{
+          headers:{authorization:"Basic "+Buffer.from(shopId+":"+secret).toString("base64"),accept:"application/json"}
+        });
+        if(!response.ok){json(res,400,{error:"Не удалось проверить платеж ЮKassa"});return;}
+        payment=await response.json();
+      }catch(error){
+        console.error("YooKassa webhook verification failed",error?.message||error);
+        json(res,502,{error:"Ошибка проверки платежа ЮKassa"});return;
       }
-      const object=event?.data?.object||{};
-      if(event?.type==="checkout.session.completed"){
-        const organizationId=object?.metadata?.organization_id||object?.client_reference_id;
-        const plan=object?.metadata?.plan;
-        if(organizationId){await updateStripeBilling(organizationId,{customerId:object.customer||null,subscriptionId:object.subscription||null,status:"active",plan});}
-      }else if(event?.type==="customer.subscription.created"||event?.type==="customer.subscription.updated"||event?.type==="customer.subscription.deleted"){
-        const organization=await findOrganizationByStripe({customerId:object.customer||null,subscriptionId:object.id||null});
-        if(organization){
-          const priceId=object?.items?.data?.[0]?.price?.id;
-          const plan=priceId===process.env.STRIPE_PRICE_STARTER||priceId===process.env.STRIPE_PRICE_STARTER_USD||priceId===process.env.STRIPE_PRICE_STARTER_RUB?"starter":priceId===process.env.STRIPE_PRICE_PRO||priceId===process.env.STRIPE_PRICE_PRO_USD||priceId===process.env.STRIPE_PRICE_PRO_RUB?"pro":priceId===process.env.STRIPE_PRICE_SCALE||priceId===process.env.STRIPE_PRICE_SCALE_USD||priceId===process.env.STRIPE_PRICE_SCALE_RUB?"scale":null;
-          const status=event.type.endsWith("deleted")?"canceled":String(object.status||"inactive");
-          await updateStripeBilling(organization.id,{customerId:object.customer||null,subscriptionId:object.id||null,status,plan});
-        }
+      const status=String(payment?.status||"");
+      const metadata=payment?.metadata||{};
+      const organizationId=String(metadata.organization_id||"").trim();
+      const plan=String(metadata.plan||"").trim();
+      if(eventType==="payment.succeeded"&&status==="succeeded"&&organizationId){
+        await updateStripeBilling(organizationId,{customerId:null,subscriptionId:eventId,status:"active",plan});
+      }else if(eventType==="payment.canceled"&&organizationId){
+        await updateStripeBilling(organizationId,{customerId:null,subscriptionId:eventId,status:"canceled",plan});
       }
+      idempotencyCache.set(seenKey,{received:true});
       json(res,200,{received:true});return;
     }
     if(path==="/health"){json(res,200,{ok:true,service:"torclix-api",version:"0.7.0",storage:process.env.DATABASE_URL?"postgres":"memory",auth:process.env.NODE_ENV==="production"?"external-provider-required":(process.env.TORCLIX_DEV_AUTH==="true"?"development-session":"development-auth-disabled")});return;}

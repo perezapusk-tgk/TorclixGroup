@@ -186,13 +186,13 @@ export async function updateBilling(organizationId,{customerId=null,subscription
   const safePlan=plan&&allowedPlan.has(plan)?plan:null;
   const {rows}=await db.query(
     `update organizations set
-      yookassa_customer_id=coalesce($2,stripe_customer_id),
-      yookassa_payment_id=coalesce($3,stripe_subscription_id),
+      yookassa_customer_id=coalesce($2,yookassa_customer_id),
+      yookassa_payment_id=coalesce($3,yookassa_payment_id),
       billing_status=coalesce($4,billing_status),
       plan=coalesce($5,plan),
       updated_at=now()
     where id=$1::uuid
-    returning id::text as id,plan,stripe_customer_id as "customerId",stripe_subscription_id as "subscriptionId",billing_status as status`,
+    returning id::text as id,plan,yookassa_customer_id as "customerId",yookassa_payment_id as "subscriptionId",billing_status as status`,
     [organizationId,customerId,subscriptionId,safeStatus,safePlan]);
   return rows[0]?{...rows[0],source:"yookassa"}:null;
 }
@@ -209,8 +209,8 @@ export async function findOrganizationByBilling({customerId=null,subscriptionId=
   const db=await getPool();
   if(!db) return null;
   const {rows}=await db.query(
-    `select id::text as id,plan,stripe_customer_id as "customerId",stripe_subscription_id as "subscriptionId",billing_status as status
-     from organizations where ($1 is not null and stripe_customer_id=$1) or ($2 is not null and stripe_subscription_id=$2) limit 1`,
+    `select id::text as id,plan,yookassa_customer_id as "customerId",yookassa_payment_id as "subscriptionId",billing_status as status
+     from organizations where ($1 is not null and yookassa_customer_id=$1) or ($2 is not null and yookassa_payment_id=$2) limit 1`,
     [customerId,subscriptionId]);
   return rows[0]||null;
 }

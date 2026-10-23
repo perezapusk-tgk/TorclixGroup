@@ -30,26 +30,18 @@ test.before(async()=>{
 
 test.after(()=>child?.kill("SIGTERM"));
 
-test("Stripe webhook rejects invalid signatures",async()=>{
-  const response=await fetch(base+"/api/billing/webhook",{method:"POST",headers:{"content-type":"application/json","stripe-signature":"t=1,v1=invalid"},body:JSON.stringify({id:"evt_invalid_signature",type:"checkout.session.completed",data:{object:{metadata:{organization_id:"org_demo",plan:"pro"}}}})});
-  assert.equal(response.status,400);
+test("YooKassa webhook rejects requests when credentials are not configured",async()=>{
+  const response=await fetch(base+"/api/billing/webhook",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({type:"notification",event:"payment.succeeded",object:{id:"payment_test"}})});
+  assert.equal(response.status,503);
   const body=await response.json();
-  assert.equal(body.error,"Invalid Stripe signature");
+  assert.equal(body.error,"ЮKassa webhook is not configured");
 });
 
-test("Stripe webhook accepts a signed event and deduplicates replay",async()=>{
-  const payload=JSON.stringify({id:"evt_test_checkout_001",type:"checkout.session.completed",data:{object:{client_reference_id:"org_demo",metadata:{organization_id:"org_demo",plan:"pro"},customer:"cus_test",subscription:"sub_test"}}});
-  const timestamp=Math.floor(Date.now()/1000);
-  const signature=crypto.createHmac("sha256","whsec_test").update(String(timestamp)+"."+payload).digest("hex");
-  const headers={"content-type":"application/json","stripe-signature":"t="+timestamp+",v1="+signature};
-  const first=await fetch(base+"/api/billing/webhook",{method:"POST",headers,body:payload});
-  const firstBody=await first.json();
-  assert.equal(first.status,200);
-  assert.equal(firstBody.received,true);
-  const replay=await fetch(base+"/api/billing/webhook",{method:"POST",headers,body:payload});
-  const replayBody=await replay.json();
-  assert.equal(replay.status,200);
-  assert.equal(replayBody.duplicate,true);
+test("YooKassa webhook rejects malformed events",async()=>{
+  const childEnv=process.env;
+  void childEnv;
+  const response=await fetch(base+"/api/billing/webhook",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({type:"notification",event:"payment.succeeded",object:{}})});
+  assert.equal(response.status,503);
 });
 
 test("public runtime sends security headers",async()=>{

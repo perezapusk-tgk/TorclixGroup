@@ -11,11 +11,16 @@ const supportedCurrencies=["RUB","USD"];
 export function billingCurrencies(){
   return supportedCurrencies.filter(currency=>currency==="RUB"||process.env["YOOKASSA_PRICE_"+currency+"_STARTER"]||process.env["YOOKASSA_PRICE_"+currency+"_PRO"]||process.env["YOOKASSA_PRICE_"+currency+"_SCALE"]);
 }
+export function normalizeBillingCurrency(currency="RUB"){
+  const value=String(currency||"RUB").toUpperCase();
+  return supportedCurrencies.includes(value)?value:"RUB";
+}
 export function priceEnvKey(plan,currency="RUB"){
-  return "YOOKASSA_PRICE_"+String(currency||"RUB").toUpperCase()+"_"+String(plan).toUpperCase();
+  return "YOOKASSA_PRICE_"+normalizeBillingCurrency(currency)+"_"+String(plan).toUpperCase();
 }
 export function checkoutCurrencyConfigured(plan,currency="RUB"){
-  return !!String(process.env[priceEnvKey(plan,currency)]||"").trim()||(String(currency).toUpperCase()==="RUB"&&Number.isFinite(Number(plans[plan]?.price)));
+  const normalized=normalizeBillingCurrency(currency);
+  return !!String(process.env[priceEnvKey(plan,normalized)]||"").trim()||(normalized==="RUB"&&Number.isFinite(Number(plans[plan]?.price)));
 }
 export function billingSnapshot(org,counts={}){
   const plan=plans[org.plan]||plans.starter;
@@ -24,7 +29,7 @@ export function billingSnapshot(org,counts={}){
 export async function createCheckoutSession({organizationId,plan,successUrl,cancelUrl,currency="RUB"}){
   const shopId=String(process.env.YOOKASSA_SHOP_ID||"").trim();
   const secret=String(process.env.YOOKASSA_SECRET_KEY||"").trim();
-  const normalizedCurrency=String(currency||"RUB").toUpperCase();
+  const normalizedCurrency=normalizeBillingCurrency(currency);
   const amount=Number(process.env[priceEnvKey(plan,normalizedCurrency)]||plans[plan]?.price);
   if(!shopId||!secret)return {configured:false,error:"ЮKassa не настроена: добавьте YOOKASSA_SHOP_ID и YOOKASSA_SECRET_KEY",currency:normalizedCurrency};
   if(!plans[plan]||!Number.isFinite(amount)||amount<=0)return {configured:false,error:"Для выбранного тарифа не задана корректная сумма",currency:normalizedCurrency};

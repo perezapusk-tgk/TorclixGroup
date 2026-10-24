@@ -156,7 +156,7 @@ const server=createServer(async(req,res)=>{
     if(req.method==="GET" && path==="/" && requestHost && !requestHost.endsWith(".onrender.com") && !["localhost","127.0.0.1"].includes(requestHost)){
       const customDomain=await findDomain(requestHost);
       if(customDomain && ["active","verified"].includes(String(customDomain.status||"")) && customDomain.projectId){
-        const customProject=await getPublicProject(customDomain.projectId);
+        const customProject=await getPublicProject(resolvePublicProjectId(customDomain.projectId));
         if(customProject){
           const customDoc=await getPublishedDocument(customProject.id);
           if(customDoc){html(res,200,renderPreview(customProject,customDoc));return;}

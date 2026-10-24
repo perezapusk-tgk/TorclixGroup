@@ -36,11 +36,11 @@ services:
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false
       - key: AUTH_ISSUER
-        sync: false
+        value: https://dev-5p5papfgff5e8qgh.us.auth0.com/
       - key: AUTH_AUDIENCE
-        sync: false
+        value: https://torclixgroup-api
       - key: AUTH_JWKS_URL
-        sync: false
+        value: https://dev-5p5papfgff5e8qgh.us.auth0.com/.well-known/jwks.json
       - key: YOOKASSA_SHOP_ID
         sync: false
       - key: YOOKASSA_SECRET_KEY

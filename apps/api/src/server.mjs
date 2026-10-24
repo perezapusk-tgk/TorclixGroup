@@ -152,6 +152,17 @@ const server=createServer(async(req,res)=>{
       const limit=path==="/tg/webhook"?120:20;
       if(!rateLimit(path+":"+ip,limit,60000)){json(res,429,{error:"Слишком много запросов. Попробуйте позже."});return;}
     }
+    const requestHost=String(req.headers.host||"").split(":")[0].toLowerCase();
+    if(req.method==="GET" && path==="/" && requestHost && !requestHost.endsWith(".onrender.com") && !["localhost","127.0.0.1"].includes(requestHost)){
+      const customDomain=await findDomain(requestHost);
+      if(customDomain && ["active","verified"].includes(String(customDomain.status||"")) && customDomain.projectId){
+        const customProject=await getPublicProject(customDomain.projectId);
+        if(customProject){
+          const customDoc=await getPublishedDocument(customProject.id);
+          if(customDoc){html(res,200,renderPreview(customProject,customDoc));return;}
+        }
+      }
+    }
     const publicPortal=path.match(/^\/public\/client-portal\/([^/]+)$/);
     if(publicPortal&&req.method==="PATCH"){
       const token=decodeURIComponent(publicPortal[1]);

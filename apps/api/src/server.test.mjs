@@ -261,3 +261,61 @@ test("project creation enforces the configured project limit",async()=>{
   assert.equal(body.error,"PROJECT_LIMIT_REACHED");
   assert.equal(body.limit,limit);
 });
+
+
+test("client portal supports review and approval workflow",async()=>{
+  const current=await fetch(base+"/api/projects/p1/client-portal");
+  const currentBody=await current.json();
+  assert.equal(current.status,200);
+  assert.ok(currentBody.data);
+  assert.ok(currentBody.data.portalUrl);
+
+  const review=await fetch(base+"/api/projects/p1/client-portal",{
+    method:"PATCH",
+    headers:{"content-type":"application/json","x-torclix-user":"demo"},
+    body:JSON.stringify({status:"review",note:"Проверьте главную страницу"})
+  });
+  const reviewBody=await review.json();
+  assert.equal(review.status,200);
+  assert.equal(reviewBody.data.status,"review");
+
+  const token=new URL(reviewBody.data.portalUrl).pathname.split("/").pop();
+  assert.ok(token);
+
+  const publicPortal=await fetch(base+"/public/client-portal/"+token);
+  const publicBody=await publicPortal.json();
+  assert.equal(publicPortal.status,200);
+  assert.equal(publicBody.data.status,"review");
+
+  const approved=await fetch(base+"/public/client-portal/"+token,{
+    method:"PATCH",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({status:"approved",note:"Всё согласовано"})
+  });
+  const approvedBody=await approved.json();
+  assert.equal(approved.status,200);
+  assert.equal(approvedBody.data.status,"approved");
+});
+
+test("calendar event validates interval and accepts a valid event",async()=>{
+  const invalid=await fetch(base+"/api/calendar/events",{
+    method:"POST",
+    headers:{"content-type":"application/json","x-torclix-user":"demo"},
+    body:JSON.stringify({title:"Bad interval",startAt:"2030-01-01T13:00:00.000Z",endAt:"2030-01-01T12:00:00.000Z"})
+  });
+  assert.equal(invalid.status,400);
+
+  const valid=await fetch(base+"/api/calendar/events",{
+    method:"POST",
+    headers:{"content-type":"application/json","x-torclix-user":"demo"},
+    body:JSON.stringify({title:"Client meeting",startAt:"2030-01-01T12:00:00.000Z",endAt:"2030-01-01T13:00:00.000Z",status:"confirmed"})
+  });
+  const validBody=await valid.json();
+  assert.equal(valid.status,201);
+  assert.equal(validBody.data.title,"Client meeting");
+
+  const listed=await fetch(base+"/api/calendar/events?from=2030-01-01T00:00:00.000Z&to=2030-01-02T00:00:00.000Z");
+  const listedBody=await listed.json();
+  assert.equal(listed.status,200);
+  assert.ok(listedBody.data.some(event=>event.title==="Client meeting"));
+});

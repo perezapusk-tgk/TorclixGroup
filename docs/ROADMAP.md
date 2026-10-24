@@ -44,9 +44,9 @@
 - [x] Orders and invoices
 
 ## 06 — SaaS
-- [~] Plans and subscriptions (Stripe Checkout endpoint ready; provider secrets required)
+- [~] Plans and subscriptions (ЮKassa Checkout endpoint ready; provider credentials required)
 - [~] Usage limits
-- [~] Billing (internal plans + Stripe Checkout)
+- [~] Billing (internal plans + ЮKassa Checkout)
 - [x] Analytics
 - [x] Audit logs
 - [ ] Backups
@@ -75,13 +75,13 @@
 - [x] Client portal surface foundation
 - [x] Dashboard session + billing + team hydration
 - [ ] Production external authentication provider
-- [~] Live billing provider (Stripe Checkout integration ready; Stripe credentials/Price IDs required)
+- [~] Live billing provider (ЮKassa integration ready; shop ID/secret and tariff prices required)
 - [x] Full client portal routing and approval workflow
 
 ## Current execution priority
 1. Production identity provider and session verification
 2. Custom domains and SSL automation
-3. Stripe credentials + webhook/subscription lifecycle
+3. ЮKassa credentials + webhook/payment lifecycle
 4. Backup strategy and final E2E production verification
 5. ~~Telegram Mini App runtime~~ — implemented
 6. CRM workflows, staff/calendar and business operations

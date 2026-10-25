@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,markOrderPaid,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateBilling,findOrganizationByBilling,getOrganizationSettings,updateOrganizationSettings,claimBillingWebhookEvent
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,markOrderPaid,updateOrderPayment,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateBilling,findOrganizationByBilling,getOrganizationSettings,updateOrganizationSettings,claimBillingWebhookEvent
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -340,7 +340,7 @@ const server=createServer(async(req,res)=>{
       try{
         const order={...found,commissionRate,commissionAmount,sellerAmount};const invoice=await createTelegramPaymentInvoice(order,project);
         const updated={...order,paymentProvider:"telegram",paymentInvoiceUrl:invoice.invoiceLink,paymentPayload:invoice.payload};
-        if(process.env.DATABASE_URL) await saveOrder(updated,found.items||[]); else orders.set(orderId,updated);
+        if(process.env.DATABASE_URL){const persisted=await updateOrderPayment(orderId,invoice.invoiceLink,invoice.payload,commissionRate);if(persisted)Object.assign(updated,persisted);}else orders.set(orderId,updated);
         json(res,200,{data:{orderId,invoiceLink:invoice.invoiceLink,total,currency:invoice.currency,commissionRate,commissionAmount,sellerAmount}});
       }catch(error){json(res,503,{error:error instanceof Error?error.message:"Не удалось создать Telegram invoice"});}
       return;

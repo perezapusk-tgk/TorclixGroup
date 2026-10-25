@@ -405,7 +405,10 @@ export async function listOrders(fallback,organizationId,projectId=null){
   if(projectId){params.push(projectId);where+=" and project_id=$2::uuid";}
   const {rows}=await db.query(`select id::text,organization_id::text as "organizationId",project_id::text as "projectId",
     customer_id::text as "customerId",customer_name as "customerName",customer_email as "customerEmail",
-    customer_phone as "customerPhone",status,currency,total::text,source,created_at as "createdAt",updated_at as "updatedAt"
+    customer_phone as "customerPhone",status,currency,total::text,source,payment_provider as "paymentProvider",
+    payment_invoice_url as "paymentInvoiceUrl",payment_payload as "paymentPayload",
+    commission_rate as "commissionRate",commission_amount as "commissionAmount",seller_amount as "sellerAmount",
+    telegram_payment_charge_id as "telegramPaymentChargeId",created_at as "createdAt",updated_at as "updatedAt"
     from orders where ${where} order by created_at desc`,params);
   return rows;
 }

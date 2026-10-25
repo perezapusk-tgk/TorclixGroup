@@ -398,9 +398,9 @@ export async function saveOrder(order,items){
         [newId(),order.organizationId,order.customerName,order.customerEmail||null,order.telegramUserId,order.telegramUsername||null]);
       customerId=upserted.rows[0].id;
     }
-    await client.query(`insert into orders(id,organization_id,project_id,customer_id,customer_name,customer_email,customer_phone,status,currency,total,source)
-      values($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10::numeric,$11)`,
-      [order.id,order.organizationId,order.projectId,customerId,order.customerName,order.customerEmail||null,order.customerPhone||null,order.status,order.currency,order.total,order.source]);
+    await client.query(`insert into orders(id,organization_id,project_id,customer_id,customer_name,customer_email,customer_phone,status,currency,total,source,payment_provider,payment_invoice_url,payment_payload,commission_rate,commission_amount,seller_amount,telegram_payment_charge_id)
+      values($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10::numeric,$11,$12,$13,$14,$15::numeric,$16::numeric,$17::numeric,$18)`,
+      [order.id,order.organizationId,order.projectId,customerId,order.customerName,order.customerEmail||null,order.customerPhone||null,order.status,order.currency,order.total,order.source,order.paymentProvider||null,order.paymentInvoiceUrl||null,order.paymentPayload||null,order.commissionRate??5,order.commissionAmount??Number(order.total||0)*0.05,order.sellerAmount??Number(order.total||0)*0.95,order.telegramPaymentChargeId||null]);
     for(const item of items){
       if(item.catalogItemId){
         const stock=await client.query(`update catalog_items
@@ -426,7 +426,10 @@ export async function updateOrderStatus(orderId,organizationId,status){
     where id=$1::uuid and organization_id=$2::uuid
     returning id::text,organization_id::text as "organizationId",project_id::text as "projectId",
     customer_name as "customerName",customer_email as "customerEmail",customer_phone as "customerPhone",
-    status,currency,total::text,source,created_at as "createdAt",updated_at as "updatedAt"`,
+    status,currency,total::text,source,payment_provider as "paymentProvider",payment_invoice_url as "paymentInvoiceUrl",
+    payment_payload as "paymentPayload",commission_rate as "commissionRate",commission_amount as "commissionAmount",
+    seller_amount as "sellerAmount",telegram_payment_charge_id as "telegramPaymentChargeId",
+    created_at as "createdAt",updated_at as "updatedAt"`,
     [orderId,organizationId,status]);
   return rows[0]||null;
 }

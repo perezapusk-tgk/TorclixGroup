@@ -670,7 +670,14 @@ if(tg?.openInvoice){tg.openInvoice(invoiceJson.data.invoiceLink,(paymentStatus)=
         const orderId=String(payload.orderId||"").trim();
         if(orderId){
           const paid=await markOrderPaid(orderId,String(payment.telegram_payment_charge_id||""),"telegram");
-          if(paid){orders.set(orderId,paid);await notifyTelegramAdmin("Оплачен заказ · "+orderId+" · "+paid.total+" "+paid.currency+" · комиссия "+Number(paid.commissionAmount||0).toFixed(2)+" "+paid.currency);}
+          const localPaid=paid||orders.get(orderId);
+          if(localPaid){
+            const finalPaid={...localPaid,status:"paid",paymentProvider:"telegram",telegramPaymentChargeId:String(payment.telegram_payment_charge_id||""),
+              commissionRate:Number(localPaid.commissionRate??5),commissionAmount:Number(localPaid.commissionAmount??(Number(localPaid.total||0)*0.05)),
+              sellerAmount:Number(localPaid.sellerAmount??(Number(localPaid.total||0)*0.95))};
+            orders.set(orderId,finalPaid);
+            await notifyTelegramAdmin("Оплачен заказ · "+orderId+" · "+finalPaid.total+" "+finalPaid.currency+" · комиссия "+Number(finalPaid.commissionAmount||0).toFixed(2)+" "+finalPaid.currency);
+          }
         }
       }
       const chatId=update?.message?.chat?.id;

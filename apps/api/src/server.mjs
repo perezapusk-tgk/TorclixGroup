@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { lookup } from "node:dns/promises";
 import {
   initStorage,listProjects,getProject,getPublishedProject,saveProject,getDocument,getPublishedDocument,saveDocument,publishDocument,unpublishDocument,listDomains,saveDomain,listRecords,saveRecord,
-  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateBilling,findOrganizationByBilling,getOrganizationSettings,updateOrganizationSettings,claimBillingWebhookEvent
+  newId,getSessionUser,listOrganizationsForUser,getMembershipRole,listTeamMembers,getOrganizationById,findDomain,verifyDomain,getTelegramIntegration,listTelegramIntegrations,saveTelegramIntegration,listCatalogItems,getCatalogItem,saveCatalogItem,archiveCatalogItem,listOrders,saveOrder,updateOrderStatus,markOrderPaid,updateClientPortal,getClientPortal,ensureClientPortalToken,updatePublicClientPortal,listStaff,saveStaff,listCalendarEvents,saveCalendarEvent,updateBilling,findOrganizationByBilling,getOrganizationSettings,updateOrganizationSettings,claimBillingWebhookEvent
 } from "./storage.mjs";
 import { can } from "../../../packages/access/src/index.mjs";
 import { authenticateRequest } from "../../../packages/auth/src/index.mjs";
@@ -75,6 +75,18 @@ async function body(req){let raw="";for await(const chunk of req){raw+=chunk;if(
 function esc(value=""){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 async function notifyTelegramUser(userId,text){if(!process.env.TELEGRAM_BOT_TOKEN||!userId)return;try{await telegramApi("sendMessage",{chat_id:userId,text});}catch(error){console.warn("Telegram notification failed",error?.message||error);}}
 async function notifyTelegramAdmin(text){const chatId=String(process.env.TELEGRAM_ADMIN_CHAT_ID||"").trim();if(!chatId||!process.env.TELEGRAM_BOT_TOKEN)return;try{await telegramApi("sendMessage",{chat_id:chatId,text});}catch(error){console.warn("Telegram admin notification failed",error?.message||error);}}
+async function createTelegramPaymentInvoice(order,project){
+  const botToken=String(process.env.TELEGRAM_BOT_TOKEN||"").trim();
+  const providerToken=String(process.env.TELEGRAM_PAYMENT_PROVIDER_TOKEN||"").trim();
+  if(!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+  if(!providerToken) throw new Error("TELEGRAM_PAYMENT_PROVIDER_TOKEN is not configured");
+  const currency=String(order.currency||"RUB").toUpperCase();
+  const amount=Math.round(Number(order.total||0)*100);
+  if(!Number.isFinite(amount)||amount<=0) throw new Error("Invalid order total");
+  const payload=JSON.stringify({type:"marketplace_order",orderId:order.id,projectId:project.id,commissionRate:Number(order.commissionRate??5)});
+  const result=await telegramApi("createInvoiceLink",{title:String(project.name||"Заказ").slice(0,32),description:"Оплата заказа в Telegram",payload,provider_token:providerToken,currency,prices:[{label:"Заказ",amount}]},botToken);
+  return {invoiceLink:result,payload,currency,amount};
+}
 
 function defaultDocument(projectId){return {projectId,activePage:"home",accent:"#d8ff3e",miniApp:{modules:["home","catalog","booking","profile","notifications"],navigation:["home","catalog","booking","profile","notifications"],theme:{accent:"#d8ff3e",mode:"dark"}},pages:[{id:"home",name:"Главная",blocks:[
   {id:"b1",type:"Hero",title:"Ваш бизнес — в одном цифровом пространстве",body:"Сайт, заявки, записи и мини‑приложение Telegram управляются из одной студии TorclixGroup."},
@@ -317,6 +329,22 @@ const server=createServer(async(req,res)=>{
       if(cacheKey)idempotencyCache.set(cacheKey,{status:201,body:response});json(res,201,response);return;
     }
 
+    const telegramInvoice=path.match(/^\/public\/projects\/([^/]+)\/orders\/([^/]+)\/telegram-invoice$/);
+    if(telegramInvoice&&req.method==="POST"){
+      const projectId=resolvePublicProjectId(telegramInvoice[1]);const project=await getPublicProject(projectId);
+      if(!project){json(res,404,{error:"Project not found"});return;}
+      const orderId=telegramInvoice[2];const found=(await listOrders(orders,project.organizationId,projectId)).find(x=>String(x.id)===String(orderId));
+      if(!found){json(res,404,{error:"Order not found"});return;}
+      if(found.status!=="pending"){json(res,409,{error:"Order is not payable",status:found.status});return;}
+      const commissionRate=5,total=Number(found.total||0),commissionAmount=Math.round(total*commissionRate)/100,sellerAmount=Math.round((total-commissionAmount)*100)/100;
+      try{
+        const order={...found,commissionRate,commissionAmount,sellerAmount};const invoice=await createTelegramPaymentInvoice(order,project);
+        const updated={...order,paymentProvider:"telegram",paymentInvoiceUrl:invoice.invoiceLink,paymentPayload:invoice.payload};
+        if(process.env.DATABASE_URL) await saveOrder(updated,found.items||[]); else orders.set(orderId,updated);
+        json(res,200,{data:{orderId,invoiceLink:invoice.invoiceLink,total,currency:invoice.currency,commissionRate,commissionAmount,sellerAmount}});
+      }catch(error){json(res,503,{error:error instanceof Error?error.message:"Не удалось создать Telegram invoice"});}
+      return;
+    }
     if(path==="/api/catalog"&&req.method==="GET"){
       const auth=await requirePermission(req,res,"catalog:read");if(!auth)return;
       const url=new URL(req.url||"/","http://localhost");
@@ -626,6 +654,19 @@ document.getElementById("tgOrder")?.addEventListener("click",async()=>{const row
        const a=Buffer.from(expected),b=Buffer.from(provided);
        if(a.length!==b.length||!crypto.timingSafeEqual(a,b)){res.writeHead(403);res.end();return;}
       const update=await body(req);
+      if(update?.pre_checkout_query?.id){
+        try{await telegramApi("answerPreCheckoutQuery",{pre_checkout_query_id:String(update.pre_checkout_query.id),ok:true},process.env.TELEGRAM_BOT_TOKEN||"");}
+        catch(error){console.warn("Telegram pre-checkout confirmation failed",error?.message||error);}
+      }
+      if(update?.message?.successful_payment){
+        const payment=update.message.successful_payment;let payload={};
+        try{payload=JSON.parse(String(payment.invoice_payload||"{}"));}catch{}
+        const orderId=String(payload.orderId||"").trim();
+        if(orderId){
+          const paid=await markOrderPaid(orderId,String(payment.telegram_payment_charge_id||""),"telegram");
+          if(paid){orders.set(orderId,paid);await notifyTelegramAdmin("Оплачен заказ · "+orderId+" · "+paid.total+" "+paid.currency+" · комиссия "+Number(paid.commissionAmount||0).toFixed(2)+" "+paid.currency);}
+        }
+      }
       const chatId=update?.message?.chat?.id;
       const textValue=String(update?.message?.text||"");
       if(chatId&&textValue.startsWith("/start")){

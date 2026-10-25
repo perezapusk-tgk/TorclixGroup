@@ -369,6 +369,19 @@ export async function listRecords(table,fallback,organizationId){
   }));
 }
 
+export async function markOrderPaid(orderId,telegramPaymentChargeId,paymentProvider="telegram"){
+  const db=await getPool();
+  if(!db) return null;
+  const {rows}=await db.query(`update orders set status='paid',payment_provider=$2,payment_payload=coalesce(payment_payload,''),telegram_payment_charge_id=$3,updated_at=now()
+    where id=$1::uuid
+    returning id::text,organization_id::text as "organizationId",project_id::text as "projectId",
+    customer_name as "customerName",customer_email as "customerEmail",customer_phone as "customerPhone",
+    status,currency,total::text,source,payment_provider as "paymentProvider",payment_invoice_url as "paymentInvoiceUrl",
+    payment_payload as "paymentPayload",commission_rate as "commissionRate",commission_amount as "commissionAmount",
+    seller_amount as "sellerAmount",telegram_payment_charge_id as "telegramPaymentChargeId",
+    created_at as "createdAt",updated_at as "updatedAt"`,[orderId,paymentProvider,telegramPaymentChargeId||null]);
+  return rows[0]||null;
+}
 export async function listOrders(fallback,organizationId,projectId=null){
   const db=await getPool();
   if(!db) return [...fallback.values()].filter(x=>x.organizationId===organizationId&&(!projectId||x.projectId===projectId));
